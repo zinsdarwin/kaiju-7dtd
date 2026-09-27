@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <AssemblyName>KaijuMod</AssemblyName>
+    <RootNamespace>KaijuMod</RootNamespace>
+    <LangVersion>latest</LangVersion>
+    <Nullable>disable</Nullable>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <!-- Override on the command line: -p:GamePath="...\7 Days To Die" -->
+    <GamePath Condition="'$(GamePath)' == ''">C:\Program Files (x86)\Steam\steamapps\common\7 Days To Die</GamePath>
+    <ManagedPath>$(GamePath)\7DaysToDie_Data\Managed</ManagedPath>
+    <ModOutput>$(MSBuildThisFileDirectory)..\..\KaijuMod</ModOutput>
+  </PropertyGroup>
+
+  <!-- Lets the project restore/build without Visual Studio's .NET Framework targeting packs. -->
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
+  </ItemGroup>
+
+  <!-- Game assemblies: referenced from your install, never copied or committed. -->
+  <ItemGroup>
+    <Reference Include="Assembly-CSharp"><HintPath>$(ManagedPath)\Assembly-CSharp.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="0Harmony"><HintPath>$(ManagedPath)\0Harmony.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine"><HintPath>$(ManagedPath)\UnityEngine.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.CoreModule"><HintPath>$(ManagedPath)\UnityEngine.CoreModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.PhysicsModule"><HintPath>$(ManagedPath)\UnityEngine.PhysicsModule.dll</HintPath><Private>false</Private></Reference>
+  </ItemGroup>
+
+  <Target Name="CopyToModFolder" AfterTargets="Build">
+    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(ModOutput)" />
+  </Target>
+
+</Project>

@@ -1,0 +1,23 @@
+# Visual Studio / Rider / build output
+bin/
+obj/
+.vs/
+.idea/
+*.user
+*.suo
+
+# Built mod DLL is produced by the build, not committed
+KaijuMod/*.dll
+KaijuMod/*.pdb
+
+# Unity project clutter (if a Unity project is added later)
+unity/Library/
+unity/Temp/
+unity/Logs/
+unity/UserSettings/
+unity/Obj/
+unity/Build/
+
+# OS
+.DS_Store
+Thumbs.db

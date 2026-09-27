@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<xml>
+  <Name value="KaijuMod" />
+  <DisplayName value="Kaiju Boss" />
+  <Version value="0.1.0" />
+  <Description value="A giant kaiju boss with breath, stomp and tail attacks. Requires EAC off and client install." />
+  <Author value="Darwin" />
+  <Website value="" />
+</xml>
