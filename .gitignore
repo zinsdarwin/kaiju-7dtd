@@ -21,3 +21,9 @@ unity/Build/
 # OS
 .DS_Store
 Thumbs.db
+
+# Character assets (model, textures, audio) stay local, never pushed.
+# The public repo is the kaiju engine; your Godzilla bundle lives only on your PC.
+KaijuMod/Resources/*.unity3d
+KaijuMod/Resources/*.bundle
+assets-local/
