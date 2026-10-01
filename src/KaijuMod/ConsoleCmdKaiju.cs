@@ -1,0 +1,179 @@
+using System.Collections.Generic;
+using System.Globalization;
+using UnityEngine;
+
+namespace KaijuMod
+{
+    /// <summary>
+    /// F1 console command for testing the grey box. The game finds console commands by scanning
+    /// mod assemblies for ConsoleCmdAbstract subclasses.
+    ///
+    /// UNVERIFIED: the override names and access modifiers. Alpha 21 used GetCommands,
+    /// GetDescription and GetHelp; 1.0 and later are believed to use public lowercase
+    /// getCommands, getDescription and getHelp. Check ConsoleCmdAbstract in the V3.2 assembly.
+    /// </summary>
+    public class ConsoleCmdKaiju : ConsoleCmdAbstract
+    {
+        private static readonly List<Vector2> recorded = new List<Vector2>();
+
+        public override string[] getCommands()
+        {
+            return new[] { "kaiju" };
+        }
+
+        public override string getDescription()
+        {
+            return "Kaiju world event: start, stop and record his route.";
+        }
+
+        public override string getHelp()
+        {
+            return "Usage:\n"
+                + "  kaiju start          walk the route (route.txt if present, else the built-in list)\n"
+                + "  kaiju test [dist]    walk a straight line from dist m in front of you, through you (default 120)\n"
+                + "  kaiju stop           stop and remove the grey box\n"
+                + "  kaiju status         position, segment, blocks cleared\n"
+                + "  kaiju speed <m/s>    set walking speed\n"
+                + "  kaiju radius <m>     set footprint radius\n"
+                + "  kaiju addpoint       record your position as the next waypoint\n"
+                + "  kaiju route          list recorded waypoints (as C# for Route.cs)\n"
+                + "  kaiju saveroute      write recorded waypoints to route.txt\n"
+                + "  kaiju clearroute     forget recorded waypoints";
+        }
+
+        public override void Execute(List<string> _params, CommandSenderInfo _senderInfo)
+        {
+            string sub = _params.Count > 0 ? _params[0].ToLowerInvariant() : "status";
+            var director = KaijuDirector.Instance;
+            switch (sub)
+            {
+                case "start":
+                {
+                    string source;
+                    var points = Route.Load(out source);
+                    string error;
+                    if (director.Start(points, out error))
+                        GameApi.ConsoleOut("Kaiju walking " + points.Count + " waypoints from " + source);
+                    else
+                        GameApi.ConsoleOut("Kaiju not started: " + error);
+                    break;
+                }
+                case "test":
+                    StartTest(_params);
+                    break;
+                case "stop":
+                    director.Stop();
+                    GameApi.ConsoleOut("Kaiju stopped.");
+                    break;
+                case "status":
+                    PrintStatus();
+                    break;
+                case "speed":
+                {
+                    float v;
+                    if (_params.Count > 1 && TryFloat(_params[1], out v) && v > 0f)
+                        director.Speed = v;
+                    GameApi.ConsoleOut("Kaiju speed " + director.Speed + " m/s");
+                    break;
+                }
+                case "radius":
+                {
+                    float v;
+                    if (_params.Count > 1 && TryFloat(_params[1], out v) && v >= 1f)
+                    {
+                        director.Footprint.Radius = v;
+                        if (director.Running)
+                            GameApi.ConsoleOut("Takes full effect (box size) on the next start.");
+                    }
+                    GameApi.ConsoleOut("Kaiju footprint radius " + director.Footprint.Radius + " m");
+                    break;
+                }
+                case "addpoint":
+                {
+                    var player = LocalPlayer();
+                    if (player == null)
+                        break;
+                    Vector3 p = GameApi.Position(player);
+                    recorded.Add(new Vector2(p.x, p.z));
+                    GameApi.ConsoleOut("Waypoint " + recorded.Count + ": " + Route.ToCSharp(recorded[recorded.Count - 1]));
+                    break;
+                }
+                case "route":
+                    if (recorded.Count == 0)
+                        GameApi.ConsoleOut("No waypoints recorded. Use kaiju addpoint.");
+                    foreach (var p in recorded)
+                        GameApi.ConsoleOut(Route.ToCSharp(p));
+                    break;
+                case "saveroute":
+                    if (recorded.Count < 2)
+                    {
+                        GameApi.ConsoleOut("Record at least two waypoints first.");
+                        break;
+                    }
+                    Route.Save(recorded);
+                    GameApi.ConsoleOut("Saved " + recorded.Count + " waypoints to " + Route.FilePath);
+                    break;
+                case "clearroute":
+                    recorded.Clear();
+                    GameApi.ConsoleOut("Recorded waypoints cleared.");
+                    break;
+                default:
+                    GameApi.ConsoleOut(getHelp());
+                    break;
+            }
+        }
+
+        /// <summary>
+        /// Straight line toward the player, starting dist metres ahead of where they face and
+        /// ending dist metres behind them: the quickest way to see him coming and get crushed.
+        /// </summary>
+        private static void StartTest(List<string> args)
+        {
+            var player = LocalPlayer();
+            if (player == null)
+                return;
+            float dist = 120f;
+            float parsed;
+            if (args.Count > 1 && TryFloat(args[1], out parsed) && parsed > 0f)
+                dist = parsed;
+            Vector3 pos = GameApi.Position(player);
+            float yaw = GameApi.YawDegrees(player) * Mathf.Deg2Rad;
+            var forward = new Vector2(Mathf.Sin(yaw), Mathf.Cos(yaw));
+            var here = new Vector2(pos.x, pos.z);
+            var points = new List<Vector2> { here + forward * dist, here, here - forward * dist };
+            string error;
+            if (KaijuDirector.Instance.Start(points, out error))
+                GameApi.ConsoleOut("Kaiju coming at you from " + dist + " m ahead at " + KaijuDirector.Instance.Speed + " m/s");
+            else
+                GameApi.ConsoleOut("Kaiju not started: " + error);
+        }
+
+        private static void PrintStatus()
+        {
+            var d = KaijuDirector.Instance;
+            if (!d.Running)
+            {
+                GameApi.ConsoleOut("Kaiju idle. Speed " + d.Speed + " m/s, radius " + d.Footprint.Radius + " m.");
+                return;
+            }
+            GameApi.ConsoleOut("Kaiju at (" + Mathf.Round(d.Position.x) + ", " + Mathf.Round(d.BaseY) + ", " + Mathf.Round(d.Position.y)
+                + "), heading to waypoint " + (d.Segment + 2) + "/" + d.WaypointCount
+                + ", " + d.Footprint.TotalCleared + " blocks cleared, "
+                + d.Footprint.PendingBlocks + " blocks and " + d.Footprint.PendingColumns + " columns queued");
+        }
+
+        private static EntityPlayer LocalPlayer()
+        {
+            World world = GameApi.World;
+            EntityPlayer player = world == null ? null : GameApi.LocalPlayer(world);
+            if (player == null)
+                GameApi.ConsoleOut("No local player.");
+            return player;
+        }
+
+        private static bool TryFloat(string s, out float v)
+        {
+            return float.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture, out v);
+        }
+    }
+}
