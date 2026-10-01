@@ -34,8 +34,8 @@ namespace KaijuMod
             // nobody has joined yet, so check for an offline server instead.
             if (GameManager.IsDedicatedServer)
                 return false;
-            var cm = ConnectionManager.Instance;
-            return cm != null && cm.CurrentMode == NetworkType.OfflineServer;
+            var cm = SingletonMonoBehaviour<ConnectionManager>.Instance;
+            return cm != null && cm.CurrentMode == ProtocolManager.NetworkType.OfflineServer;
         }
 
         /// <summary>Snapshot of the players in the world.</summary>
@@ -119,7 +119,8 @@ namespace KaijuMod
             if (positions.Count == 0)
                 return;
             // VERIFIED (V3.3): GameManager.SetBlocksRPC(List<BlockChangeInfo>) batches changes, and
-            // BlockChangeInfo(Vector3i, BlockValue.Air, true) clears the block and its density.
+            // BlockChangeInfo(BlockValueRef, BlockValue.Air, true) clears the block and its density
+            // (Vector3i converts implicitly to BlockValueRef). See docs/engine-api.md.
             // Plain removal is preferred over GameManager.ExplosionServer, which can spawn a
             // falling-block entity per block. Remesh cost of large batches still needs an in-game test.
             var changes = new List<BlockChangeInfo>(positions.Count);
