@@ -1,12 +1,12 @@
 # Kaiju mod for 7 Days to Die
 
-A giant kaiju boss for 7 Days to Die **V3.2**: a skyscraper-scale monster with a breath beam, ground stomp and tail sweep that can actually breach walls and hit players at its feet.
+A Godzilla world event for 7 Days to Die **V3.2**. You don't fight him; you run. He walks city to city levelling everything, and anyone caught in his path dies. Later: assemble the Oxygen Destroyer and plant it in his path. See [docs/design.md](docs/design.md).
 
 > Entity name: `zombieKaiju`. The code is a generic kaiju engine (MIT licensed). Character assets such as a Godzilla model, textures and roar are **not** in this repo: they are built into a local asset bundle and git-ignored, so the public repo holds no third-party IP.
 
 ## Why this needs code, not just XML
 
-Vanilla zombie AI only considers the two blocks in front of an entity (feet + head). A scaled-up zombie looks huge but ignores anything 3+ blocks up and can't land melee on a player standing at its feet. This mod keeps a small path collider so it navigates like a zombie, and adds its own "smash box" and ranged/AoE attacks in C#.
+Godzilla is not a zombie: no zombie AI or pathfinding. A server-side C# director moves him between cities as plain data, applies destruction along his footprint, kills players inside it, and syncs a long-distance visual model to every client.
 
 ## License
 
@@ -27,11 +27,12 @@ docs/                <- design notes and research
 ## Roadmap
 
 - [x] Phase 0: repo, mod skeleton, Harmony project
-- [ ] Phase 1: XML prototype (scaled vanilla brute, console spawn)
-- [ ] Phase 2: custom rigged model + Animator exported as an asset bundle
-- [ ] Phase 3: C# fight logic (smash box, breath beam, stomp AoE)
-- [ ] Phase 4: encounter design (blood moon finale / world boss, scaling, loot)
-- [ ] Phase 5: dedicated-server hardening and performance
+- [ ] Milestone 1: grey box walks between two towns, destroys blocks, kills players in its path
+- [ ] Long-distance visual + network sync
+- [ ] Devastation pass for areas crossed while unloaded
+- [ ] The Run game mode (pacing, routes, blood moon interplay)
+- [ ] Godzilla model (local asset bundle)
+- [ ] Oxygen Destroyer quest line and win condition
 
 ## Building the DLL
 
