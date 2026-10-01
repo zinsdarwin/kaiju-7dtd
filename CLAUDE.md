@@ -12,7 +12,7 @@ Godzilla world-event mod for 7 Days to Die V3.2, single player only. Read `docs/
 - Build: `dotnet build src/KaijuMod -c Release -p:GamePath="<7 Days To Die install>"`; output DLL copies into `KaijuMod/`.
 - Deploy: copy `KaijuMod/` into `<install>/Mods/`; launch without EAC.
 - Logs: `%APPDATA%\7DaysToDie\logs\` (or `Player.log` next to the exe on some setups).
-- Verify engine APIs by decompiling `7DaysToDie_Data/Managed/Assembly-CSharp.dll` (e.g. `ilspycmd`) before relying on them. Unverified so far: server explosion call, batched block-change RPC, chunk-loaded hook, single-player check, world spawn of a visual-only GameObject.
+- Verify engine APIs by decompiling `7DaysToDie_Data/Managed/Assembly-CSharp.dll` (e.g. `ilspycmd`) before relying on them. Explosion, batched block changes, chunk-load hook, single-player check, visual-only GameObject and ModEvents are verified in `docs/engine-api.md` (from build V 3.3.0 b17); its last section lists what still needs an in-game test.
 
 ## Next steps
 1. Map generator (`tools/`): generate a vanilla 6k world as a template, inspect its real V3.2 file formats, then write a script that rewrites biomes, roads, heightmap and prefab placements for the snake layout into a new world folder (never modify the template).
