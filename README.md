@@ -53,7 +53,7 @@ The C# project references the game's own assemblies, which are not in this repo.
 
 Other commands (`kaiju help` lists them): `kaiju start` walks the route in `KaijuMod/route.txt` (or the placeholder list in `Route.cs`), `kaiju stop`, `kaiju status`, `kaiju speed <m/s>`, `kaiju radius <m>`. To record a real route between two towns, walk the road and run `kaiju addpoint` at each bend, then `kaiju saveroute`.
 
-All calls into the game go through `src/KaijuMod/GameApi.cs`. Those marked `UNVERIFIED` still need checking against the decompiled V3.2 assembly; if the build fails, that file is where to look.
+All calls into the game go through `src/KaijuMod/GameApi.cs`. Those marked `UNVERIFIED` still need checking against the decompiled game assembly (the rest were checked against V3.3.0); if the build fails, that file is where to look.
 
 ## Character assets (local only)
 

@@ -7,9 +7,10 @@ namespace KaijuMod
     /// Every call into the game's own assembly goes through this class, so verifying the mod
     /// against V3.2 means checking this one file.
     ///
-    /// Calls tagged UNVERIFIED were written from memory of earlier game versions and have not
-    /// been checked against the decompiled V3.2 Assembly-CSharp.dll yet. If one fails to compile
-    /// or misbehaves, fix it here; nothing else in the mod touches the engine directly.
+    /// Calls tagged VERIFIED were checked against the decompiled V3.3.0 (b17) Assembly-CSharp.dll
+    /// (see docs/engine-api.md). Calls tagged UNVERIFIED were written from memory of earlier game
+    /// versions. If one fails to compile or misbehaves, fix it here; nothing else in the mod
+    /// touches the engine directly.
     /// </summary>
     public static class GameApi
     {
@@ -29,11 +30,12 @@ namespace KaijuMod
         /// </summary>
         public static bool IsSinglePlayer()
         {
-            // UNVERIFIED: GameManager.IsDedicatedServer (static) and ConnectionManager.IsSinglePlayer.
+            // VERIFIED (V3.3): ConnectionManager.IsSinglePlayer is also true for a hosted game that
+            // nobody has joined yet, so check for an offline server instead.
             if (GameManager.IsDedicatedServer)
                 return false;
-            var cm = SingletonMonoBehaviour<ConnectionManager>.Instance;
-            return cm != null && cm.IsSinglePlayer;
+            var cm = ConnectionManager.Instance;
+            return cm != null && cm.CurrentMode == NetworkType.OfflineServer;
         }
 
         /// <summary>Snapshot of the players in the world.</summary>
@@ -89,20 +91,21 @@ namespace KaijuMod
         /// <summary>True if the chunk holding this column is loaded, so its blocks can be read and changed.</summary>
         public static bool IsChunkLoaded(World world, int x, int z)
         {
-            // UNVERIFIED: World.GetChunkFromWorldPos(Vector3i) returns null for unloaded chunks.
+            // VERIFIED (V3.3): World.GetChunkFromWorldPos(Vector3i) returns null for unloaded chunks.
+            // Block changes sent to unloaded chunks are silently dropped, so this check matters.
             return world.GetChunkFromWorldPos(new Vector3i(x, 0, z)) != null;
         }
 
         /// <summary>
-        /// True if the block at this position should be destroyed: anything that is not air,
-        /// terrain, or a child cell of a multi-block (the parent cell owns removal).
+        /// True if the block at this position should be destroyed: anything that is not air or
+        /// terrain. Clearing any cell of a multi-block removes the whole block (verified, V3.3).
         /// </summary>
         public static bool IsDestructible(World world, int x, int y, int z)
         {
-            // UNVERIFIED: World.GetBlock(Vector3i), BlockValue.isair, BlockValue.ischild,
+            // UNVERIFIED: World.GetBlock(Vector3i), BlockValue.isair,
             // BlockValue.Block.shape.IsTerrain().
             BlockValue bv = world.GetBlock(new Vector3i(x, y, z));
-            if (bv.isair || bv.ischild)
+            if (bv.isair)
                 return false;
             var block = bv.Block;
             if (block == null || block.shape == null)
@@ -115,13 +118,14 @@ namespace KaijuMod
         {
             if (positions.Count == 0)
                 return;
-            // UNVERIFIED: BlockChangeInfo(Vector3i, BlockValue, bool updateLight) constructor,
-            // BlockValue.Air, and World.SetBlocksRPC(List<BlockChangeInfo>) as the batched,
-            // server-side block change. This is the main thing to check for chunk remesh cost.
+            // VERIFIED (V3.3): GameManager.SetBlocksRPC(List<BlockChangeInfo>) batches changes, and
+            // BlockChangeInfo(Vector3i, BlockValue.Air, true) clears the block and its density.
+            // Plain removal is preferred over GameManager.ExplosionServer, which can spawn a
+            // falling-block entity per block. Remesh cost of large batches still needs an in-game test.
             var changes = new List<BlockChangeInfo>(positions.Count);
             foreach (var p in positions)
                 changes.Add(new BlockChangeInfo(p, BlockValue.Air, true));
-            world.SetBlocksRPC(changes);
+            GameManager.Instance.SetBlocksRPC(changes);
         }
 
         /// <summary>
@@ -130,7 +134,8 @@ namespace KaijuMod
         /// </summary>
         public static Vector3 WorldToScene(Vector3 worldPos)
         {
-            // UNVERIFIED: static Origin.position holds the current floating-origin offset.
+            // VERIFIED (V3.3): Unity position = world position - Origin.position. The origin shifts
+            // about every 260 m; the box is re-placed every frame, so it follows the shift.
             return worldPos - Origin.position;
         }
 
