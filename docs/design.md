@@ -22,13 +22,15 @@ Find components across the map, assemble the device at a workbench, plant it in 
 
 Godzilla is **not** a zombie entity and uses no zombie AI or pathfinding.
 
+**Single player only.** The game still runs a local server and client in one process, so code uses server-side calls, but there is no network sync. The mod disables the event (with a console warning) in hosted or dedicated games.
+
 | Piece | Runs on | Job |
 | --- | --- | --- |
 | Director | Server (C#) | Picks next city from world POI data, advances his position every tick as plain data, even through unloaded chunks |
 | Destruction | Server (C#) | Rate-limited explosion-style block damage along his footprint; caps on structural collapse |
 | Kill zone | Server (C#) | Players inside the footprint radius die |
 | Devastation pass | Server (C#, Harmony on chunk load) | Applies ruin to areas he crossed while nobody was nearby |
-| Visual | Every client | Visual-only model (not an Entity) so it renders at long distance; position synced by a custom NetPackage |
+| Visual | Same process | Visual-only model (not an Entity) so it renders at long distance; the director moves it directly |
 | Oxygen Destroyer | XML (quests, items, recipes, blocks) + C# trigger | Assembly and the win condition |
 
 ## First milestone
@@ -37,6 +39,6 @@ A grey box walks between two towns, destroys blocks under it, and kills a player
 
 ## Risks
 
-- Block-change volume in multiplayer (network and chunk remeshing).
+- Block-change volume (chunk remeshing and frame rate).
 - Long-distance rendering of a non-entity model (LOD, fog, view distance).
 - Engine APIs to verify by decompiling the V3.2 assembly before relying on them: server explosion call, batched block-change RPC, POI/town list for a generated world, chunk-loaded hook.

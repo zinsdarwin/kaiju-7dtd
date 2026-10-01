@@ -6,7 +6,7 @@ A Godzilla world event for 7 Days to Die **V3.2**. You don't fight him; you run.
 
 ## Why this needs code, not just XML
 
-Godzilla is not a zombie: no zombie AI or pathfinding. A server-side C# director moves him between cities as plain data, applies destruction along his footprint, kills players inside it, and syncs a long-distance visual model to every client.
+Godzilla is not a zombie: no zombie AI or pathfinding. A server-side C# director moves him between cities as plain data, applies destruction along his footprint, kills players inside it, and moves a long-distance visual model. Single player only.
 
 ## License
 
@@ -28,7 +28,7 @@ docs/                <- design notes and research
 
 - [x] Phase 0: repo, mod skeleton, Harmony project
 - [ ] Milestone 1: grey box walks between two towns, destroys blocks, kills players in its path
-- [ ] Long-distance visual + network sync
+- [ ] Long-distance visual model
 - [ ] Devastation pass for areas crossed while unloaded
 - [ ] The Run game mode (pacing, routes, blood moon interplay)
 - [ ] Godzilla model (local asset bundle)
