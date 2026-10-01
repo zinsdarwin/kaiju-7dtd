@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <xml>
   <Name value="KaijuMod" />
-  <DisplayName value="Kaiju Boss" />
+  <DisplayName value="Kaiju" />
   <Version value="0.1.0" />
-  <Description value="A giant kaiju boss with breath, stomp and tail attacks. Requires EAC off and client install." />
+  <Description value="Godzilla world event: he walks the road city to city, levelling everything and killing anyone in his path. Single player only. Requires EAC off." />
   <Author value="Darwin" />
   <Website value="" />
 </xml>
