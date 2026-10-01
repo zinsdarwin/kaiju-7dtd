@@ -22,7 +22,9 @@
   <!-- Game assemblies: referenced from your install, never copied or committed. -->
   <ItemGroup>
     <Reference Include="Assembly-CSharp"><HintPath>$(ManagedPath)\Assembly-CSharp.dll</HintPath><Private>false</Private></Reference>
-    <Reference Include="0Harmony"><HintPath>$(ManagedPath)\0Harmony.dll</HintPath><Private>false</Private></Reference>
+    <!-- VERIFIED (V3.3): Harmony ships in Mods\0_TFP_Harmony, not Managed. -->
+    <Reference Include="0Harmony"><HintPath>$(GamePath)\Mods\0_TFP_Harmony\0Harmony.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="LogLibrary"><HintPath>$(ManagedPath)\LogLibrary.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="UnityEngine"><HintPath>$(ManagedPath)\UnityEngine.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="UnityEngine.CoreModule"><HintPath>$(ManagedPath)\UnityEngine.CoreModule.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="UnityEngine.PhysicsModule"><HintPath>$(ManagedPath)\UnityEngine.PhysicsModule.dll</HintPath><Private>false</Private></Reference>

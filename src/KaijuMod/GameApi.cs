@@ -19,7 +19,7 @@ namespace KaijuMod
         {
             get
             {
-                // UNVERIFIED: GameManager.Instance and GameManager.World.
+                // VERIFIED (V3.3): GameManager.Instance and GameManager.World (compiles against b17).
                 var gm = GameManager.Instance;
                 return gm == null ? null : gm.World;
             }
@@ -41,42 +41,42 @@ namespace KaijuMod
         /// <summary>Snapshot of the players in the world.</summary>
         public static List<EntityPlayer> Players(World world)
         {
-            // UNVERIFIED: World.Players is a DictionaryList<int, EntityPlayer> with a public .list.
+            // VERIFIED (V3.3): World.Players is a public DictionaryList<int, EntityPlayer> with .list.
             return new List<EntityPlayer>(world.Players.list);
         }
 
         /// <summary>The local player, used by console commands to place test routes.</summary>
         public static EntityPlayer LocalPlayer(World world)
         {
-            // UNVERIFIED: World.GetPrimaryPlayer().
+            // VERIFIED (V3.3): World.GetPrimaryPlayer() returns the EntityPlayerLocal.
             return world.GetPrimaryPlayer();
         }
 
         public static Vector3 Position(EntityPlayer player)
         {
-            // UNVERIFIED: Entity.position is a public Vector3 field in world coordinates.
+            // VERIFIED (V3.3): Entity.position is a public Vector3 field in world coordinates.
             return player.position;
         }
 
         /// <summary>Facing direction in degrees around the vertical axis (0 = +z, 90 = +x).</summary>
         public static float YawDegrees(EntityPlayer player)
         {
-            // UNVERIFIED: Entity.rotation is a public Vector3 field whose y is the yaw in degrees.
+            // VERIFIED (V3.3): Entity.rotation is a public Vector3 field. UNVERIFIED in game: y as yaw in degrees.
             return player.rotation.y;
         }
 
         public static bool IsAlive(EntityPlayer player)
         {
-            // UNVERIFIED: EntityAlive.IsDead().
+            // VERIFIED (V3.3): EntityAlive.IsDead().
             return player != null && !player.IsDead();
         }
 
         /// <summary>Kills the player outright. Crushing damage, far above any health pool.</summary>
         public static void Kill(EntityPlayer player)
         {
-            // UNVERIFIED: DamageSource(EnumDamageSource, EnumDamageTypes) constructor and
-            // EntityAlive.DamageEntity(DamageSource, int, bool, float). If god mode or a buff
-            // blocks this, look for a direct kill such as SetDead / Kill(DamageResponse).
+            // VERIFIED (V3.3): DamageSource(EnumDamageSource, EnumDamageTypes) constructor and
+            // EntityAlive.DamageEntity(DamageSource, int, bool, float). DamageEntity returns -1
+            // without damage while IsGodMode is on (debug god mode), so test with it off.
             var source = new DamageSource(EnumDamageSource.External, EnumDamageTypes.Crushing);
             player.DamageEntity(source, 100000, false, 1f);
         }
@@ -84,8 +84,9 @@ namespace KaijuMod
         /// <summary>Surface height (top terrain block) at a column.</summary>
         public static int TerrainHeight(World world, int x, int z)
         {
-            // UNVERIFIED: World.GetHeight(int, int) returning the top terrain block's y.
-            return world.GetHeight(x, z);
+            // VERIFIED (V3.3): World.GetTerrainHeight(int, int) reads the chunk's terrain height map.
+            // World.GetHeight includes buildings, trees and water, so the box would climb onto roofs.
+            return world.GetTerrainHeight(x, z);
         }
 
         /// <summary>True if the chunk holding this column is loaded, so its blocks can be read and changed.</summary>
@@ -102,7 +103,7 @@ namespace KaijuMod
         /// </summary>
         public static bool IsDestructible(World world, int x, int y, int z)
         {
-            // UNVERIFIED: World.GetBlock(Vector3i), BlockValue.isair,
+            // VERIFIED (V3.3, compiles): World.GetBlock(Vector3i), BlockValue.isair,
             // BlockValue.Block.shape.IsTerrain().
             BlockValue bv = world.GetBlock(new Vector3i(x, y, z));
             if (bv.isair)
@@ -143,7 +144,8 @@ namespace KaijuMod
         /// <summary>Writes a line to the F1 console, or the log when no console is available.</summary>
         public static void ConsoleOut(string line)
         {
-            // UNVERIFIED: SingletonMonoBehaviour<SdtdConsole>.Instance.Output(string).
+            // VERIFIED (V3.3): SdtdConsole.Output(string) only appends to the output of the command
+            // being executed, so lines written outside a console command are not shown. Use Log.Out there.
             var console = SingletonMonoBehaviour<SdtdConsole>.Instance;
             if (console != null)
                 console.Output(line);

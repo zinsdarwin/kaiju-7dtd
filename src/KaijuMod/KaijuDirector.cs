@@ -97,7 +97,6 @@ namespace KaijuMod
             if (segment >= route.Count - 1)
             {
                 Log.Out("[KaijuMod] Reached the last waypoint");
-                GameApi.ConsoleOut("Kaiju reached the end of the route.");
                 Stop();
             }
         }
@@ -127,9 +126,8 @@ namespace KaijuMod
         }
 
         /// <summary>
-        /// Follows the ground under his centre, rate-limited so he does not jump onto a rooftop for
-        /// a frame. GetHeight may report the top of a building rather than the terrain; the
-        /// footprint clears buildings ahead of his centre, so the height settles back to ground.
+        /// Follows the terrain under his centre (buildings excluded), rate-limited so steep ground
+        /// does not make the box jump.
         /// </summary>
         private void UpdateBaseY(World world, float dt)
         {

@@ -8,9 +8,8 @@ namespace KaijuMod
     /// F1 console command for testing the grey box. The game finds console commands by scanning
     /// mod assemblies for ConsoleCmdAbstract subclasses.
     ///
-    /// UNVERIFIED: the override names and access modifiers. Alpha 21 used GetCommands,
-    /// GetDescription and GetHelp; 1.0 and later are believed to use public lowercase
-    /// getCommands, getDescription and getHelp. Check ConsoleCmdAbstract in the V3.2 assembly.
+    /// VERIFIED (V3.3): override the lowercase getCommands, getDescription and getHelp (protected
+    /// originally, public in the shipped publicized assembly); the capitalized ones cache them.
     /// </summary>
     public class ConsoleCmdKaiju : ConsoleCmdAbstract
     {
