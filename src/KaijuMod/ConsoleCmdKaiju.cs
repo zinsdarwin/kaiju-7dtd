@@ -34,6 +34,7 @@ namespace KaijuMod
                 + "  kaiju status         position, segment, blocks cleared\n"
                 + "  kaiju speed <m/s>    set walking speed\n"
                 + "  kaiju radius <m>     set footprint radius\n"
+                + "  kaiju height <m>     set height (box size and how high blocks are cleared)\n"
                 + "  kaiju addpoint       record your position as the next waypoint\n"
                 + "  kaiju route          list recorded waypoints (as C# for Route.cs)\n"
                 + "  kaiju saveroute      write recorded waypoints to route.txt\n"
@@ -95,6 +96,18 @@ namespace KaijuMod
                             GameApi.ConsoleOut("Takes full effect (box size) on the next start.");
                     }
                     GameApi.ConsoleOut("Kaiju footprint radius " + director.Footprint.Radius + " m");
+                    break;
+                }
+                case "height":
+                {
+                    float v;
+                    if (_params.Count > 1 && TryFloat(_params[1], out v) && v >= 5f && v <= 250f)
+                    {
+                        director.Footprint.Height = Mathf.RoundToInt(v);
+                        if (director.Running)
+                            GameApi.ConsoleOut("Takes full effect (box size) on the next start.");
+                    }
+                    GameApi.ConsoleOut("Kaiju height " + director.Footprint.Height + " m (5 to 250; blocks are cleared up to the world's build limit)");
                     break;
                 }
                 case "addpoint":
