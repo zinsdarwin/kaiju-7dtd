@@ -34,6 +34,7 @@ namespace KaijuMod
                 + "  kaiju status         position, segment, blocks cleared\n"
                 + "  kaiju speed <m/s>    set walking speed\n"
                 + "  kaiju radius <m>     set footprint radius\n"
+                + "  kaiju stride <h>     ground per walk loop in body heights; higher slows his legs (default 0.6)\n"
                 + "  kaiju height <m>     set height (box size and how high blocks are cleared)\n"
                 + "  kaiju addpoint       record your position as the next waypoint\n"
                 + "  kaiju route          list recorded waypoints (as C# for Route.cs)\n"
@@ -104,6 +105,14 @@ namespace KaijuMod
                         director.Footprint.Height = Mathf.RoundToInt(v);
                     }
                     GameApi.ConsoleOut("Kaiju height " + director.Footprint.Height + " m (5 to 250; blocks are cleared up to the world's build limit)");
+                    break;
+                }
+                case "stride":
+                {
+                    float v;
+                    if (_params.Count > 1 && TryFloat(_params[1], out v) && v >= 0.05f && v <= 10f)
+                        KaijuVisual.StrideHeights = v;
+                    GameApi.ConsoleOut("Kaiju stride " + KaijuVisual.StrideHeights + " body heights per walk loop (higher = slower legs)");
                     break;
                 }
                 case "addpoint":

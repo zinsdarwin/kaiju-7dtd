@@ -15,7 +15,18 @@ namespace KaijuMod
         /// <summary>Name of the prefab inside the bundle.</summary>
         public const string AssetName = "Kaiju";
 
+        /// <summary>
+        /// Ground covered by one loop of the model's walk, in body heights. The walk's playback
+        /// speed follows his real speed through this, so his feet don't slide. Tunable with
+        /// `kaiju stride`: raise it if the walk looks too fast, lower it if too slow.
+        /// </summary>
+        public static float StrideHeights = 0.6f;
+
         private GameObject go;
+        private Animation anim;
+        private float clipLength;
+        private Vector3 lastBase;
+        private bool haveLast;
         private readonly KaijuBody body = new KaijuBody();
         private bool usingBody;
         // Height of the model at scale 1, measured once from its renderers.
@@ -52,6 +63,9 @@ namespace KaijuMod
             foreach (var collider in go.GetComponentsInChildren<Collider>())
                 Object.Destroy(collider);
             Object.DontDestroyOnLoad(go);
+            anim = go.GetComponentInChildren<Animation>();
+            clipLength = anim != null && anim.clip != null ? anim.clip.length : 0f;
+            haveLast = false;
         }
 
         /// <summary>
@@ -72,6 +86,25 @@ namespace KaijuMod
             go.transform.position = GameApi.WorldToScene(worldBase);
             if (heading.sqrMagnitude > 0.0001f)
                 go.transform.rotation = Quaternion.LookRotation(new Vector3(heading.x, 0f, heading.y));
+            SyncWalk(worldBase, height);
+        }
+
+        /// <summary>Plays the walk at the rate that matches the ground he actually covered this frame.</summary>
+        private void SyncWalk(Vector3 worldBase, float height)
+        {
+            float dt = Time.deltaTime;
+            if (anim == null || clipLength <= 0f || dt <= 0f)
+                return;
+            if (haveLast)
+            {
+                float moved = new Vector2(worldBase.x - lastBase.x, worldBase.z - lastBase.z).magnitude;
+                float metresPerLoop = Mathf.Max(0.01f, StrideHeights * height);
+                float rate = moved / dt * clipLength / metresPerLoop;
+                foreach (AnimationState state in anim)
+                    state.speed = rate;
+            }
+            lastBase = worldBase;
+            haveLast = true;
         }
 
         public void Hide()

@@ -53,7 +53,7 @@ The C# project references the game's own assemblies, which are not in this repo.
 2. Launch **without Easy Anti-Cheat** (required for DLL mods).
 3. Start a single player game (debug god mode off, or he can't hurt you), open the console (F1) and run `kaiju test`. A stand-in Godzilla built from simple shapes appears 120 m in front of you and walks straight through you, clearing every non-terrain block in a 10 m radius. Stand still to get crushed. The log (`%APPDATA%\7DaysToDie\logs\`) shows `[KaijuMod]` lines.
 
-Other commands (`kaiju help` lists them): `kaiju start` walks the route in `KaijuMod/route.txt` (or the placeholder list in `Route.cs`), `kaiju stop`, `kaiju status`, `kaiju speed <m/s>`, `kaiju radius <m>`, `kaiju height <m>`. To record a real route between two towns, walk the road and run `kaiju addpoint` at each bend, then `kaiju saveroute`.
+Other commands (`kaiju help` lists them): `kaiju start` walks the route in `KaijuMod/route.txt` (or the placeholder list in `Route.cs`), `kaiju stop`, `kaiju status`, `kaiju speed <m/s>`, `kaiju radius <m>`, `kaiju height <m>`, `kaiju stride <body heights>` (slows or speeds his walk animation). To record a real route between two towns, walk the road and run `kaiju addpoint` at each bend, then `kaiju saveroute`.
 
 All calls into the game go through `src/KaijuMod/GameApi.cs`, checked against V3.3.0 (b17); see [docs/engine-api.md](docs/engine-api.md).
 
