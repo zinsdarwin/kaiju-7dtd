@@ -26,6 +26,8 @@ namespace KaijuMod
         private Vector2 heading;
         private float baseY;
         private bool haveBaseY;
+        // Players already reported as crushed this run, so a failed kill (god mode) logs once.
+        private readonly HashSet<EntityPlayer> crushed = new HashSet<EntityPlayer>();
 
         public bool Running { get; private set; }
         public Vector2 Position { get { return position; } }
@@ -60,6 +62,7 @@ namespace KaijuMod
             heading = (route[1] - route[0]).normalized;
             haveBaseY = false;
             Footprint.Reset();
+            crushed.Clear();
             visual.Show(Footprint.Radius * 2f, Footprint.Height);
             Running = true;
             Log.Out("[KaijuMod] Walking " + route.Count + " waypoints from " + position + " at " + Speed + " m/s");
@@ -92,7 +95,7 @@ namespace KaijuMod
             int y = Mathf.RoundToInt(baseY);
             Footprint.Tick(world, position, y);
             KillPlayersInside(world);
-            visual.Place(new Vector3(position.x, baseY, position.y), heading);
+            visual.Place(new Vector3(position.x, baseY, position.y), heading, Footprint.Radius * 2f, Footprint.Height);
 
             if (segment >= route.Count - 1)
             {
@@ -154,12 +157,16 @@ namespace KaijuMod
             foreach (EntityPlayer player in GameApi.Players(world))
             {
                 if (!GameApi.IsAlive(player))
+                {
+                    crushed.Remove(player); // log again if they respawn and walk back in
                     continue;
+                }
                 Vector3 p = GameApi.Position(player);
                 float dx = p.x - position.x, dz = p.z - position.y;
                 if (dx * dx + dz * dz > r2 || p.y < bottom || p.y > top)
                     continue;
-                Log.Out("[KaijuMod] Crushed player at " + p);
+                if (crushed.Add(player))
+                    Log.Out("[KaijuMod] Crushed player at " + p);
                 GameApi.Kill(player);
             }
         }

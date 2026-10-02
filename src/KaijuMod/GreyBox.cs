@@ -27,10 +27,11 @@ namespace KaijuMod
         }
 
         /// <summary>Places the box with its base at worldBase, facing heading (x, z).</summary>
-        public void Place(Vector3 worldBase, Vector2 heading)
+        public void Place(Vector3 worldBase, Vector2 heading, float width, float height)
         {
             if (go == null)
                 return;
+            go.transform.localScale = new Vector3(width, height, width);
             float h = go.transform.localScale.y;
             go.transform.position = GameApi.WorldToScene(worldBase + new Vector3(0f, h * 0.5f, 0f));
             if (heading.sqrMagnitude > 0.0001f)

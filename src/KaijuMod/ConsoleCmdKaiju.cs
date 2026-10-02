@@ -28,12 +28,13 @@ namespace KaijuMod
         public override string getHelp()
         {
             return "Usage:\n"
-                + "  kaiju start          walk the route (route.txt if present, else the built-in list)\n"
+                + "  kaiju start          walk this session's recorded waypoints, else route.txt, else the built-in list\n"
                 + "  kaiju test [dist]    walk a straight line from dist m in front of you, through you (default 120)\n"
                 + "  kaiju stop           stop and remove the grey box\n"
                 + "  kaiju status         position, segment, blocks cleared\n"
                 + "  kaiju speed <m/s>    set walking speed\n"
                 + "  kaiju radius <m>     set footprint radius\n"
+                + "  kaiju height <m>     set height (box size and how high blocks are cleared)\n"
                 + "  kaiju addpoint       record your position as the next waypoint\n"
                 + "  kaiju route          list recorded waypoints (as C# for Route.cs)\n"
                 + "  kaiju saveroute      write recorded waypoints to route.txt\n"
@@ -48,8 +49,18 @@ namespace KaijuMod
             {
                 case "start":
                 {
+                    // Waypoints recorded this session win, so record-then-start needs no save.
                     string source;
-                    var points = Route.Load(out source);
+                    List<Vector2> points;
+                    if (recorded.Count >= 2)
+                    {
+                        points = new List<Vector2>(recorded);
+                        source = "the waypoints recorded this session";
+                    }
+                    else
+                    {
+                        points = Route.Load(out source);
+                    }
                     string error;
                     if (director.Start(points, out error))
                         GameApi.ConsoleOut("Kaiju walking " + points.Count + " waypoints from " + source);
@@ -81,10 +92,18 @@ namespace KaijuMod
                     if (_params.Count > 1 && TryFloat(_params[1], out v) && v >= 1f)
                     {
                         director.Footprint.Radius = v;
-                        if (director.Running)
-                            GameApi.ConsoleOut("Takes full effect (box size) on the next start.");
                     }
                     GameApi.ConsoleOut("Kaiju footprint radius " + director.Footprint.Radius + " m");
+                    break;
+                }
+                case "height":
+                {
+                    float v;
+                    if (_params.Count > 1 && TryFloat(_params[1], out v) && v >= 5f && v <= 250f)
+                    {
+                        director.Footprint.Height = Mathf.RoundToInt(v);
+                    }
+                    GameApi.ConsoleOut("Kaiju height " + director.Footprint.Height + " m (5 to 250; blocks are cleared up to the world's build limit)");
                     break;
                 }
                 case "addpoint":
