@@ -4,10 +4,11 @@ namespace KaijuMod
 {
     /// <summary>
     /// What the player sees: the Godzilla model from KaijuMod/Resources/kaiju.unity3d if it is
-    /// installed, otherwise a plain grey box. Either way it is a plain Unity object, not a game
-    /// Entity: no collider, no AI; the director moves it directly every frame.
+    /// installed, otherwise the stand-in body built from primitives (KaijuBody). Either way it is
+    /// a plain Unity object, not a game Entity: no collider, no AI; the director moves it directly
+    /// every frame.
     /// </summary>
-    public class GreyBox
+    public class KaijuVisual
     {
         /// <summary>Asset bundle with the model, relative to the mod folder. Git-ignored, never committed.</summary>
         public const string BundleFile = "Resources/kaiju.unity3d";
@@ -15,13 +16,14 @@ namespace KaijuMod
         public const string AssetName = "Kaiju";
 
         private GameObject go;
-        private bool isModel;
+        private readonly KaijuBody body = new KaijuBody();
+        private bool usingBody;
         // Height of the model at scale 1, measured once from its renderers.
         private float modelHeight = 1f;
 
         public void Show(float width, float height)
         {
-            if (go != null)
+            if (go != null || usingBody)
                 return;
             GameObject prefab = null;
             try
@@ -30,24 +32,21 @@ namespace KaijuMod
             }
             catch (System.Exception e)
             {
-                Log.Warning("[KaijuMod] Could not load " + BundleFile + "?" + AssetName + ", using the grey box: " + e.Message);
+                Log.Warning("[KaijuMod] Could not load " + BundleFile + "?" + AssetName + ", using the stand-in body: " + e.Message);
             }
 
             if (prefab != null)
             {
                 go = Object.Instantiate(prefab);
                 go.name = "KaijuModel";
-                isModel = true;
                 modelHeight = MeasureHeight(go);
                 Log.Out("[KaijuMod] Using model " + AssetName + " (" + modelHeight + " m tall at scale 1)");
             }
             else
             {
-                go = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                go.name = "KaijuGreyBox";
-                isModel = false;
-                // If the default material's shader is stripped from the game build, the cube
-                // renders magenta. That is fine for a grey box: it is easy to spot.
+                body.Show(width, height);
+                usingBody = true;
+                return;
             }
             // Visual only: the footprint code decides what he hits, not physics.
             foreach (var collider in go.GetComponentsInChildren<Collider>())
@@ -56,31 +55,29 @@ namespace KaijuMod
         }
 
         /// <summary>
-        /// Places him with his feet at worldBase, facing heading (x, z). The box is sized to the
-        /// footprint; the model is scaled uniformly to the footprint height, so set the model's
-        /// pivot at its feet and its front along +z.
+        /// Places him with his feet at worldBase, facing heading (x, z). The model is scaled
+        /// uniformly to the footprint height, so set its pivot at its feet and its front along +z.
         /// </summary>
         public void Place(Vector3 worldBase, Vector2 heading, float width, float height)
         {
+            if (usingBody)
+            {
+                body.Place(worldBase, heading, width, height);
+                return;
+            }
             if (go == null)
                 return;
-            if (isModel)
-            {
-                float s = height / modelHeight;
-                go.transform.localScale = new Vector3(s, s, s);
-                go.transform.position = GameApi.WorldToScene(worldBase);
-            }
-            else
-            {
-                go.transform.localScale = new Vector3(width, height, width);
-                go.transform.position = GameApi.WorldToScene(worldBase + new Vector3(0f, height * 0.5f, 0f));
-            }
+            float s = height / modelHeight;
+            go.transform.localScale = new Vector3(s, s, s);
+            go.transform.position = GameApi.WorldToScene(worldBase);
             if (heading.sqrMagnitude > 0.0001f)
                 go.transform.rotation = Quaternion.LookRotation(new Vector3(heading.x, 0f, heading.y));
         }
 
         public void Hide()
         {
+            body.Hide();
+            usingBody = false;
             if (go == null)
                 return;
             Object.Destroy(go);

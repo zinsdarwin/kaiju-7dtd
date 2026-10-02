@@ -6,7 +6,7 @@ namespace KaijuMod
     /// <summary>
     /// Moves Godzilla along his route as plain data: a position on a polyline, advanced every
     /// frame by speed * time. No entity, no pathfinding. Each frame it also drives the footprint
-    /// destruction, the kill zone and the grey box visual.
+    /// destruction, the kill zone and his visual.
     /// </summary>
     public class KaijuDirector
     {
@@ -18,7 +18,7 @@ namespace KaijuMod
         public float ClimbRate = 6f;
 
         public readonly Footprint Footprint = new Footprint();
-        private readonly GreyBox visual = new GreyBox();
+        private readonly KaijuVisual visual = new KaijuVisual();
 
         private List<Vector2> route = new List<Vector2>();
         private int segment;

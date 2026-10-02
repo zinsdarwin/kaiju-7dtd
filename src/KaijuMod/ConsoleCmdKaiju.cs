@@ -5,7 +5,7 @@ using UnityEngine;
 namespace KaijuMod
 {
     /// <summary>
-    /// F1 console command for testing the grey box. The game finds console commands by scanning
+    /// F1 console command for testing the kaiju. The game finds console commands by scanning
     /// mod assemblies for ConsoleCmdAbstract subclasses.
     ///
     /// VERIFIED (V3.3): override the lowercase getCommands, getDescription and getHelp (protected
@@ -30,7 +30,7 @@ namespace KaijuMod
             return "Usage:\n"
                 + "  kaiju start          walk this session's recorded waypoints, else route.txt, else the built-in list\n"
                 + "  kaiju test [dist]    walk a straight line from dist m in front of you, through you (default 120)\n"
-                + "  kaiju stop           stop and remove the grey box\n"
+                + "  kaiju stop           stop and remove him\n"
                 + "  kaiju status         position, segment, blocks cleared\n"
                 + "  kaiju speed <m/s>    set walking speed\n"
                 + "  kaiju radius <m>     set footprint radius\n"
