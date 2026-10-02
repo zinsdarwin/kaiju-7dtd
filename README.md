@@ -59,11 +59,22 @@ All calls into the game go through `src/KaijuMod/GameApi.cs`, checked against V3
 
 ## Character assets (local only)
 
-Put your model's exported bundle at `KaijuMod/Resources/kaiju.unity3d` and keep source files in `assets-local/`. Both paths are git-ignored.
+Put your model's exported bundle at `KaijuMod/Resources/kaiju.unity3d` and keep source files in `assets-local/`. Both paths are git-ignored. Without a bundle, a stand-in body built from primitives is shown.
+
+### Model credit
+
+The bundle used in development is built from "Godzilla First Walk Animation (scrunchy32205 alt)" by carladoll996 (https://sketchfab.com/3d-models/godzilla-first-walk-animationscrunchy32205-alt-e46c2cc5b698471588afd0ff9875d519), licensed CC BY 4.0 (http://creativecommons.org/licenses/by/4.0/). Converted to a Unity asset bundle (re-oriented, scaled, Standard-shader materials); not distributed with this repo. Godzilla is a trademark of Toho Co., Ltd.; this is an unofficial fan mod.
 
 ## Unity
 
-Asset bundles must be built with the exact Unity editor version the game ships with. Read it from the first lines of `Player.log` before installing Unity.
+Asset bundles must be built with the exact Unity editor version the game ships with: **2022.3.62f2** for V3.3.0 (b17) (read it from `UnityPlayer.dll`'s product version or the first lines of `Player.log`).
+
+`tools/unity-bundle/` holds the build script. To build the bundle: copy it to a project under `assets-local/` (e.g. `assets-local/unity-kaiju/`), put the model at `Assets/Model/godzilla.glb`, then run:
+```
+"<Unity 2022.3.62f2>\Editor\Unity.exe" -batchmode -projectPath assets-local/unity-kaiju -executeMethod BuildKaiju.Build -kaijuOut KaijuMod/Resources -logFile build.log -quit
+```
+
+It imports the glb with glTFast, stands the model on its feet facing +z at height 1, swaps in Standard-shader materials, loops the walk with a legacy Animation, and writes `kaiju.unity3d` plus `preview.png` (a render of the model; git-ignored).
 
 ## Research
 
