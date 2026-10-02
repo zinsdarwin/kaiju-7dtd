@@ -16,6 +16,8 @@ namespace KaijuMod
             var harmony = new Harmony(HarmonyId);
             harmony.PatchAll(Assembly.GetExecutingAssembly());
             Log.Out("[KaijuMod] Harmony patches applied");
+            KaijuRunner.Create();
+            Log.Out("[KaijuMod] Director ready. Console: kaiju test, kaiju start, kaiju help");
         }
     }
 }

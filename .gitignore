@@ -27,3 +27,6 @@ Thumbs.db
 KaijuMod/Resources/*.unity3d
 KaijuMod/Resources/*.bundle
 assets-local/
+
+# Per-machine Claude Code settings
+.claude/settings.local.json
