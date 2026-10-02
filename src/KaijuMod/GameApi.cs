@@ -141,6 +141,22 @@ namespace KaijuMod
             return worldPos - Origin.position;
         }
 
+        /// <summary>
+        /// Loads a prefab from a Unity asset bundle in the mod's Resources folder, or null if the
+        /// file is missing. bundleFile is relative to the mod folder, e.g. "Resources/kaiju.unity3d".
+        /// </summary>
+        public static GameObject LoadModPrefab(string bundleFile, string assetName)
+        {
+            // Check first: AssetBundleManager logs an error for a missing file, and the model is
+            // optional (it stays local and is never committed).
+            string dir = System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
+            if (!System.IO.File.Exists(System.IO.Path.Combine(dir ?? ".", bundleFile)))
+                return null;
+            // VERIFIED (V3.3): DataLoader.LoadAsset<T>("#<bundle>?<asset>"); C# needs the
+            // #@modfolder(ModName): form, plain @modfolder: only works in XML.
+            return DataLoader.LoadAsset<GameObject>("#@modfolder(KaijuMod):" + bundleFile + "?" + assetName);
+        }
+
         /// <summary>Writes a line to the F1 console, or the log when no console is available.</summary>
         public static void ConsoleOut(string line)
         {
