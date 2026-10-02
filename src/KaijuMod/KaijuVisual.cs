@@ -60,8 +60,10 @@ namespace KaijuMod
             {
                 go = Object.Instantiate(prefab);
                 go.name = "KaijuModel";
-                modelHeight = MeasureHeight(go);
-                Log.Out("[KaijuMod] Using model " + AssetName + " (" + modelHeight + " m tall at scale 1)");
+                // The bundle build bakes the mesh to exactly 1 unit tall. Renderer bounds overstate it
+                // (skinned mesh bounds are padded, measured 1.25 in game), which made him 20% short.
+                modelHeight = 1f;
+                Log.Out("[KaijuMod] Using model " + AssetName + " (renderer bounds " + MeasureHeight(go) + " tall at scale 1; using 1)");
             }
             else
             {
