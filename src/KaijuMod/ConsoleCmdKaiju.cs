@@ -92,8 +92,6 @@ namespace KaijuMod
                     if (_params.Count > 1 && TryFloat(_params[1], out v) && v >= 1f)
                     {
                         director.Footprint.Radius = v;
-                        if (director.Running)
-                            GameApi.ConsoleOut("Takes full effect (box size) on the next start.");
                     }
                     GameApi.ConsoleOut("Kaiju footprint radius " + director.Footprint.Radius + " m");
                     break;
@@ -104,8 +102,6 @@ namespace KaijuMod
                     if (_params.Count > 1 && TryFloat(_params[1], out v) && v >= 5f && v <= 250f)
                     {
                         director.Footprint.Height = Mathf.RoundToInt(v);
-                        if (director.Running)
-                            GameApi.ConsoleOut("Takes full effect (box size) on the next start.");
                     }
                     GameApi.ConsoleOut("Kaiju height " + director.Footprint.Height + " m (5 to 250; blocks are cleared up to the world's build limit)");
                     break;

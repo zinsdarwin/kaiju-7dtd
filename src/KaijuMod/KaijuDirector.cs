@@ -95,7 +95,7 @@ namespace KaijuMod
             int y = Mathf.RoundToInt(baseY);
             Footprint.Tick(world, position, y);
             KillPlayersInside(world);
-            visual.Place(new Vector3(position.x, baseY, position.y), heading);
+            visual.Place(new Vector3(position.x, baseY, position.y), heading, Footprint.Radius * 2f, Footprint.Height);
 
             if (segment >= route.Count - 1)
             {
