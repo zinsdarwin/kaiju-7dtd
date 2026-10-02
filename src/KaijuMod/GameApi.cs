@@ -141,11 +141,43 @@ namespace KaijuMod
             return worldPos - Origin.position;
         }
 
+        /// <summary>World coordinates of a Unity scene position (inverse of WorldToScene).</summary>
+        public static Vector3 SceneToWorld(Vector3 scenePos)
+        {
+            // VERIFIED (V3.3): see WorldToScene.
+            return scenePos + Origin.position;
+        }
+
+        /// <summary>The player's view ray (crosshair) in world coordinates.</summary>
+        public static Ray LookRay(EntityPlayer player)
+        {
+            // VERIFIED (V3.3): EntityAlive.GetLookRay() is virtual; EntityPlayerLocal overrides it with
+            // the camera's centre ray, its origin already shifted to world coordinates (+ Origin.position).
+            return player.GetLookRay();
+        }
+
+        /// <summary>First collider hit along a world-space ray (terrain, blocks, entities), or null.</summary>
+        public static Vector3? Raycast(Vector3 worldOrigin, Vector3 direction, float maxDistance)
+        {
+            // UNVERIFIED in game: that chunk meshes carry colliders Physics.Raycast hits. Unity physics
+            // works in scene space, so shift by Origin.position both ways. Triggers are ignored.
+            RaycastHit hit;
+            if (Physics.Raycast(worldOrigin - Origin.position, direction, out hit, maxDistance, ~0, QueryTriggerInteraction.Ignore))
+                return hit.point + Origin.position;
+            return null;
+        }
+
         /// <summary>
         /// Loads a prefab from a Unity asset bundle in the mod's Resources folder, or null if the
         /// file is missing. bundleFile is relative to the mod folder, e.g. "Resources/kaiju.unity3d".
         /// </summary>
         public static GameObject LoadModPrefab(string bundleFile, string assetName)
+        {
+            return LoadModAsset<GameObject>(bundleFile, assetName);
+        }
+
+        /// <summary>Loads any asset (prefab, material, ...) from a bundle in the mod folder, or null if the file is missing.</summary>
+        public static T LoadModAsset<T>(string bundleFile, string assetName) where T : Object
         {
             // Check first: AssetBundleManager logs an error for a missing file, and the model is
             // optional (it stays local and is never committed).
@@ -154,7 +186,7 @@ namespace KaijuMod
                 return null;
             // VERIFIED (V3.3): DataLoader.LoadAsset<T>("#<bundle>?<asset>"); C# needs the
             // #@modfolder(ModName): form, plain @modfolder: only works in XML.
-            return DataLoader.LoadAsset<GameObject>("#@modfolder(KaijuMod):" + bundleFile + "?" + assetName);
+            return DataLoader.LoadAsset<T>("#@modfolder(KaijuMod):" + bundleFile + "?" + assetName);
         }
 
         /// <summary>Writes a line to the F1 console, or the log when no console is available.</summary>

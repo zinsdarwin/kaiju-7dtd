@@ -19,6 +19,19 @@ namespace KaijuMod
 
         public readonly Footprint Footprint = new Footprint();
         private readonly KaijuVisual visual = new KaijuVisual();
+        private readonly KaijuBreath breath;
+        // Direction he faces. Follows the route heading, except while breathing, when he turns
+        // toward the target (degrees per second).
+        private Vector2 facing = Vector2.up;
+        public float TurnRate = 30f;
+
+        public KaijuDirector()
+        {
+            breath = new KaijuBreath(visual);
+        }
+
+        public bool Breathing { get { return breath.Active; } }
+        public long BreathCleared { get { return breath.TotalCleared; } }
 
         private List<Vector2> route = new List<Vector2>();
         private int segment;
@@ -60,6 +73,7 @@ namespace KaijuMod
             segment = 0;
             position = route[0];
             heading = (route[1] - route[0]).normalized;
+            facing = heading;
             haveBaseY = false;
             Footprint.Reset();
             crushed.Clear();
@@ -74,6 +88,7 @@ namespace KaijuMod
             if (Running)
                 Log.Out("[KaijuMod] Stopped at " + position + ", " + Footprint.TotalCleared + " blocks cleared");
             Running = false;
+            breath.Cancel();
             visual.Hide();
         }
 
@@ -89,19 +104,59 @@ namespace KaijuMod
                 return;
             }
 
-            Advance(dt);
+            // He stands still while breathing.
+            if (!breath.Active)
+                Advance(dt);
             UpdateBaseY(world, dt);
+            UpdateFacing(dt);
+            breath.Tick(world, dt);
 
             int y = Mathf.RoundToInt(baseY);
             Footprint.Tick(world, position, y);
             KillPlayersInside(world);
-            visual.Place(new Vector3(position.x, baseY, position.y), heading, Footprint.Radius * 2f, Footprint.Height);
+            visual.Place(new Vector3(position.x, baseY, position.y), facing, Footprint.Radius * 2f, Footprint.Height);
 
-            if (segment >= route.Count - 1)
+            if (segment >= route.Count - 1 && !breath.Active)
             {
                 Log.Out("[KaijuMod] Reached the last waypoint");
                 Stop();
             }
+        }
+
+        /// <summary>After the walk animation has run: aim the head and draw the breath on the mouth.</summary>
+        public void LateTick()
+        {
+            if (Running)
+                breath.LateTick();
+        }
+
+        /// <summary>Atomic breath at a world-space point. He stops, turns to face it, charges and fires.</summary>
+        public bool Breathe(Vector3 worldTarget, out string error)
+        {
+            error = null;
+            if (!Running)
+            {
+                error = "He isn't out. Use kaiju test or kaiju start first.";
+                return false;
+            }
+            breath.Begin(worldTarget, Footprint.Height);
+            return true;
+        }
+
+        private void UpdateFacing(float dt)
+        {
+            Vector2 want = heading;
+            Vector2? target = breath.FacingTarget;
+            if (target.HasValue)
+            {
+                Vector2 d = target.Value - position;
+                if (d.sqrMagnitude > 1f)
+                    want = d.normalized;
+            }
+            float a = Vector2.SignedAngle(facing, want);
+            float step = TurnRate * dt;
+            facing = Mathf.Abs(a) <= step ? want : (Vector2)(Quaternion.Euler(0f, 0f, Mathf.Sign(a) * step) * facing);
+            facing.Normalize();
         }
 
         private void Advance(float dt)

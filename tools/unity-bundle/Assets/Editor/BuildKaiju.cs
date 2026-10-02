@@ -9,14 +9,18 @@ using UnityEngine;
 /// Batch-mode builder for the Kaiju asset bundle:
 ///   Unity.exe -batchmode -projectPath . -executeMethod BuildKaiju.Build -kaijuOut <dir> -quit
 /// Makes prefab "Kaiju" from Assets/Model/godzilla.glb: feet at the origin, facing +z, 1 unit
-/// tall, Standard-shader materials, legacy Animation playing the walk on loop. Writes
-/// kaiju.unity3d and preview.png to the output folder.
+/// tall, Standard-shader materials, legacy Animation playing the walk on loop, and an empty
+/// "Mouth" on the head bone (forward = where the breath goes). The dorsal plate material
+/// (name contains "Scales") has emission enabled at black so the mod can light it. Also bundles
+/// the atomic breath materials KaijuBeam, KaijuSpark and KaijuSmoke. Writes kaiju.unity3d,
+/// preview.png and preview-glow.png (plates lit) to the output folder.
 /// </summary>
 public static class BuildKaiju
 {
     const string ModelPath = "Assets/Model/godzilla.glb";
     const string PrefabPath = "Assets/Kaiju.prefab";
     const string GenDir = "Assets/Generated";
+    const string PlateMaterialKey = "Scales";
 
     public static void Build()
     {
@@ -87,6 +91,8 @@ public static class BuildKaiju
         scaler.localScale = Vector3.one / h;
         verts = BakedVertices(root);
         Debug.Log("[BuildKaiju] final bounds x " + verts.Min(v => v.x) + ".." + verts.Max(v => v.x) + " y " + verts.Min(v => v.y) + ".." + verts.Max(v => v.y) + " z " + verts.Min(v => v.z) + ".." + verts.Max(v => v.z));
+        Vector3? snout = AddMouth(root);
+        SplitPlates(root, snout);
 
         // Root motion check: a walk that moves the hips would slide him backwards each loop.
         if (walk != null)
@@ -114,6 +120,14 @@ public static class BuildKaiju
                 if (!made.TryGetValue(mats[i], out var m))
                 {
                     m = ToStandard(mats[i]);
+                    if (m.name.Contains(PlateMaterialKey))
+                    {
+                        // Emission on at black: the mod raises _EmissionColor for the breath charge-up.
+                        // Enabling it here keeps the _EMISSION shader variant in the bundle.
+                        m.EnableKeyword("_EMISSION");
+                        m.SetColor("_EmissionColor", Color.black);
+                        m.globalIlluminationFlags = MaterialGlobalIlluminationFlags.RealtimeEmissive;
+                    }
                     AssetDatabase.CreateAsset(m, GenDir + "/" + Safe(mats[i].name) + ".mat");
                     made[mats[i]] = m;
                 }
@@ -126,15 +140,166 @@ public static class BuildKaiju
 
         PrefabUtility.SaveAsPrefabAsset(root, PrefabPath);
         RenderPreview(root, Path.Combine(outDir, "preview.png"));
+        foreach (var m in made.Values.Where(m => m.name.Contains(PlateMaterialKey)))
+            m.SetColor("_EmissionColor", new Color(0.35f, 0.7f, 1f) * 3f);
+        RenderPreview(root, Path.Combine(outDir, "preview-glow.png"));
+        foreach (var m in made.Values.Where(m => m.name.Contains(PlateMaterialKey)))
+            m.SetColor("_EmissionColor", Color.black);
         UnityEngine.Object.DestroyImmediate(root);
+        var effectPaths = MakeEffectMaterials();
         AssetDatabase.SaveAssets();
 
-        var build = new AssetBundleBuild { assetBundleName = "kaiju.unity3d", assetNames = new[] { PrefabPath } };
+        var build = new AssetBundleBuild { assetBundleName = "kaiju.unity3d", assetNames = new[] { PrefabPath }.Concat(effectPaths).ToArray() };
         string tmp = Path.Combine(Path.GetTempPath(), "kaiju-bundle");
         Directory.CreateDirectory(tmp);
         BuildPipeline.BuildAssetBundles(tmp, new[] { build }, BuildAssetBundleOptions.ChunkBasedCompression, BuildTarget.StandaloneWindows64);
         File.Copy(Path.Combine(tmp, "kaiju.unity3d"), Path.Combine(outDir, "kaiju.unity3d"), true);
         Debug.Log("[BuildKaiju] wrote " + Path.Combine(outDir, "kaiju.unity3d"));
+    }
+
+    /// <summary>
+    /// Adds an empty "Mouth" at the front of the snout, parented to the bone that moves it most,
+    /// facing his front. The mod fires the breath from it and turns that bone (and its parent) to aim.
+    /// </summary>
+    static Vector3? AddMouth(GameObject root)
+    {
+        var all = new List<(Vector3 pos, BoneWeight w, Transform[] bones)>();
+        foreach (var smr in root.GetComponentsInChildren<SkinnedMeshRenderer>())
+        {
+            var mesh = new Mesh();
+            smr.BakeMesh(mesh, true);
+            var m = root.transform.worldToLocalMatrix * smr.transform.localToWorldMatrix;
+            var v = mesh.vertices;
+            var w = smr.sharedMesh.boneWeights;
+            for (int i = 0; i < v.Length && i < w.Length; i++)
+                all.Add((m.MultiplyPoint3x4(v[i]), w[i], smr.bones));
+            UnityEngine.Object.DestroyImmediate(mesh);
+        }
+        // Snout tip: the front-most point of the head (above the arms).
+        var head = all.Where(a => a.pos.y > 0.7f).ToList();
+        if (head.Count == 0)
+        {
+            Debug.LogWarning("[BuildKaiju] no head vertices found; no Mouth marker");
+            return null;
+        }
+        Vector3 tip = head.OrderByDescending(a => a.pos.z).First().pos;
+        Vector3 mouth = tip + new Vector3(0f, -0.02f, -0.015f);
+        var score = new Dictionary<Transform, float>();
+        foreach (var a in all.Where(a => (a.pos - tip).sqrMagnitude < 0.06f * 0.06f))
+        {
+            void Add(int idx, float wt)
+            {
+                if (wt <= 0f || idx < 0 || idx >= a.bones.Length || a.bones[idx] == null) return;
+                score.TryGetValue(a.bones[idx], out var s0);
+                score[a.bones[idx]] = s0 + wt;
+            }
+            Add(a.w.boneIndex0, a.w.weight0); Add(a.w.boneIndex1, a.w.weight1);
+            Add(a.w.boneIndex2, a.w.weight2); Add(a.w.boneIndex3, a.w.weight3);
+        }
+        if (score.Count == 0)
+        {
+            Debug.LogWarning("[BuildKaiju] no bone weights near the snout; no Mouth marker");
+            return tip;
+        }
+        Transform bone = score.OrderByDescending(kv => kv.Value).First().Key;
+        var marker = new GameObject("Mouth").transform;
+        marker.position = root.transform.TransformPoint(mouth);
+        marker.rotation = Quaternion.LookRotation(root.transform.forward);
+        marker.SetParent(bone, true);
+        Debug.Log("[BuildKaiju] mouth at " + mouth + " on bone " + bone.name + " (parent " + (bone.parent ? bone.parent.name : "none") + ")");
+        return tip;
+    }
+
+    /// <summary>
+    /// The plate material also covers claws and teeth. Moves those triangles to a copy of the
+    /// material without "Scales" in its name, so only the dorsal plates glow. Classified by
+    /// position in the 1-unit, +z-facing pose: feet claws are near the ground, hand claws are
+    /// forward and below the head, teeth are near the snout.
+    /// </summary>
+    static void SplitPlates(GameObject root, Vector3? snout)
+    {
+        foreach (var smr in root.GetComponentsInChildren<SkinnedMeshRenderer>())
+        {
+            var mats = smr.sharedMaterials;
+            int sub = Array.FindIndex(mats, m => m != null && m.name.Contains(PlateMaterialKey));
+            if (sub < 0)
+                continue;
+            var baked = new Mesh();
+            smr.BakeMesh(baked, true);
+            var tm = root.transform.worldToLocalMatrix * smr.transform.localToWorldMatrix;
+            var pos = baked.vertices.Select(v => tm.MultiplyPoint3x4(v)).ToArray();
+            UnityEngine.Object.DestroyImmediate(baked);
+
+            var mesh = UnityEngine.Object.Instantiate(smr.sharedMesh);
+            mesh.name = smr.sharedMesh.name + "_split";
+            var tris = mesh.GetTriangles(sub);
+            var plates = new List<int>();
+            var other = new List<int>();
+            for (int i = 0; i < tris.Length; i += 3)
+            {
+                Vector3 c = (pos[tris[i]] + pos[tris[i + 1]] + pos[tris[i + 2]]) / 3f;
+                bool claw = c.y < 0.1f || (c.z > 0.3f && c.y < 0.72f);
+                bool tooth = snout.HasValue && (c - snout.Value).magnitude < 0.09f;
+                (claw || tooth ? other : plates).AddRange(new[] { tris[i], tris[i + 1], tris[i + 2] });
+            }
+            if (other.Count == 0)
+                continue;
+            mesh.subMeshCount = mats.Length + 1;
+            mesh.SetTriangles(plates, sub);
+            mesh.SetTriangles(other, mats.Length);
+            AssetDatabase.CreateAsset(mesh, GenDir + "/" + Safe(mesh.name) + ".asset");
+            smr.sharedMesh = mesh;
+            var claws = new Material(mats[sub]) { name = "GZ_Claws" };
+            smr.sharedMaterials = mats.Concat(new[] { claws }).ToArray();
+            Debug.Log("[BuildKaiju] plates: " + plates.Count / 3 + " triangles glow, " + other.Count / 3 + " claw/teeth triangles moved to GZ_Claws");
+        }
+    }
+
+    /// <summary>Additive beam and spark materials and an alpha-blended smoke material, with generated soft textures.</summary>
+    static string[] MakeEffectMaterials()
+    {
+        var beamTex = SoftTexture("kaiju_beam_tex", (u, v) => Mathf.Exp(-Mathf.Pow((v - 0.5f) * 4.5f, 2f)));
+        var dotTex = SoftTexture("kaiju_dot_tex", (u, v) =>
+        {
+            float d = new Vector2(u - 0.5f, v - 0.5f).magnitude * 2f;
+            return Mathf.Clamp01(1f - d) * Mathf.Clamp01(1f - d);
+        });
+        return new[]
+        {
+            EffectMaterial("KaijuBeam", "Legacy Shaders/Particles/Additive", beamTex),
+            EffectMaterial("KaijuSpark", "Legacy Shaders/Particles/Additive", dotTex),
+            EffectMaterial("KaijuSmoke", "Legacy Shaders/Particles/Alpha Blended", dotTex),
+        };
+    }
+
+    static string EffectMaterial(string name, string shader, Texture2D tex)
+    {
+        var sh = Shader.Find(shader);
+        if (sh == null)
+            throw new Exception("Shader not found: " + shader);
+        var m = new Material(sh) { name = name };
+        m.SetTexture("_MainTex", tex);
+        m.SetColor("_TintColor", new Color(0.5f, 0.5f, 0.5f, 0.5f));
+        string path = GenDir + "/" + name + ".mat";
+        AssetDatabase.CreateAsset(m, path);
+        return path;
+    }
+
+    static Texture2D SoftTexture(string name, Func<float, float, float> alpha)
+    {
+        const int N = 64;
+        var t = new Texture2D(N, N, TextureFormat.RGBA32, true) { name = name, wrapMode = TextureWrapMode.Clamp };
+        var px = new Color[N * N];
+        for (int y = 0; y < N; y++)
+            for (int x = 0; x < N; x++)
+            {
+                float a = alpha((x + 0.5f) / N, (y + 0.5f) / N);
+                px[y * N + x] = new Color(a, a, a, a);
+            }
+        t.SetPixels(px);
+        t.Apply();
+        AssetDatabase.CreateAsset(t, GenDir + "/" + name + ".asset");
+        return t;
     }
 
     static List<Vector3> BakedVertices(GameObject root)
