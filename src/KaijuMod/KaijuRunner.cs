@@ -22,6 +22,7 @@ namespace KaijuMod
                 // Time.deltaTime is 0 while the single player game is paused (if the game pauses
                 // via timeScale; to verify), so he stops with it.
                 KaijuDirector.Instance.Tick(Time.deltaTime);
+                KaijuRun.Instance.Tick(Time.deltaTime);
             }
             catch (System.Exception e)
             {

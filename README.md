@@ -28,7 +28,7 @@ docs/                <- design notes and research
 ## Roadmap
 
 - [x] Phase 0: repo, mod skeleton, Harmony project
-- [ ] Map generator: custom 6k snake world from a vanilla V3.2 template
+- [x] Map generator: custom 6k snake world (`tools/snakemap`)
 - [ ] Milestone 1: grey box walks the road between two towns, destroys blocks, kills a player in its path
 - [ ] Long-distance visual model
 - [ ] Devastation pass for areas crossed while unloaded
@@ -53,7 +53,21 @@ The C# project references the game's own assemblies, which are not in this repo.
 2. Launch **without Easy Anti-Cheat** (required for DLL mods).
 3. Start a single player game (debug god mode off, or he can't hurt you), open the console (F1) and run `kaiju test`. A stand-in Godzilla built from simple shapes appears 120 m in front of you and walks straight through you, clearing every non-terrain block in a 10 m radius. Stand still to get crushed. The log (`%APPDATA%\7DaysToDie\logs\`) shows `[KaijuMod]` lines.
 
-Other commands (`kaiju help` lists them): `kaiju start` walks the route in `KaijuMod/route.txt` (or the placeholder list in `Route.cs`), `kaiju stop`, `kaiju status`, `kaiju speed <m/s>`, `kaiju radius <m>`, `kaiju height <m>`, `kaiju stride <body heights>` (slows or speeds his walk animation), `kaiju breath` (atomic breath at what you are looking at; `kaiju breath me` aims at you). The breath stops him, turns him to face the target, lights his dorsal plates for 3 s, then fires a 4 s beam that destroys blocks along its path (terrain stays) and kills anyone in it. It needs the model bundle for the glow, head aim and beam materials. To record a real route between two towns, walk the road and run `kaiju addpoint` at each bend, then `kaiju saveroute`.
+Other commands (`kaiju help` lists them): `kaiju start` walks the route in `KaijuMod/route.txt` (or the placeholder list in `Route.cs`), `kaiju stop`, `kaiju status`, `kaiju speed <m/s>`, `kaiju radius <m>`, `kaiju height <m>`, `kaiju stride <body heights>` (slows or speeds his walk animation), `kaiju breath` (atomic breath at what you are looking at; `kaiju breath me` aims at you). The breath stops him, turns him to face the target, lights his dorsal plates for 3 s, then fires a 4 s beam that destroys blocks along its path (terrain stays) and kills anyone in it. It needs the model bundle for the glow, head aim and beam materials. When the beam ends on a target it detonates like an atomic bomb, Minus One style: a white flash, a dust shockwave along the ground, a crater four times the beam's width (blocks only, terrain stays; anyone inside dies), and a mushroom cloud that climbs to about five times his height over a minute and drifts away over a couple of minutes. To record a real route between two towns, walk the road and run `kaiju addpoint` at each bend, then `kaiju saveroute`.
+
+### The Run
+
+Start a new game on the **Kaiju Snake** world (from `tools/snakemap`) and The Run starts by itself: the mod reads `kaiju.xml` from the world folder (other worlds leave it off).
+
+- As soon as you spawn, Godzilla rises from the sea and destroys the start city. He walks in along its main road, back out along the next street, and uses his atomic breath on the blocks in between.
+- A radiation front then sweeps along the strip from the ruined city toward the strip's end city, timed to stop 200 m short of it when the blood moon starts. Anyone behind it, or in an earlier strip, takes 4 radiation damage a second and gets an on-screen warning.
+- When the blood moon horde ends (dawn), he destroys the end city. For the next 4 in-game hours the front sweeps over that city to the coast while you escape north through the pass; then the next strip's front starts.
+- **The Oxygen Destroyer.** Cedar Harbor, Cinder Bay, Dune Point and Frostport each hold one part in a glowing crate (placed in the building nearest the city centre once you get near; a compass marker appears inside the city). Godzilla never destroys the crates, so a missed part can be dug out of the ruins. Craft the Oxygen Destroyer at a workbench from the four parts (plus 10 electrical parts and 20 forged steel), place it inside Ashmouth and use it to arm it. When the last blood moon horde ends he attacks Ashmouth: if he comes within 40 m of the armed device he dies and the run is won; otherwise the city falls and the run is lost.
+- **Fallout.** A dark remnant cloud and a green-grey haze hang over every city he has attacked, for the rest of the run. Inside the radiation, ash falls around you, the air turns green-grey and a geiger counter clicks.
+- **Sound.** Each atomic blast is a deep boom heard from kilometres away, followed by smaller explosions over the next seconds. He roars (a bear and a dire wolf pitched way down) when he rises from the sea, before his first breath on a city, every 30-60 s while walking, and when he dies.
+- Progress is saved to `kaiju_run.xml` in the save folder.
+
+Commands: `kaiju run` (status: day, strip, front position, next attack; `kaiju run reset` starts over), `kaiju attack <city name|start|end>` (send him at a city now), `kaiju radiation <on|off>`, `kaiju parts` (where each part's crate is and which you carry), `kaiju give <1-4|all>` (testing), `kaiju attack finale` (the last attack, with the Oxygen Destroyer check, now), `kaiju roar`.
 
 All calls into the game go through `src/KaijuMod/GameApi.cs`, checked against V3.3.0 (b17); see [docs/engine-api.md](docs/engine-api.md).
 

@@ -14,7 +14,7 @@ namespace KaijuMod
         /// <summary>Horizontal radius in metres (one block = one metre).</summary>
         public float Radius = 10f;
         /// <summary>Blocks cleared above his base height.</summary>
-        public int Height = 120;
+        public int Height = 51; // Godzilla Minus One
         /// <summary>Blocks cleared below his base height (foundations, shallow basements).</summary>
         public int Depth = 3;
         /// <summary>Block reads allowed per frame while scanning new columns.</summary>
