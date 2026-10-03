@@ -19,8 +19,8 @@ namespace KaijuMod
         public static float FadeTime = 1.2f;
         /// <summary>Longest beam, in metres from the mouth.</summary>
         public static float Range = 600f;
-        /// <summary>Beam damage radius as a fraction of his height (0.04 at 120 m = about 5 m).</summary>
-        public static float RadiusFraction = 0.04f;
+        /// <summary>Beam damage radius as a fraction of his height (0.08 at 51 m = about 4 m).</summary>
+        public static float RadiusFraction = 0.08f;
         /// <summary>How fast the beam's front travels out from the mouth, m/s.</summary>
         public static float BeamSpeed = 400f;
         /// <summary>Blocks set to air per frame by the beam (on top of the footprint's budget).</summary>
@@ -40,7 +40,7 @@ namespace KaijuMod
         private Vector3 target;        // aim point, world coordinates
         private Vector3 mouthWorld;    // last known mouth position, world coordinates
         private Vector3 beamEnd;       // current beam end, world coordinates
-        private float height = 120f;
+        private float height = 51f;
         private float aimWeight;
 
         // Damage along the beam: cells within radius of the traced segment, nearest the mouth first.
