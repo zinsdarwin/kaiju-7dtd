@@ -544,7 +544,7 @@ class SnakeMap:
 
         # Spawn: just east of the start city, in the pine forest beside the road.
         start = next(s for s in self.settlements if s["role"] == "start")
-        sx = start["x"] + start["half"] + 140
+        sx = start["x"] + start["half"] + 40
         with open(os.path.join(out, "spawnpoints.xml"), "w", encoding="utf-8", newline="\n") as f:
             f.write('<?xml version="1.0" encoding="UTF-8"?>\n<spawnpoints>\n')
             for k, dx in enumerate((0, 25, 50, 75)):
