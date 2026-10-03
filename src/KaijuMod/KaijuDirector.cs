@@ -344,9 +344,9 @@ namespace KaijuMod
         {
             int x = Mathf.FloorToInt(position.x);
             int z = Mathf.FloorToInt(position.y);
-            if (!GameApi.IsChunkLoaded(world, x, z))
-                return; // keep the last known height while walking through unloaded ground
-            float ground = GameApi.TerrainHeight(world, x, z);
+            // Works on unloaded ground too (the world heightmap), so he stands at the right height
+            // when he comes ashore far from the player.
+            float ground = GameApi.GroundHeight(world, x, z);
             if (!haveBaseY)
             {
                 baseY = ground;

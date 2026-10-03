@@ -89,6 +89,19 @@ namespace KaijuMod
             return world.GetTerrainHeight(x, z);
         }
 
+        /// <summary>
+        /// Ground height at a column anywhere on the map: the loaded chunk's terrain height, or the
+        /// world heightmap where the chunk is not loaded (far from the player).
+        /// </summary>
+        public static float GroundHeight(World world, int x, int z)
+        {
+            // VERIFIED (V3.3): World.GetHeightAt(x, z) reads the terrain generator's heightmap
+            // (TerrainFromRaw.GetTerrainHeightAt, world coordinates, whole map, no chunk needed).
+            if (IsChunkLoaded(world, x, z))
+                return TerrainHeight(world, x, z);
+            return world.GetHeightAt(x, z);
+        }
+
         /// <summary>True if the chunk holding this column is loaded, so its blocks can be read and changed.</summary>
         public static bool IsChunkLoaded(World world, int x, int z)
         {
@@ -273,8 +286,15 @@ namespace KaijuMod
             {
                 Vector3 p = worldOrigin + dir * d;
                 int x = Mathf.FloorToInt(p.x), y = Mathf.FloorToInt(p.y), z = Mathf.FloorToInt(p.z);
-                if (y < 0 || y > 254 || !IsChunkLoaded(world, x, z))
+                if (y < 0 || y > 254)
                     continue;
+                if (!IsChunkLoaded(world, x, z))
+                {
+                    // No block data out here: hit the ground from the world heightmap.
+                    if (p.y <= world.GetHeightAt(x, z))
+                        return p;
+                    continue;
+                }
                 if (p.y <= TerrainHeight(world, x, z) || !world.GetBlock(new Vector3i(x, y, z)).isair)
                     return p;
             }
