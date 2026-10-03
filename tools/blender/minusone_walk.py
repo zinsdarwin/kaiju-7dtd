@@ -262,6 +262,14 @@ for o in meshes:
     for b in band:
         counts[b] += 1
 print("plate bands (faces, tail tip first):", counts)
+# His eyes (Object_13, both in one mesh) glow with the plates: "Scales" puts them in the mod's
+# glow set; no band, so they brighten with the whole charge.
+for o in meshes:
+    if o.name == 'Object_13':
+        for sl in o.material_slots:
+            if sl.material:
+                sl.material.name = "Scales_NoSplit_Eyes"
+print("eyes material:", [sl.material.name for o in meshes if o.name == 'Object_13' for sl in o.material_slots])
 for o in meshes:
     print("material", o.name, [s.material.name for s in o.material_slots if s.material][:3])
 
@@ -322,8 +330,9 @@ def pose_dict(hips, spine, neck, head, jaw, arms, elbows, tail0, tail):
 
 REST = pose_dict(0, (0, 0, 0), 0, 0, 0, 0, 0, 0, 0)
 CROUCH = pose_dict(7, (8, 8, 6), 14, 20, 0, 22, 14, 4, 1.2)
-INHALE = pose_dict(2, (2, 0, -6), -12, -22, 14, 12, 8, 3, 1.0)
-FIRE = pose_dict(9, (10, 8, 4), 6, 4, 42, 32, 22, 7, 2.0)
+INHALE = pose_dict(2, (2, 0, -6), -12, -22, 22, 12, 8, 3, 1.0)
+# Fire: chest ~12 degrees further over than at first, head held up to aim forward, jaw wide.
+FIRE = pose_dict(12, (13, 11, 7), 2, -6, 70, 34, 24, 8, 2.2)  # jaw: widest before it folds into the throat
 KEYS = [(0, REST), (40, CROUCH), (150, CROUCH), (162, INHALE), (168, FIRE), (228, FIRE), (264, REST)]
 ORDER = [HIPS] + THIGHS + SPINE + [NECK, HEAD, JAW, JAW2] + SHOULDERS + ELBOWS + TAIL
 
@@ -352,7 +361,10 @@ for f in range(0, BREATH_N + 1, 2):
         pose[HEAD] += 1.5 * math.sin(f * 2.3)
         pose[JAW] += 2.0 * math.sin(f * 1.7)
     for b in ORDER:
-        if b in THIGHS:
+        if b in (JAW, JAW2):
+            # The jaw opens about its own X axis (as in the model's roar pose), not the world's.
+            P[b].rotation_quaternion = Euler((math.radians(pose[b]), 0, 0)).to_quaternion()
+        elif b in THIGHS:
             # Keep the legs where they stand while the pelvis tips forward.
             turn(b, rot((1, 0, 0), -pose[HIPS]))
         elif b == HIPS:
