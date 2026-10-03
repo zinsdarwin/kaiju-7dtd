@@ -1,0 +1,283 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kaiju Viewer</title>
+<style>
+  :root {
+    --bg: #1d2127; --panel: #262b33; --text: #e6e9ee; --muted: #9aa3ae; --accent: #5aa0ff; --line: #3a414c;
+  }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); font: 14px system-ui, sans-serif; }
+  #view { position: fixed; inset: 0; }
+  #ui { position: fixed; left: 12px; right: 12px; bottom: 12px; background: var(--panel); border: 1px solid var(--line);
+        border-radius: 10px; padding: 10px 12px; display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; }
+  button { background: #323945; color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 6px 12px; cursor: pointer; font: inherit; }
+  button.on { background: var(--accent); border-color: var(--accent); color: #0b1220; }
+  label { color: var(--muted); display: flex; align-items: center; gap: 6px; }
+  #time { flex: 1 1 260px; min-width: 200px; }
+  #phase { min-width: 190px; color: var(--accent); font-variant-numeric: tabular-nums; }
+  #status { position: fixed; top: 12px; left: 12px; color: var(--muted); background: rgba(0,0,0,.35); padding: 4px 8px; border-radius: 6px; }
+</style>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+<div id="view"></div>
+<div id="status">Loading model…</div>
+<div id="ui">
+  <button id="walk">Walk</button>
+  <button id="roar">Roar</button>
+  <button id="breath">Breath</button>
+  <button id="pause">Pause</button>
+  <input id="time" type="range" min="0" max="11" step="0.01" value="0" title="Breath time (s)">
+  <span id="phase">–</span>
+  <label>Speed <select id="speed"><option>0.25</option><option>0.5</option><option selected>1</option><option>2</option></select></label>
+  <label><input id="beam" type="checkbox" checked> Beam</label>
+  <button id="cam">Side view</button>
+  <button id="reload">Reload model</button>
+</div>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+
+// Same model the game's bundle is built from (git-ignored, local only).
+const MODEL = '/assets-local/minusone/out/godzilla.glb';
+// Breath timing, as in the mod (KaijuBreath.Mega*): charge 7 s, fire 2.5 s, fade 1.5 s.
+const CHARGE = 7, FIRE = 2.5, FADE = 1.5, BREATH = CHARGE + FIRE + FADE;
+const GLOW = new THREE.Color(0.3, 0.6, 1.0);
+
+const view = document.getElementById('view');
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+view.appendChild(renderer.domElement);
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x8fa3b8);
+scene.fog = new THREE.Fog(0x8fa3b8, 40, 120);
+const camera = new THREE.PerspectiveCamera(35, 1, 0.05, 500);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+scene.add(new THREE.HemisphereLight(0xdfe8f5, 0x4a443c, 1.2));
+const sun = new THREE.DirectionalLight(0xffffff, 2.2);
+sun.position.set(6, 10, 4);
+scene.add(sun);
+const ground = new THREE.Mesh(new THREE.CircleGeometry(60, 64), new THREE.MeshStandardMaterial({ color: 0x5b5a55, roughness: 1 }));
+ground.rotation.x = -Math.PI / 2;
+scene.add(ground);
+
+const composer = new EffectComposer(renderer);
+composer.addPass(new RenderPass(scene, camera));
+const bloom = new UnrealBloomPass(new THREE.Vector2(1, 1), 0.55, 0.4, 0.8);
+composer.addPass(bloom);
+composer.addPass(new OutputPass());
+
+function resize() {
+  const w = innerWidth, h = innerHeight;
+  renderer.setSize(w, h);
+  composer.setSize(w, h);
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+}
+addEventListener('resize', resize);
+resize();
+
+// Beam: a glowing core and a soft outer cylinder from the mouth.
+const beam = new THREE.Group();
+const core = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.08, 1, 12, 1, true),
+  new THREE.MeshBasicMaterial({ color: 0xdff0ff, transparent: true, opacity: 0.95 }));
+const outer = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.26, 1, 16, 1, true),
+  new THREE.MeshBasicMaterial({ color: 0x4f8dff, transparent: true, opacity: 0.45, blending: THREE.AdditiveBlending, depthWrite: false }));
+beam.add(core, outer);
+beam.visible = false;
+scene.add(beam);
+
+let beamScale = 1;
+let model = null, mixer = null, actions = {}, glowMats = [], bones = {}, mode = 'walk', paused = false, speed = 1, side = false;
+const loader = new GLTFLoader();
+const status = document.getElementById('status');
+
+// The roar plays over the walk with only the tracks that change (as the bundle build keeps them).
+function movingOnly(clip) {
+  const keep = clip.tracks.filter(t => {
+    const v = t.values, n = t.getValueSize();
+    for (let i = n; i < v.length; i++) if (Math.abs(v[i] - v[i % n]) > 1e-4) return true;
+    return false;
+  });
+  return new THREE.AnimationClip(clip.name, clip.duration, keep);
+}
+
+// Bounds of the skinned meshes as posed (Box3.setFromObject reads the unskinned geometry).
+function skinnedBox(root) {
+  root.updateMatrixWorld(true);
+  const box = new THREE.Box3(), b = new THREE.Box3();
+  root.traverse(o => {
+    if (!o.isSkinnedMesh) return;
+    o.skeleton.update();
+    o.computeBoundingBox();
+    b.copy(o.boundingBox).applyMatrix4(o.matrixWorld);
+    box.union(b);
+  });
+  return box;
+}
+
+function load() {
+  status.textContent = 'Loading model…';
+  loader.load(MODEL + '?t=' + Date.now(), gltf => {
+    if (model) scene.remove(model);
+    model = gltf.scene;
+    scene.add(model);
+    glowMats = [];
+    bones = {};
+    model.traverse(o => {
+      if (o.isBone) bones[o.name.replace(/\./g, '')] = o; // three.js drops the dots from node names
+      if (o.isMesh) {
+        o.frustumCulled = false;
+        const mats = Array.isArray(o.material) ? o.material : [o.material];
+        for (const m of mats) {
+          if (!m.name.includes('Scales')) continue;
+          const b = m.name.match(/Band(\d+)/);
+          m.emissive = GLOW.clone();
+          m.emissiveIntensity = 0;
+          glowMats.push({ m, band: b ? parseInt(b[1], 10) : -1 });
+        }
+      }
+    });
+    mixer = new THREE.AnimationMixer(model);
+    actions = {};
+    for (const clip of gltf.animations) {
+      const key = clip.name.toLowerCase();
+      const c = key.includes('roar') ? movingOnly(clip) : clip;
+      const a = mixer.clipAction(c);
+      if (!key.includes('walk')) { a.setLoop(THREE.LoopOnce); a.clampWhenFinished = true; }
+      actions[key.includes('walk') ? 'walk' : key.includes('roar') ? 'roar' : 'breath'] = a;
+    }
+    // Stand him on the ground, centred on his feet, and frame him (pose of the walk's first frame).
+    actions.walk && actions.walk.reset().play();
+    mixer.update(0);
+    const box = skinnedBox(model);
+    model.position.x -= (box.min.x + box.max.x) / 2;
+    model.position.z -= (box.min.z + box.max.z) / 2;
+    model.position.y -= box.min.y;
+    const size = box.getSize(new THREE.Vector3());
+    const h = size.y;
+    camera.near = h * 0.01; camera.far = h * 60; camera.updateProjectionMatrix();
+    scene.fog.near = h * 8; scene.fog.far = h * 25;
+    ground.scale.setScalar(h / 6);
+    camera.position.set(h * 1.4, h * 0.6, h * 2.0); // glTF front is +z
+    beamScale = h / 6;
+    controls.target.set(0, h * 0.5, 0);
+    window.kv = { model, size, camera, controls, actions, mixer };
+    status.textContent = 'Clips: ' + gltf.animations.map(c => c.name + ' ' + c.duration.toFixed(1) + 's').join(', ')
+      + ' · glow materials: ' + glowMats.length + ' · drag to orbit, scroll to zoom';
+    setMode(mode);
+  }, undefined, e => { status.textContent = 'Could not load ' + MODEL + ': ' + e.message; });
+}
+
+function setMode(m) {
+  mode = m;
+  for (const id of ['walk', 'roar', 'breath'])
+    document.getElementById(id).classList.toggle('on', id === m);
+  if (!mixer) return;
+  const { walk, roar, breath } = actions;
+  if (walk) { walk.reset().play(); walk.setEffectiveWeight(m === 'breath' ? 0 : 1); }
+  if (roar) { roar.stop(); if (m === 'roar') roar.reset().play(); }
+  if (breath) { breath.stop(); if (m === 'breath') breath.reset().play(); }
+}
+
+function setGlow(t) {
+  // t: seconds into the breath, or -1 when not breathing.
+  let level = 0, progress = 1, banded = false;
+  const flicker = 1 + 0.18 * Math.sin(performance.now() * 0.05);
+  if (t >= 0 && t < CHARGE) {
+    const lit = CHARGE * 0.85;
+    progress = Math.min(1, t / lit);
+    level = (t > lit ? 5 : 3.2) * flicker;
+    banded = true;
+  } else if (t >= CHARGE && t < CHARGE + FIRE) level = 5 * flicker;
+  else if (t >= CHARGE + FIRE && t < BREATH) level = 5 * (1 - (t - CHARGE - FIRE) / FADE);
+  const bands = Math.max(1, ...glowMats.map(g => g.band + 1));
+  for (const { m, band } of glowMats) {
+    let k = 1;
+    if (banded) {
+      if (band < 0) k = progress;
+      else {
+        const on = Math.min(1, Math.max(0, progress * bands - band));
+        k = on <= 0 ? 0 : 1 + 0.8 * (1 - on);
+      }
+    }
+    m.emissiveIntensity = level * k * 0.2;
+  }
+}
+
+const tmpA = new THREE.Vector3(), tmpB = new THREE.Vector3(), tmpC = new THREE.Vector3();
+function placeBeam(t) {
+  const on = document.getElementById('beam').checked && t >= CHARGE && t < CHARGE + FIRE + FADE * 0.6;
+  beam.visible = on && !!bones['Bone022_7'];
+  if (!beam.visible) return;
+  // Out of the mouth along the head's line: from the neck through the jaw hinge.
+  bones['Bone013_11'].getWorldPosition(tmpA);
+  bones['Bone022_7'].getWorldPosition(tmpB);
+  const dir = tmpC.subVectors(tmpB, tmpA).normalize();
+  const start = tmpB.clone().addScaledVector(dir, 0.5 * beamScale);
+  const len = 40 * beamScale;
+  const grow = Math.min(1, (t - CHARGE) / 0.25);
+  const fade = t > CHARGE + FIRE ? 1 - (t - CHARGE - FIRE) / (FADE * 0.6) : 1;
+  beam.position.copy(start).addScaledVector(dir, len / 2);
+  beam.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir);
+  beam.scale.set(grow * fade * beamScale, len, grow * fade * beamScale);
+}
+
+const timeEl = document.getElementById('time'), phaseEl = document.getElementById('phase');
+let scrubbing = false;
+timeEl.addEventListener('input', () => {
+  scrubbing = true;
+  if (mode !== 'breath') setMode('breath');
+  const b = actions.breath;
+  if (b) { b.paused = false; b.time = parseFloat(timeEl.value); mixer.update(0); }
+});
+timeEl.addEventListener('change', () => { scrubbing = false; });
+
+document.getElementById('walk').onclick = () => setMode('walk');
+document.getElementById('roar').onclick = () => setMode('roar');
+document.getElementById('breath').onclick = () => setMode('breath');
+document.getElementById('pause').onclick = e => { paused = !paused; e.target.classList.toggle('on', paused); };
+document.getElementById('speed').onchange = e => { speed = parseFloat(e.target.value); };
+document.getElementById('reload').onclick = load;
+document.getElementById('cam').onclick = () => {
+  side = !side;
+  const h = controls.target.y * 2;
+  if (side) camera.position.set(h * 2.6, h * 0.5, 0); else camera.position.set(h * 1.4, h * 0.6, h * 2.0);
+};
+
+const clock = new THREE.Clock();
+function frame() {
+  const dt = clock.getDelta();
+  if (mixer && !paused && !scrubbing) mixer.update(dt * speed);
+  let bt = -1;
+  if (mode === 'breath' && actions.breath) {
+    bt = actions.breath.time;
+    if (!scrubbing) timeEl.value = bt;
+    phaseEl.textContent = (bt < CHARGE ? 'Charging' : bt < CHARGE + FIRE ? 'FIRING' : bt < BREATH ? 'Fading' : 'Done')
+      + ' · ' + bt.toFixed(2) + ' s';
+  } else phaseEl.textContent = mode === 'roar' && actions.roar ? 'Roar · ' + actions.roar.time.toFixed(2) + ' s' : 'Walk';
+  setGlow(bt);
+  placeBeam(bt);
+  controls.update();
+  composer.render();
+  requestAnimationFrame(frame);
+}
+load();
+frame();
+</script>
+</body>
+</html>
