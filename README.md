@@ -77,7 +77,9 @@ Put your model's exported bundle at `KaijuMod/Resources/kaiju.unity3d` and keep 
 
 ### Model credit
 
-The bundle used in development is built from "Godzilla First Walk Animation (scrunchy32205 alt)" by carladoll996 (https://sketchfab.com/3d-models/godzilla-first-walk-animationscrunchy32205-alt-e46c2cc5b698471588afd0ff9875d519), licensed CC BY 4.0 (http://creativecommons.org/licenses/by/4.0/). Converted to a Unity asset bundle (re-oriented, scaled, Standard-shader materials); not distributed with this repo. Godzilla is a trademark of Toho Co., Ltd.; this is an unofficial fan mod.
+The bundle used in development is built from "Godzilla minus one Rigged" by The Yakult man (https://sketchfab.com/3d-models/godzilla-minus-one-rigged-a033cff17082479a921d84aa6e5e9d9c), licensed CC BY 4.0 (http://creativecommons.org/licenses/by/4.0/). Changes: a walk cycle was added to its rig, then it was converted to a Unity asset bundle (re-oriented, scaled, Standard-shader materials); not distributed with this repo.
+
+An earlier version used "Godzilla First Walk Animation (scrunchy32205 alt)" by carladoll996 (https://sketchfab.com/3d-models/godzilla-first-walk-animationscrunchy32205-alt-e46c2cc5b698471588afd0ff9875d519), licensed CC BY 4.0. Godzilla is a trademark of Toho Co., Ltd.; this is an unofficial fan mod.
 
 ## Unity
 

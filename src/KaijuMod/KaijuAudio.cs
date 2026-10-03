@@ -53,10 +53,10 @@ namespace KaijuMod
         }
 
         /// <summary>His roar from a point (his mouth): two creature calls, pitched down, layered.</summary>
-        public static void Roar(Vector3 worldPos)
+        public static void Roar(Vector3 worldPos, float delay = 0f)
         {
-            Play(worldPos, Clip(Roars[0]), RoarPitch, 1f, RoarRange, 0f);
-            Play(worldPos, Clip(Roars[1]), RoarPitch * 0.9f, 0.8f, RoarRange, 0.15f);
+            Play(worldPos, Clip(Roars[0]), RoarPitch, 1f, RoarRange, delay);
+            Play(worldPos, Clip(Roars[1]), RoarPitch * 0.9f, 0.8f, RoarRange, delay + 0.15f);
         }
 
         private static void Play(Vector3 worldPos, AudioClip clip, float pitch, float volume, float range, float delay)

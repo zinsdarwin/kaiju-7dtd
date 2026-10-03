@@ -14,7 +14,7 @@ namespace KaijuMod
     /// How Godzilla attacks a coastal city: he rises from the sea offshore, walks in along the
     /// city's main road to its inland edge, crosses to the next street north and walks back out
     /// to sea along it, then sinks. Six breaths hit the rows he does not walk, so the whole city
-    /// reads as destroyed rather than two trenches. Distances suit a 51 m Godzilla; the city
+    /// reads as destroyed rather than two trenches. Distances suit a 50-100 m Godzilla; the city
     /// layout (main road through the middle, streets every 78 m) comes from tools/snakemap.
     /// </summary>
     public class CityAttack
@@ -23,7 +23,7 @@ namespace KaijuMod
         public const float BlockSpacing = 78f;
         /// <summary>Metres offshore (from the map edge) where he rises and sinks.</summary>
         public const float OffshoreMargin = 70f;
-        /// <summary>Breath damage radius multiplier for city attacks (beam ~10 m, crater ~20 m at 51 m).</summary>
+        /// <summary>Breath damage radius multiplier for city attacks (beam ~20 m, crater ~61 m at 100 m tall).</summary>
         public static float BreathScale = 2.5f;
         /// <summary>Walking speed during an attack, m/s.</summary>
         public static float Speed = 10f;

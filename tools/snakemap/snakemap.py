@@ -131,6 +131,18 @@ def save_png(rgba, path):
 
 # ---------------------------------------------------------------- prefabs
 
+def prefab_y(terrain):
+    """Prefab ground layer for a terrain height. The game's own worlds put it at terrain + ~0.83
+    (measured on an RWG world: y - YOffset - dtm height is 0.76..0.86); round(terrain) left
+    every POI one block below the roads on a flat pad."""
+    return int(round(terrain + 0.83))
+
+
+def snap_ground(h):
+    """Flat ground height for a prefab site, as the game's worlds have it: a whole block + 0.17."""
+    return math.floor(h) + 0.17
+
+
 class Poi:
     def __init__(self, name, sx, sz, yoff, rot_north, townships, tags, zoning):
         self.name, self.sx, self.sz, self.yoff = name, sx, sz, yoff
@@ -333,7 +345,7 @@ class SnakeMap:
             c0, c1 = int(max(c0, 0)), int(min(c1, N - 1))
             r0, r1 = int(max(r0, 0)), int(min(r1, N - 1))
             region = h[r0:r1, c0:c1]
-            ph = float(np.clip(np.median(region), SEA + 4, BASE_H + 18))
+            ph = snap_ground(float(np.clip(np.median(region), SEA + 4, BASE_H + 18)))
             s["pad"] = ph
             s["z"] = zc
             pad_mask[r0:r1, c0:c1] = True
@@ -423,18 +435,30 @@ class SnakeMap:
                     bx0 = cross_x[c] + STREET_HW + 2
                     bx1 = cross_x[c + 1] - STREET_HW - 2
                     x = bx0
+                    try_trader = True
                     while True:
-                        want_trader = not trader_done and abs(face_z - zc) < 1 and c == len(cross_x) // 2 - 1
+                        # The trader goes on the main road from the middle block on, at the first
+                        # spot it fits.
+                        want_trader = (not trader_done and try_trader and abs(face_z - zc) < 1
+                                       and c >= len(cross_x) // 2 - 1)
                         cand = self.traders if want_trader else pool
                         placed = self.place_lot(cand, s, x, bx1, face_z, hw_face, depth, north_of_main)
                         if placed is None:
                             if want_trader:
-                                trader_done = True  # didn't fit here; try the next block
+                                try_trader = False  # not in this block; the next block tries again
                                 continue
                             break
                         if want_trader:
                             trader_done = True
+                            s["trader"] = self.prefabs[-1][0]
                         x = placed + LOT_GAP
+            if not trader_done:
+                print("warning: no trader fits in", s["name"])
+        # The start city is the first attack, so the middle pine town is where the game really starts.
+        mid = [s for s in self.settlements if s["strip"] == 0 and s["kind"] == "town"][1]
+        if "trader" not in mid:
+            raise SystemExit("no trader in %s (middle pine town); try another --seed" % mid["name"])
+        print("traders:", ", ".join("%s %s" % (s["name"], s.get("trader", "-")) for s in self.settlements))
 
     def place_lot(self, pool, s, x, xmax, face_z, hw_face, depth, north_of_main):
         """Places one POI at x along a block edge facing a street. Returns its far x, or None."""
@@ -458,7 +482,7 @@ class SnakeMap:
             zmin = face_z + hw_face + 2
         else:
             zmin = face_z - hw_face - 2 - dpt
-        y = int(round(s["pad"])) + p.yoff
+        y = prefab_y(s["pad"]) + p.yoff
         self.prefabs.append((p.name, int(round(x)), y, int(round(zmin)), b))
         return x + w
 
@@ -489,7 +513,7 @@ class SnakeMap:
                 foot = self.h[r0:r0 + dpt, c0:c0 + w]
                 if foot.size == 0 or foot.max() - foot.min() > 7 or foot.min() < SEA + 4 or self.ridge[r, c] > 8:
                     continue
-                gh = float(foot.mean())
+                gh = snap_ground(float(foot.mean()))
                 # Flatten the footprint plus a margin, blended out over 20 m.
                 m = 10
                 rr0, rr1 = max(r0 - m - 20, 0), min(r0 + dpt + m + 20, N)
@@ -500,7 +524,7 @@ class SnakeMap:
                 dz = np.maximum(np.maximum(r0 - m - yy, yy - (r0 + dpt + m)), 0)
                 wgt = 1 - smoothstep(np.hypot(dx, dz) / 20.0)
                 self.h[rr0:rr1, cc0:cc1] = sub * (1 - wgt) + gh * wgt
-                self.prefabs.append((p.name, c0 - HALF, int(round(gh)) + p.yoff, r0 - HALF, b))
+                self.prefabs.append((p.name, c0 - HALF, prefab_y(gh) + p.yoff, r0 - HALF, b))
                 placed.append((x, z, max(w, dpt) / 2 + 60))
                 count += 1
 
@@ -508,6 +532,11 @@ class SnakeMap:
 
     def write(self, out, template, name):
         os.makedirs(out, exist_ok=True)
+        # The game's processed copies of an earlier version would hide this one; it rebuilds them.
+        for f in ("dtm_processed.raw", "splat3_half.png", "splat3_processed.png",
+                  "splat4_half.png", "splat4_processed.png", "checksums.txt"):
+            if os.path.exists(os.path.join(out, f)):
+                os.remove(os.path.join(out, f))
         h = np.clip(np.round(self.h * 256), 0, 65535).astype("<u2")
         h.tofile(os.path.join(out, "dtm.raw"))
 
@@ -542,15 +571,15 @@ class SnakeMap:
                 f.write('  <decoration type="model" name="%s" position="%d,%d,%d" rotation="%d" />\n' % (pname, x, y, z, b))
             f.write("</prefabs>\n")
 
-        # Spawn: just east of the start city, in the pine forest beside the road.
+        # Spawn: on the main road in the middle of the start city, which he attacks seconds
+        # later, facing west to see him come out of the sea.
         start = next(s for s in self.settlements if s["role"] == "start")
-        sx = start["x"] + start["half"] + 40
         with open(os.path.join(out, "spawnpoints.xml"), "w", encoding="utf-8", newline="\n") as f:
             f.write('<?xml version="1.0" encoding="UTF-8"?>\n<spawnpoints>\n')
-            for k, dx in enumerate((0, 25, 50, 75)):
-                x = sx + dx
-                z = self.road_z(0, x) + (18 if k % 2 else -18)
-                f.write('  <spawnpoint position="%d,%.2f,%d" rotation="0,90,0" />\n' % (x, self.height(x, z) + 1, z))
+            for k, dx in enumerate((0, 6, 12, 18)):
+                x = start["x"] + dx
+                z = start["z"] + (3 if k % 2 else -3)
+                f.write('  <spawnpoint position="%d,%.2f,%d" rotation="0,270,0" />\n' % (x, self.height(x, z) + 1, z))
             f.write("</spawnpoints>\n")
 
         shutil.copyfile(os.path.join(template, "main.ttw"), os.path.join(out, "main.ttw"))

@@ -11,10 +11,12 @@ namespace KaijuMod
     /// </summary>
     public class Footprint
     {
-        /// <summary>Horizontal radius in metres (one block = one metre).</summary>
-        public float Radius = 10f;
+        /// <summary>Horizontal radius in metres (one block = one metre). The Minus One model is ~57 m wide at 100 m tall.</summary>
+        public float Radius = 31f;
+        /// <summary>How far ahead of his feet the cylinder is centred, as a fraction of Radius: his chest and arms lean out in front.</summary>
+        public float Lead = 0.3f;
         /// <summary>Blocks cleared above his base height.</summary>
-        public int Height = 51; // Godzilla Minus One
+        public int Height = 100;
         /// <summary>Blocks cleared below his base height (foundations, shallow basements).</summary>
         public int Depth = 3;
         /// <summary>Block reads allowed per frame while scanning new columns.</summary>

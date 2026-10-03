@@ -210,7 +210,7 @@ namespace KaijuMod
             breath.Tick(world, dt);
 
             int y = Mathf.RoundToInt(baseY);
-            Footprint.Tick(world, position, y);
+            Footprint.Tick(world, FootprintCenter, y);
             KillPlayersInside(world);
             visual.Place(new Vector3(position.x, baseY - Submerged() * Footprint.Height * 0.95f, position.y), facing, Footprint.Radius * 2f, Footprint.Height);
 
@@ -246,7 +246,9 @@ namespace KaijuMod
         {
             if (!Running)
                 return false;
-            KaijuAudio.Roar(visual.MouthWorld());
+            // The sound waits until his mouth is open.
+            float delay = visual.PlayRoar() ? KaijuVisual.RoarOpenDelay : 0f;
+            KaijuAudio.Roar(visual.MouthWorld(), delay);
             return true;
         }
 
@@ -356,8 +358,12 @@ namespace KaijuMod
             baseY = Mathf.MoveTowards(baseY, ground, ClimbRate * dt);
         }
 
+        /// <summary>Centre of the destruction cylinder: a little ahead of his feet, under his chest.</summary>
+        private Vector2 FootprintCenter { get { return position + facing * (Footprint.Radius * Footprint.Lead); } }
+
         private void KillPlayersInside(World world)
         {
+            Vector2 c = FootprintCenter;
             float r = Footprint.Radius + 1f;
             float r2 = r * r;
             float bottom = baseY - Footprint.Depth - 2f;
@@ -370,7 +376,7 @@ namespace KaijuMod
                     continue;
                 }
                 Vector3 p = GameApi.Position(player);
-                float dx = p.x - position.x, dz = p.z - position.y;
+                float dx = p.x - c.x, dz = p.z - c.y;
                 if (dx * dx + dz * dz > r2 || p.y < bottom || p.y > top)
                     continue;
                 if (crushed.Add(player))

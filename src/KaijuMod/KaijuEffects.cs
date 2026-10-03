@@ -14,9 +14,12 @@ namespace KaijuMod
         public const int MaxClouds = 6;
         private static readonly List<GameObject> clouds = new List<GameObject>();
 
+        /// <summary>Size of the atomic blast visuals (flash, shockwave, mushroom cloud) relative to his height.</summary>
+        public static float ExplosionScale = 1.8f;
+
         /// <summary>
         /// Atomic-bomb impact (Minus One style): white flash, a dust shockwave ring along the ground,
-        /// and a mushroom cloud whose cap rises to about 5x his height over a minute, lit orange
+        /// and a mushroom cloud whose cap rises to about 5x his height (times ExplosionScale) over a minute, lit orange
         /// underneath at first, then grey, drifting and fading over a couple of minutes.
         /// </summary>
         public static void Explosion(Vector3 worldPos, float height, Material smoke, Material spark)
@@ -30,7 +33,7 @@ namespace KaijuMod
             var go = new GameObject("KaijuMushroomCloud");
             Object.DontDestroyOnLoad(go);
             var cloud = go.AddComponent<MushroomCloud>();
-            cloud.Init(worldPos, height, smoke, spark);
+            cloud.Init(worldPos, height * ExplosionScale, smoke, spark);
             clouds.Add(go);
         }
 
@@ -84,8 +87,8 @@ namespace KaijuMod
     }
 
     /// <summary>
-    /// Lasting fallout over a ruined city: a dark remnant cloud hanging high above it and a low
-    /// green-grey haze over the ruins. Slow, sparse particles that never stop emitting.
+    /// Lasting fallout over a ruined city: a low green-grey haze over the ruins. Slow, sparse
+    /// particles that never stop emitting. (The dark cloud above follows the radiation: FrontCloud.)
     /// </summary>
     public class FalloutCloud : WorldAnchored
     {
@@ -100,45 +103,99 @@ namespace KaijuMod
             f.LateUpdate();
             float h = Mathf.Max(10f, height);
 
-            var remnant = KaijuEffects.Particles(go.transform, "Remnant", smoke, 70, true);
-            remnant.transform.localPosition = new Vector3(0f, h * 4.2f, 0f);
-            var main = remnant.main;
-            main.startLifetime = new ParticleSystem.MinMaxCurve(80f, 120f);
-            main.startSpeed = new ParticleSystem.MinMaxCurve(0.2f, 1f);
-            main.startSize = new ParticleSystem.MinMaxCurve(h * 1.0f, h * 1.8f);
-            main.startColor = new ParticleSystem.MinMaxGradient(new Color(0.24f, 0.23f, 0.22f, 0.55f), new Color(0.32f, 0.3f, 0.27f, 0.45f));
-            var shape = remnant.shape;
-            shape.enabled = true;
-            shape.shapeType = ParticleSystemShapeType.Sphere;
-            shape.radius = h * 1.6f;
-            shape.scale = new Vector3(1.6f, 0.45f, 1.6f);
-            var col = remnant.colorOverLifetime;
-            col.enabled = true;
-            col.color = KaijuEffects.Fade(Color.white, Color.white, 0.15f, 0.8f);
-            var emission = remnant.emission;
-            emission.rateOverTime = 0.7f;
-            remnant.Play();
-            remnant.Simulate(60f, true, false); // start already formed after a load
-
             var haze = KaijuEffects.Particles(go.transform, "Haze", smoke, 60, true);
             haze.transform.localPosition = new Vector3(0f, h * 0.35f, 0f);
-            main = haze.main;
+            var main = haze.main;
             main.startLifetime = new ParticleSystem.MinMaxCurve(50f, 80f);
             main.startSpeed = new ParticleSystem.MinMaxCurve(0.1f, 0.5f);
             main.startSize = new ParticleSystem.MinMaxCurve(h * 0.8f, h * 1.4f);
             main.startColor = new ParticleSystem.MinMaxGradient(new Color(0.42f, 0.47f, 0.34f, 0.35f), new Color(0.36f, 0.4f, 0.3f, 0.3f));
-            shape = haze.shape;
+            var shape = haze.shape;
             shape.enabled = true;
             shape.shapeType = ParticleSystemShapeType.Box;
             shape.scale = new Vector3(cityHalfWidth * 2.2f, h * 0.4f, 4f * 78f);
-            col = haze.colorOverLifetime;
+            var col = haze.colorOverLifetime;
             col.enabled = true;
             col.color = KaijuEffects.Fade(Color.white, Color.white, 0.2f, 0.75f);
-            emission = haze.emission;
+            var emission = haze.emission;
             emission.rateOverTime = 0.9f;
             haze.Play();
             haze.Simulate(50f, true, false);
             return f;
+        }
+    }
+
+    /// <summary>
+    /// The dark top of the mushroom clouds, staying for good: a heavy, dark cloud bank hanging at
+    /// mushroom-cap height over the irradiated ground just behind the radiation front, gliding
+    /// along with the front (and over the mountains to the next strip). Particles simulate in local
+    /// space, so the whole bank moves together.
+    /// </summary>
+    public class FrontCloud : WorldAnchored
+    {
+        /// <summary>How fast the bank glides to a new spot, m/s (the front itself is far slower).</summary>
+        public static float MoveSpeed = 40f;
+
+        private ParticleSystem ps;
+        private bool placed;
+        private Vector3 target;
+
+        /// <summary>
+        /// h: blast scale height (his height times ExplosionScale). width (z) and depth (x) are the
+        /// bank's size in metres. prewarm: start fully formed (after a load) instead of building up.
+        /// </summary>
+        public static FrontCloud Create(Material smoke, float h, float width, float depth, bool prewarm)
+        {
+            if (smoke == null)
+                return null;
+            var go = new GameObject("KaijuFrontCloud");
+            Object.DontDestroyOnLoad(go);
+            var f = go.AddComponent<FrontCloud>();
+            f.ps = KaijuEffects.Particles(go.transform, "Bank", smoke, 320, true);
+            var main = f.ps.main;
+            main.startLifetime = new ParticleSystem.MinMaxCurve(90f, 150f);
+            main.startSpeed = new ParticleSystem.MinMaxCurve(0.2f, 1.5f);
+            main.startSize = new ParticleSystem.MinMaxCurve(h * 1.1f, h * 2.0f);
+            main.startColor = new ParticleSystem.MinMaxGradient(new Color(0.13f, 0.12f, 0.12f, 0.8f), new Color(0.22f, 0.2f, 0.19f, 0.7f));
+            var shape = f.ps.shape;
+            shape.enabled = true;
+            shape.shapeType = ParticleSystemShapeType.Box;
+            shape.scale = new Vector3(depth, h * 0.5f, width);
+            var col = f.ps.colorOverLifetime;
+            col.enabled = true;
+            col.color = KaijuEffects.Fade(Color.white, Color.white, 0.15f, 0.8f);
+            var size = f.ps.sizeOverLifetime;
+            size.enabled = true;
+            size.size = new ParticleSystem.MinMaxCurve(1f, AnimationCurve.Linear(0f, 0.8f, 1f, 1.3f));
+            var emission = f.ps.emission;
+            emission.rateOverTime = 2.6f;
+            f.ps.Play();
+            if (prewarm)
+                f.ps.Simulate(150f, true, false);
+            return f;
+        }
+
+        /// <summary>Where the bank should hang (world position of its centre). The first call places it there.</summary>
+        public void MoveTo(Vector3 worldTarget)
+        {
+            target = worldTarget;
+            if (!placed)
+            {
+                worldPos = worldTarget;
+                placed = true;
+            }
+        }
+
+        /// <summary>Stops or restarts the bank building; existing puffs drift out over a couple of minutes.</summary>
+        public void SetEmitting(bool on)
+        {
+            var emission = ps.emission;
+            emission.enabled = on;
+        }
+
+        private void Update()
+        {
+            worldPos = Vector3.MoveTowards(worldPos, target, MoveSpeed * Time.deltaTime);
         }
     }
 
@@ -300,8 +357,9 @@ namespace KaijuMod
     public class MushroomCloud : WorldAnchored
     {
         private const float CapRise = 60f;     // seconds for the cap to climb
-        private const float EmitFor = 40f;     // seconds the stem and cap keep emitting
-        private const float LifeSpan = 160f;
+        private const float EmitFor = 40f;     // seconds the stem keeps emitting
+        private const float CapEmitFor = 75f;  // seconds the cap keeps building
+        private const float LifeSpan = 260f;
 
         private float h, t;
         private Transform capRoot;
@@ -374,18 +432,18 @@ namespace KaijuMod
                 // Cap: billows out from a point that climbs to ~5x his height.
                 capRoot = new GameObject("CapRoot").transform;
                 capRoot.SetParent(transform, false);
-                cap = KaijuEffects.Particles(capRoot, "Cap", smoke, 500, true);
+                cap = KaijuEffects.Particles(capRoot, "Cap", smoke, 1100, true);
                 main = cap.main;
-                main.startLifetime = new ParticleSystem.MinMaxCurve(60f, 95f);
+                main.startLifetime = new ParticleSystem.MinMaxCurve(110f, 170f);
                 main.startSpeed = new ParticleSystem.MinMaxCurve(h * 0.02f, h * 0.08f);
-                main.startSize = new ParticleSystem.MinMaxCurve(h * 0.7f, h * 1.3f);
+                main.startSize = new ParticleSystem.MinMaxCurve(h * 0.8f, h * 1.5f);
                 shape = cap.shape;
                 shape.enabled = true;
                 shape.shapeType = ParticleSystemShapeType.Sphere;
                 shape.radius = h * 0.5f;
                 col = cap.colorOverLifetime;
                 col.enabled = true;
-                col.color = KaijuEffects.Fade(Color.white, Color.white, 0.03f, 0.7f);
+                col.color = KaijuEffects.Fade(Color.white, Color.white, 0.03f, 0.8f);
                 size = cap.sizeOverLifetime;
                 size.enabled = true;
                 size.size = new ParticleSystem.MinMaxCurve(1f, AnimationCurve.Linear(0f, 1f, 1f, 2.4f));
@@ -396,7 +454,7 @@ namespace KaijuMod
                 vel.y = new ParticleSystem.MinMaxCurve(0.4f);
                 vel.z = new ParticleSystem.MinMaxCurve(0.3f);
                 emission = cap.emission;
-                emission.rateOverTime = 9f;
+                emission.rateOverTime = 16f;
                 cap.Play();
             }
             if (spark != null && capRoot != null)
@@ -435,6 +493,7 @@ namespace KaijuMod
             // Orange lit underneath at first, grey later.
             float heat = Mathf.Clamp01(1f - t / 20f);
             Color grey = new Color(0.42f, 0.41f, 0.43f, 0.75f);
+            Color dark = new Color(0.17f, 0.16f, 0.16f, 0.85f); // the cap: heavy, near-black smoke
             Color hot = new Color(0.85f, 0.45f, 0.25f, 0.8f);
             if (stem != null)
             {
@@ -444,7 +503,7 @@ namespace KaijuMod
             if (cap != null)
             {
                 var main = cap.main;
-                main.startColor = Color.Lerp(grey, hot, heat * 0.8f);
+                main.startColor = Color.Lerp(dark, hot, heat * 0.8f);
             }
             if (glow != null)
                 glow.intensity = 4f * heat;
@@ -456,7 +515,11 @@ namespace KaijuMod
             if (t > EmitFor)
             {
                 if (stem != null) { var e = stem.emission; e.enabled = false; }
-                if (cap != null) { var e = cap.emission; e.enabled = false; }
+            }
+            if (t > CapEmitFor && cap != null)
+            {
+                var e = cap.emission;
+                e.enabled = false;
             }
             if (t > LifeSpan)
                 Destroy(gameObject);

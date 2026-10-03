@@ -21,8 +21,8 @@ namespace KaijuMod
     {
         public static readonly KaijuRun Instance = new KaijuRun();
 
-        /// <summary>Real seconds after the first spawn before he attacks the start city. Short: his walk in from the sea is the lead-in.</summary>
-        public static float StartAttackDelay = 5f;
+        /// <summary>Real seconds after the first spawn before he attacks the start city. None: his walk in from the sea is the lead-in.</summary>
+        public static float StartAttackDelay = 0f;
         /// <summary>In-game hours after an end-city attack before the next strip's front starts.</summary>
         public static int GraceHours = 4;
         /// <summary>The front stops this far short of the end city's inland edge, metres.</summary>
@@ -67,6 +67,10 @@ namespace KaijuMod
         private readonly Dictionary<string, FalloutCloud> fallout = new Dictionary<string, FalloutCloud>();
         private Ashfall ash;
         private bool fogOn;
+        private FrontCloud frontCloud;
+        private bool prewarmFront;   // the first cloud after a load starts fully formed
+        /// <summary>Size of the dark cloud bank over the radiation front, metres.</summary>
+        public static float FrontCloudWidth = 900f, FrontCloudDepth = 700f;
         private float nextGeiger;
 
         // Not saved: markers and lights are rebuilt as the player moves.
@@ -146,6 +150,7 @@ namespace KaijuMod
             ClearMarkers();
             ClearFallout(world);
             boundWorld = world;
+            prewarmFront = true;
             startTimer = radTimer = partsTimer = 0f;
             st = new State();
             string folder = GameApi.WorldFolder();
@@ -291,6 +296,29 @@ namespace KaijuMod
             return (float)(now - start) / (end - start);
         }
 
+        /// <summary>
+        /// The moving edge of the radiation now: the previous strip's sweep during a grace period,
+        /// otherwise the current strip's front. False when there is none (before the run, after the end).
+        /// </summary>
+        private bool CurrentFront(ulong now, out float x, out int strip)
+        {
+            x = 0f;
+            strip = -1;
+            if (data == null || !st.RadiationOn || st.Strip < 0)
+                return false;
+            if (now < st.FrontStart && st.Strip >= 1)
+            {
+                strip = st.Strip - 1;
+                x = SweepX(strip, now);
+                return true;
+            }
+            if (st.Complete || st.Strip >= data.Strips)
+                return false;
+            strip = st.Strip;
+            x = FrontX(strip, now);
+            return true;
+        }
+
         /// <summary>True if a world position is irradiated now; frontX is the front it is measured against.</summary>
         public bool IsIrradiated(Vector3 p, ulong now, out float frontX, out int strip)
         {
@@ -368,6 +396,29 @@ namespace KaijuMod
 
         // ---- Fallout
 
+        /// <summary>Keeps the dark cloud bank hanging over the irradiated side of the front.</summary>
+        private void TickFrontCloud(ulong now)
+        {
+            float fx;
+            int strip;
+            bool on = CurrentFront(now, out fx, out strip);
+            if (on && frontCloud == null)
+            {
+                float h = KaijuDirector.Instance.Footprint.Height * KaijuEffects.ExplosionScale;
+                frontCloud = FrontCloud.Create(KaijuDirector.Instance.EffectMaterial("KaijuSmoke"), h,
+                    FrontCloudWidth, FrontCloudDepth, prewarmFront);
+            }
+            prewarmFront = false;
+            if (frontCloud == null)
+                return;
+            frontCloud.SetEmitting(on);
+            if (!on)
+                return;
+            float stripZ = -data.Size / 2f + (strip + 0.5f) * data.StripHeight;
+            float capY = data.SeaLevel + KaijuDirector.Instance.Footprint.Height * KaijuEffects.ExplosionScale * 4.6f;
+            frontCloud.MoveTo(new Vector3(fx - data.Direction(strip) * FrontCloudDepth * 0.5f, capY, stripZ));
+        }
+
         private void AddFallout(Settlement city)
         {
             if (city == null || fallout.ContainsKey(city.Name))
@@ -387,6 +438,9 @@ namespace KaijuMod
             if (ash != null)
                 Object.Destroy(ash.gameObject);
             ash = null;
+            if (frontCloud != null)
+                Object.Destroy(frontCloud.gameObject);
+            frontCloud = null;
             if (fogOn)
                 GameApi.ClearFog(world);
             fogOn = false;
@@ -398,6 +452,7 @@ namespace KaijuMod
         /// </summary>
         private void TickFallout(World world, EntityPlayer player, ulong now)
         {
+            TickFrontCloud(now);
             if (player == null)
                 return;
             Vector3 p = GameApi.Position(player);

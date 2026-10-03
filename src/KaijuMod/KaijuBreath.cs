@@ -19,7 +19,7 @@ namespace KaijuMod
         public static float FadeTime = 1.2f;
         /// <summary>Longest beam, in metres from the mouth.</summary>
         public static float Range = 600f;
-        /// <summary>Beam damage radius as a fraction of his height (0.08 at 51 m = about 4 m).</summary>
+        /// <summary>Beam damage radius as a fraction of his height (0.08 at 100 m = 8 m).</summary>
         public static float RadiusFraction = 0.08f;
         /// <summary>How fast the beam's front travels out from the mouth, m/s.</summary>
         public static float BeamSpeed = 400f;
@@ -28,7 +28,7 @@ namespace KaijuMod
         /// <summary>Candidate cells examined per frame while tracing the beam or a blast crater.</summary>
         public static int ReadBudget = 8000;
         /// <summary>Blast crater radius as a multiple of the beam's damage radius (Minus One style detonation).</summary>
-        public static float BlastScale = 4f;
+        public static float BlastScale = 3f; // crater ~61 m radius in a city attack at 100 m tall
 
         private static readonly Color CoreColor = new Color(0.85f, 0.95f, 1f, 1f);
         private static readonly Color GlowColor = new Color(0.25f, 0.55f, 1f, 0.7f);
@@ -42,7 +42,7 @@ namespace KaijuMod
         private Vector3 target;        // aim point, world coordinates
         private Vector3 mouthWorld;    // last known mouth position, world coordinates
         private Vector3 beamEnd;       // current beam end, world coordinates
-        private float height = 51f;
+        private float height = 100f;
         private float aimWeight;
 
         // Damage along the beam: cells within radius of the traced segment, nearest the mouth first.
