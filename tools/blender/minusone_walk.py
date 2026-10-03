@@ -359,9 +359,11 @@ for f in range(0, BREATH_N + 1, 2):
             turn(b, rot((1, 0, 0), pose[b]), HIP_PIVOT)
         else:
             turn(b, rot((1, 0, 0), pose[b]))
-    for b in ORDER:
-        P[b].keyframe_insert("location", frame=f)
-        P[b].keyframe_insert("rotation_quaternion", frame=f)
+    # Key every bone, not just the posed ones: the breath holds the whole body in the game, and
+    # unkeyed bones would export at their rest pose (the eye bones need their offsets).
+    for pb in P:
+        pb.keyframe_insert("location", frame=f)
+        pb.keyframe_insert("rotation_quaternion", frame=f)
 
 # All actions on NLA tracks so the exporter writes each as its own animation.
 ad = arm.animation_data
