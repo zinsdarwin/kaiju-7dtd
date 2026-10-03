@@ -11,24 +11,33 @@ Decided 2026-09-30. Supersedes the "boss fight" direction in research.md.
 ## Game modes
 
 ### 1. The Run (first)
-A survival run on a custom snake-shaped map. Godzilla follows the main road city to city, levelling each one. You loot ahead of him and must reach the next biome before he catches up. One biome per 7-day blood moon cycle: a full run is 35 days.
+A survival run across a custom snake-shaped map, one biome per 7-day blood moon cycle: a full run is 35 days. Decided by Darwin 2026-10-03.
+
+1. **Day 1.** You spawn in the pine forest at the bottom left of the map, just east of a big coastal city. Godzilla comes out of the western ocean and destroys that city.
+2. **The chase.** Radiation spreads east from the ruined city and chases you along the strip. You have 7 days to loot your way to the big city at the strip's east end.
+3. **Blood moon.** You survive the horde in or near the east city. When the horde ends, Godzilla comes out of the eastern ocean and destroys that city.
+4. **The escape.** You have a few hours after the horde to get north through the mountain pass into the burnt forest.
+5. **Repeat.** The radiation now chases you west along the burnt strip to its west-end city, Godzilla hits it after the next horde, and so on through all five biomes.
+
+Defaults picked where the plan does not say yet (tunable):
+- The radiation is the week-long chaser. Godzilla stays offshore between attacks and comes ashore only at the end cities.
+- Smaller towns sit along the road between the two big cities of each strip.
 
 ## The map (6k, 6144 m)
 
+- Ocean along the whole west and east edges. Godzilla lives there and comes ashore at the end cities.
 - Five horizontal biome strips, about 1.2 km tall each, alternating direction:
-  1. Pine forest, bottom, left to right (start)
-  2. Burnt forest, right to left
-  3. Desert, left to right
-  4. Snow, right to left
-  5. Wasteland, left to right (finale; later the Oxygen Destroyer)
-- One main road snakes through all five, about 5.5 km per strip plus 4 northward switchbacks (roughly 28-30 km total). Cities and towns sit along it.
-- High ridges between strips, so the road's switchback is the only way north.
-- Godzilla's route is the road: a fixed waypoint list. No route planning.
-- Pace (tunable): about one strip per 7 in-game days. On 60-minute days that is slower than walking; the pressure is looting each city before he arrives. Options: start him a day behind, or ramp his speed.
+  1. Pine forest, bottom, west to east (start)
+  2. Burnt forest, east to west
+  3. Desert, west to east
+  4. Snow, east to west
+  5. Wasteland, west to east (finale; later the Oxygen Destroyer)
+- High mountain ranges between strips. Each has one pass, at alternating ends, beside that strip's end city: the only way north.
+- A big city at the far (coastal) end of each strip, plus the starting city at the west end of the pine strip.
+- One main road snakes through all five strips and every pass, with towns along it.
 
 ### Building it
-The game's random world generator can't make this layout, so it is a custom world. Plan: generate a normal 6k world in V3.2 as a template, then a script in `tools/` rewrites its biome map, road map, heightmap and prefab placements. Using real V3.2 files as the template avoids guessing at formats (the only format reference found is from Alpha 17).
-
+The game's random world generator can't make this layout, so it is a custom world written by a Python script in `tools/snakemap`. It uses a V3.2 random-generated 6k world as a read-only format reference and writes a new world folder ("Kaiju Snake") into GeneratedWorlds. It also writes the road's waypoints and the end cities' positions for the mod.
 
 ### 2. Oxygen Destroyer (later)
 Find components across the map, assemble the device at a workbench, plant it in a city on his route. If he walks into its radius while it's armed: death sequence, run won.
@@ -41,7 +50,8 @@ Godzilla is **not** a zombie entity and uses no zombie AI or pathfinding.
 
 | Piece | Runs on | Job |
 | --- | --- | --- |
-| Director | Server (C#) | Follows the road's waypoint list, advances his position every tick as plain data, even through unloaded chunks |
+| Director | Server (C#) | Brings him ashore at each end city when the blood moon horde ends and walks him through it along a waypoint list, advancing his position every tick as plain data, even through unloaded chunks |
+| Radiation | Server (C#) | A front that sweeps along each strip over the week, from the ruined city toward the next one, hurting players behind it |
 | Destruction | Server (C#) | Rate-limited explosion-style block damage along his footprint; caps on structural collapse |
 | Kill zone | Server (C#) | Players inside the footprint radius die |
 | Devastation pass | Server (C#, Harmony on chunk load) | Applies ruin to areas he crossed while nobody was nearby |
