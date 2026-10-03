@@ -341,16 +341,35 @@ SKY = pose_dict(0, (-4, -6, -8), -30, -42, 16, 12, 10, 0, 0)
 # points straight ahead: neck + head = -(body bend 62 + jaw/2 35).
 FIRE = pose_dict(16, (18, 16, 12), -45, -52, 70, -15, 15, 0, 0)  # jaw: widest before it folds into the throat
 # Charge crouched (plates light), rear up to the sky as they flare, whip the head down and fire.
-KEYS = [(0, REST), (36, CROUCH), (120, CROUCH), (144, SKY), (156, SKY), (168, FIRE), (228, FIRE), (264, REST)]
+# He stands while the glow climbs his tail (the mod lights the bands over 0-6 s, the tail's in
+# the first ~4 s), then in one motion bends over, rears up to the sky and whips down to fire
+# as the beam starts at 7 s (frame 168).
+KEYS = [(0, REST), (96, REST), (126, CROUCH), (150, SKY), (165, FIRE), (228, FIRE), (264, REST)]
 ORDER = [HIPS] + THIGHS + SPINE + [NECK, HEAD, JAW, JAW2] + SHOULDERS + ELBOWS + TAIL
 
 
+def key_slope(k, b):
+    """Degrees per frame through key k for bone b: carried through (one fluid motion), zero at
+    the ends, beside holds, and where the motion turns back (so it never overshoots)."""
+    if k == 0 or k == len(KEYS) - 1:
+        return 0.0
+    (fa, pa), (fk, pk), (fb, pb) = KEYS[k - 1], KEYS[k], KEYS[k + 1]
+    da, db = pk[b] - pa[b], pb[b] - pk[b]
+    if da * db <= 0:
+        return 0.0
+    return (pb[b] - pa[b]) / (fb - fa)
+
+
 def breath_pose(f):
-    for (f0, p0), (f1, p1) in zip(KEYS, KEYS[1:]):
+    for k in range(len(KEYS) - 1):
+        (f0, p0), (f1, p1) = KEYS[k], KEYS[k + 1]
         if f0 <= f <= f1:
-            u = (f - f0) / (f1 - f0)
-            u = u * u * (3 - 2 * u)
-            return {b: p0[b] + (p1[b] - p0[b]) * u for b in p0}
+            d = float(f1 - f0)
+            u = (f - f0) / d
+            h00, h10 = 2 * u ** 3 - 3 * u ** 2 + 1, u ** 3 - 2 * u ** 2 + u
+            h01, h11 = -2 * u ** 3 + 3 * u ** 2, u ** 3 - u ** 2
+            return {b: h00 * p0[b] + h10 * d * key_slope(k, b) + h01 * p1[b] + h11 * d * key_slope(k + 1, b)
+                    for b in p0}
     return dict(REST)
 
 
@@ -362,7 +381,7 @@ for f in range(0, BREATH_N + 1, 2):
         pb.location, pb.rotation_quaternion = base[pb.name][0].copy(), base[pb.name][1].copy()
     bpy.context.view_layer.update()
     pose = breath_pose(f)
-    if 36 < f < 120:     # straining as the charge builds
+    if 96 < f < 150:     # straining as he bends and rears
         pose[HEAD] += 1.2 * math.sin(f * 0.9)
         pose[NECK] += 0.6 * math.sin(f * 0.7 + 1.0)
     if 168 < f < 228:    # recoil tremble while firing
