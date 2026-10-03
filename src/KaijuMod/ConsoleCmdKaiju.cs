@@ -5,7 +5,7 @@ using UnityEngine;
 namespace KaijuMod
 {
     /// <summary>
-    /// F1 console command for testing the grey box. The game finds console commands by scanning
+    /// F1 console command for testing the kaiju. The game finds console commands by scanning
     /// mod assemblies for ConsoleCmdAbstract subclasses.
     ///
     /// VERIFIED (V3.3): override the lowercase getCommands, getDescription and getHelp (protected
@@ -30,10 +30,12 @@ namespace KaijuMod
             return "Usage:\n"
                 + "  kaiju start          walk this session's recorded waypoints, else route.txt, else the built-in list\n"
                 + "  kaiju test [dist]    walk a straight line from dist m in front of you, through you (default 120)\n"
-                + "  kaiju stop           stop and remove the grey box\n"
+                + "  kaiju stop           stop and remove him\n"
+                + "  kaiju breath [me]    atomic breath at what you're looking at (or at you); he must be out\n"
                 + "  kaiju status         position, segment, blocks cleared\n"
                 + "  kaiju speed <m/s>    set walking speed\n"
                 + "  kaiju radius <m>     set footprint radius\n"
+                + "  kaiju stride <h>     ground per walk loop in body heights; higher slows his legs (default 0.6)\n"
                 + "  kaiju height <m>     set height (box size and how high blocks are cleared)\n"
                 + "  kaiju addpoint       record your position as the next waypoint\n"
                 + "  kaiju route          list recorded waypoints (as C# for Route.cs)\n"
@@ -71,6 +73,9 @@ namespace KaijuMod
                 case "test":
                     StartTest(_params);
                     break;
+                case "breath":
+                    Breathe(_params);
+                    break;
                 case "stop":
                     director.Stop();
                     GameApi.ConsoleOut("Kaiju stopped.");
@@ -104,6 +109,14 @@ namespace KaijuMod
                         director.Footprint.Height = Mathf.RoundToInt(v);
                     }
                     GameApi.ConsoleOut("Kaiju height " + director.Footprint.Height + " m (5 to 250; blocks are cleared up to the world's build limit)");
+                    break;
+                }
+                case "stride":
+                {
+                    float v;
+                    if (_params.Count > 1 && TryFloat(_params[1], out v) && v >= 0.05f && v <= 10f)
+                        KaijuVisual.StrideHeights = v;
+                    GameApi.ConsoleOut("Kaiju stride " + KaijuVisual.StrideHeights + " body heights per walk loop (higher = slower legs)");
                     break;
                 }
                 case "addpoint":
@@ -164,6 +177,30 @@ namespace KaijuMod
                 GameApi.ConsoleOut("Kaiju coming at you from " + dist + " m ahead at " + KaijuDirector.Instance.Speed + " m/s");
             else
                 GameApi.ConsoleOut("Kaiju not started: " + error);
+        }
+
+        /// <summary>Fires at the point under the crosshair (up to 1 km), or at the player with "me".</summary>
+        private static void Breathe(List<string> args)
+        {
+            var player = LocalPlayer();
+            if (player == null)
+                return;
+            Vector3 target;
+            if (args.Count > 1 && args[1].ToLowerInvariant() == "me")
+            {
+                target = GameApi.Position(player) + new Vector3(0f, 1f, 0f);
+            }
+            else
+            {
+                Ray look = GameApi.LookRay(player);
+                Vector3? hit = GameApi.Raycast(look.origin, look.direction, 1000f);
+                target = hit ?? look.origin + look.direction * 400f;
+            }
+            string error;
+            if (KaijuDirector.Instance.Breathe(target, out error))
+                GameApi.ConsoleOut("Atomic breath charging at (" + Mathf.Round(target.x) + ", " + Mathf.Round(target.y) + ", " + Mathf.Round(target.z) + ")");
+            else
+                GameApi.ConsoleOut("No breath: " + error);
         }
 
         private static void PrintStatus()

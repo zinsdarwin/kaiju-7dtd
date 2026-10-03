@@ -26,6 +26,7 @@ Thumbs.db
 # The public repo is the kaiju engine; your Godzilla bundle lives only on your PC.
 KaijuMod/Resources/*.unity3d
 KaijuMod/Resources/*.bundle
+KaijuMod/Resources/*.png
 assets-local/
 
 # Per-machine Claude Code settings

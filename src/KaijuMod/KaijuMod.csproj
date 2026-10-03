@@ -25,8 +25,13 @@
     <!-- VERIFIED (V3.3): Harmony ships in Mods\0_TFP_Harmony, not Managed. -->
     <Reference Include="0Harmony"><HintPath>$(GamePath)\Mods\0_TFP_Harmony\0Harmony.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="LogLibrary"><HintPath>$(ManagedPath)\LogLibrary.dll</HintPath><Private>false</Private></Reference>
+    <!-- DataLoader.LoadAsset has Addressables AssetReference overloads; the compiler needs the type. -->
+    <Reference Include="Unity.Addressables"><HintPath>$(ManagedPath)\Unity.Addressables.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Unity.ResourceManager"><HintPath>$(ManagedPath)\Unity.ResourceManager.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="UnityEngine"><HintPath>$(ManagedPath)\UnityEngine.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="UnityEngine.CoreModule"><HintPath>$(ManagedPath)\UnityEngine.CoreModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.AnimationModule"><HintPath>$(ManagedPath)\UnityEngine.AnimationModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.ParticleSystemModule"><HintPath>$(ManagedPath)\UnityEngine.ParticleSystemModule.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="UnityEngine.PhysicsModule"><HintPath>$(ManagedPath)\UnityEngine.PhysicsModule.dll</HintPath><Private>false</Private></Reference>
   </ItemGroup>
 

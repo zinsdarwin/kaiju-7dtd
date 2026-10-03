@@ -51,19 +51,30 @@ The C# project references the game's own assemblies, which are not in this repo.
 
 1. Copy the `KaijuMod` folder into `<game>/Mods/`.
 2. Launch **without Easy Anti-Cheat** (required for DLL mods).
-3. Start a single player game (debug god mode off, or he can't hurt you), open the console (F1) and run `kaiju test`. A grey box appears 120 m in front of you and walks straight through you, clearing every non-terrain block in a 10 m radius. Stand still to get crushed. The log (`%APPDATA%\7DaysToDie\logs\`) shows `[KaijuMod]` lines.
+3. Start a single player game (debug god mode off, or he can't hurt you), open the console (F1) and run `kaiju test`. A stand-in Godzilla built from simple shapes appears 120 m in front of you and walks straight through you, clearing every non-terrain block in a 10 m radius. Stand still to get crushed. The log (`%APPDATA%\7DaysToDie\logs\`) shows `[KaijuMod]` lines.
 
-Other commands (`kaiju help` lists them): `kaiju start` walks the route in `KaijuMod/route.txt` (or the placeholder list in `Route.cs`), `kaiju stop`, `kaiju status`, `kaiju speed <m/s>`, `kaiju radius <m>`, `kaiju height <m>`. To record a real route between two towns, walk the road and run `kaiju addpoint` at each bend, then `kaiju saveroute`.
+Other commands (`kaiju help` lists them): `kaiju start` walks the route in `KaijuMod/route.txt` (or the placeholder list in `Route.cs`), `kaiju stop`, `kaiju status`, `kaiju speed <m/s>`, `kaiju radius <m>`, `kaiju height <m>`, `kaiju stride <body heights>` (slows or speeds his walk animation), `kaiju breath` (atomic breath at what you are looking at; `kaiju breath me` aims at you). The breath stops him, turns him to face the target, lights his dorsal plates for 3 s, then fires a 4 s beam that destroys blocks along its path (terrain stays) and kills anyone in it. It needs the model bundle for the glow, head aim and beam materials. To record a real route between two towns, walk the road and run `kaiju addpoint` at each bend, then `kaiju saveroute`.
 
 All calls into the game go through `src/KaijuMod/GameApi.cs`, checked against V3.3.0 (b17); see [docs/engine-api.md](docs/engine-api.md).
 
 ## Character assets (local only)
 
-Put your model's exported bundle at `KaijuMod/Resources/kaiju.unity3d` and keep source files in `assets-local/`. Both paths are git-ignored.
+Put your model's exported bundle at `KaijuMod/Resources/kaiju.unity3d` and keep source files in `assets-local/`. Both paths are git-ignored. Without a bundle, a stand-in body built from primitives is shown.
+
+### Model credit
+
+The bundle used in development is built from "Godzilla First Walk Animation (scrunchy32205 alt)" by carladoll996 (https://sketchfab.com/3d-models/godzilla-first-walk-animationscrunchy32205-alt-e46c2cc5b698471588afd0ff9875d519), licensed CC BY 4.0 (http://creativecommons.org/licenses/by/4.0/). Converted to a Unity asset bundle (re-oriented, scaled, Standard-shader materials); not distributed with this repo. Godzilla is a trademark of Toho Co., Ltd.; this is an unofficial fan mod.
 
 ## Unity
 
-Asset bundles must be built with the exact Unity editor version the game ships with. Read it from the first lines of `Player.log` before installing Unity.
+Asset bundles must be built with the exact Unity editor version the game ships with: **2022.3.62f2** for V3.3.0 (b17) (read it from `UnityPlayer.dll`'s product version or the first lines of `Player.log`).
+
+`tools/unity-bundle/` holds the build script. To build the bundle: copy it to a project under `assets-local/` (e.g. `assets-local/unity-kaiju/`), put the model at `Assets/Model/godzilla.glb`, then run:
+```
+"<Unity 2022.3.62f2>\Editor\Unity.exe" -batchmode -projectPath assets-local/unity-kaiju -executeMethod BuildKaiju.Build -kaijuOut KaijuMod/Resources -logFile build.log -quit
+```
+
+It imports the glb with glTFast, stands the model on its feet facing +z at height 1, swaps in Standard-shader materials, loops the walk with a legacy Animation, and writes `kaiju.unity3d` plus `preview.png` (a render of the model; git-ignored).
 
 ## Research
 

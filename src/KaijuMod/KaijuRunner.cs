@@ -30,5 +30,19 @@ namespace KaijuMod
                 KaijuDirector.Instance.Stop();
             }
         }
+
+        private void LateUpdate()
+        {
+            try
+            {
+                // After animation: the breath aims the head and puts the beam on the mouth.
+                KaijuDirector.Instance.LateTick();
+            }
+            catch (System.Exception e)
+            {
+                Log.Error("[KaijuMod] Director stopped after an error: " + e);
+                KaijuDirector.Instance.Stop();
+            }
+        }
     }
 }
