@@ -35,6 +35,17 @@ namespace KaijuMod
 
         private List<Vector2> route = new List<Vector2>();
         private int segment;
+        // City attacks: scripted breaths by distance walked, rising from and sinking into the sea.
+        private readonly List<BreathEvent> events = new List<BreathEvent>();
+        private int nextEvent;
+        private float breathScale = 1f;
+        private float traveled, routeLength;
+        private bool fromSea;
+        private float normalSpeed = -1f;
+        /// <summary>Metres walked while rising out of the sea at the start (and sinking at the end) of an attack.</summary>
+        public float EmergeDistance = 90f;
+        /// <summary>Name of the city being attacked, or null.</summary>
+        public string Attacking { get; private set; }
         private Vector2 position;
         private Vector2 heading;
         private float baseY;
@@ -71,6 +82,10 @@ namespace KaijuMod
             Stop();
             route = new List<Vector2>(points);
             segment = 0;
+            traveled = 0f;
+            routeLength = 0f;
+            for (int i = 1; i < route.Count; i++)
+                routeLength += (route[i] - route[i - 1]).magnitude;
             position = route[0];
             heading = (route[1] - route[0]).normalized;
             facing = heading;
@@ -86,10 +101,41 @@ namespace KaijuMod
         public void Stop()
         {
             if (Running)
-                Log.Out("[KaijuMod] Stopped at " + position + ", " + Footprint.TotalCleared + " blocks cleared");
+                Log.Out("[KaijuMod] Stopped at " + position + ", " + Footprint.TotalCleared + " blocks cleared"
+                    + (Attacking != null ? " (attack on " + Attacking + ")" : ""));
             Running = false;
             breath.Cancel();
             visual.Hide();
+            events.Clear();
+            nextEvent = 0;
+            breathScale = 1f;
+            fromSea = false;
+            Attacking = null;
+            if (normalSpeed > 0f)
+                Speed = normalSpeed;
+            normalSpeed = -1f;
+        }
+
+        /// <summary>
+        /// A city attack: rises from the sea at the route's start, walks it at the attack speed,
+        /// fires the scripted breaths, and sinks back into the sea at its end.
+        /// </summary>
+        public bool StartAttack(CityAttack plan, float seaLevel, out string error)
+        {
+            if (!Start(plan.Route, out error))
+                return false;
+            events.AddRange(plan.Breaths);
+            events.Sort((a, b) => a.Distance.CompareTo(b.Distance));
+            nextEvent = 0;
+            breathScale = CityAttack.BreathScale;
+            fromSea = true;
+            Attacking = plan.City.Name;
+            normalSpeed = Speed;
+            Speed = CityAttack.Speed;
+            // Offshore chunks are usually not loaded yet; start on the seabed rather than at y = 0.
+            baseY = seaLevel - 15f;
+            haveBaseY = true;
+            return true;
         }
 
         public void Tick(float dt)
@@ -107,6 +153,11 @@ namespace KaijuMod
             // He stands still while breathing.
             if (!breath.Active)
                 Advance(dt);
+            if (!breath.Active && nextEvent < events.Count && traveled >= events[nextEvent].Distance)
+            {
+                breath.Begin(events[nextEvent].Target, Footprint.Height, breathScale);
+                nextEvent++;
+            }
             UpdateBaseY(world, dt);
             UpdateFacing(dt);
             breath.Tick(world, dt);
@@ -114,7 +165,7 @@ namespace KaijuMod
             int y = Mathf.RoundToInt(baseY);
             Footprint.Tick(world, position, y);
             KillPlayersInside(world);
-            visual.Place(new Vector3(position.x, baseY, position.y), facing, Footprint.Radius * 2f, Footprint.Height);
+            visual.Place(new Vector3(position.x, baseY - Submerged() * Footprint.Height * 0.95f, position.y), facing, Footprint.Radius * 2f, Footprint.Height);
 
             if (segment >= route.Count - 1 && !breath.Active)
             {
@@ -141,6 +192,17 @@ namespace KaijuMod
             }
             breath.Begin(worldTarget, Footprint.Height);
             return true;
+        }
+
+        /// <summary>How far under the sea he is during an attack: 1 = fully, 0 = standing on the ground.</summary>
+        private float Submerged()
+        {
+            if (!fromSea)
+                return 0f;
+            float rise = Mathf.Clamp01(traveled / EmergeDistance);
+            float sink = Mathf.Clamp01((routeLength - traveled) / EmergeDistance);
+            float up = Mathf.Min(rise, sink);
+            return 1f - up * up * (3f - 2f * up);
         }
 
         private void UpdateFacing(float dt)
@@ -174,10 +236,12 @@ namespace KaijuMod
                     position = to;
                     segment++;
                     remaining -= dist;
+                    traveled += dist;
                 }
                 else
                 {
                     position += heading * remaining;
+                    traveled += remaining;
                     remaining = 0f;
                 }
             }

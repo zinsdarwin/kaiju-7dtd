@@ -28,7 +28,7 @@ docs/                <- design notes and research
 ## Roadmap
 
 - [x] Phase 0: repo, mod skeleton, Harmony project
-- [ ] Map generator: custom 6k snake world from a vanilla V3.2 template
+- [x] Map generator: custom 6k snake world (`tools/snakemap`)
 - [ ] Milestone 1: grey box walks the road between two towns, destroys blocks, kills a player in its path
 - [ ] Long-distance visual model
 - [ ] Devastation pass for areas crossed while unloaded
@@ -54,6 +54,17 @@ The C# project references the game's own assemblies, which are not in this repo.
 3. Start a single player game (debug god mode off, or he can't hurt you), open the console (F1) and run `kaiju test`. A stand-in Godzilla built from simple shapes appears 120 m in front of you and walks straight through you, clearing every non-terrain block in a 10 m radius. Stand still to get crushed. The log (`%APPDATA%\7DaysToDie\logs\`) shows `[KaijuMod]` lines.
 
 Other commands (`kaiju help` lists them): `kaiju start` walks the route in `KaijuMod/route.txt` (or the placeholder list in `Route.cs`), `kaiju stop`, `kaiju status`, `kaiju speed <m/s>`, `kaiju radius <m>`, `kaiju height <m>`, `kaiju stride <body heights>` (slows or speeds his walk animation), `kaiju breath` (atomic breath at what you are looking at; `kaiju breath me` aims at you). The breath stops him, turns him to face the target, lights his dorsal plates for 3 s, then fires a 4 s beam that destroys blocks along its path (terrain stays) and kills anyone in it. It needs the model bundle for the glow, head aim and beam materials. To record a real route between two towns, walk the road and run `kaiju addpoint` at each bend, then `kaiju saveroute`.
+
+### The Run
+
+Start a new game on the **Kaiju Snake** world (from `tools/snakemap`) and The Run starts by itself: the mod reads `kaiju.xml` from the world folder (other worlds leave it off).
+
+- 90 s after you first spawn, Godzilla rises from the sea and destroys the start city. He walks in along its main road, back out along the next street, and uses his atomic breath on the blocks in between.
+- A radiation front then sweeps along the strip from the ruined city toward the strip's end city, timed to stop 200 m short of it when the blood moon starts. Anyone behind it, or in an earlier strip, takes 4 radiation damage a second and gets an on-screen warning.
+- When the blood moon horde ends (dawn), he destroys the end city. For the next 4 in-game hours the front sweeps over that city to the coast while you escape north through the pass; then the next strip's front starts.
+- Progress is saved to `kaiju_run.xml` in the save folder.
+
+Commands: `kaiju run` (status: day, strip, front position, next attack; `kaiju run reset` starts over), `kaiju attack <city name|start|end>` (send him at a city now), `kaiju radiation <on|off>`.
 
 All calls into the game go through `src/KaijuMod/GameApi.cs`, checked against V3.3.0 (b17); see [docs/engine-api.md](docs/engine-api.md).
 

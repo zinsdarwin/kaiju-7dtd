@@ -74,8 +74,9 @@ namespace KaijuMod
         }
 
         /// <summary>Starts a breath at a world-space target point.</summary>
-        public void Begin(Vector3 worldTarget, float kaijuHeight)
+        public void Begin(Vector3 worldTarget, float kaijuHeight, float radiusScale = 1f)
         {
+            this.radiusScale = Mathf.Max(0.1f, radiusScale);
             Cancel();
             target = worldTarget;
             height = Mathf.Max(5f, kaijuHeight);
@@ -194,7 +195,10 @@ namespace KaijuMod
 
         // ---- Damage ----
 
-        private float DamageRadius { get { return Mathf.Max(2f, height * RadiusFraction); } }
+        // Damage radius multiplier for this breath (city attacks use a bigger one).
+        private float radiusScale = 1f;
+
+        private float DamageRadius { get { return Mathf.Max(2f, height * RadiusFraction * radiusScale); } }
 
         /// <summary>
         /// Advances the beam front and queues destructible blocks within the damage radius of the

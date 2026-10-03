@@ -22,12 +22,15 @@ namespace KaijuMod
 
         public override string getDescription()
         {
-            return "Kaiju world event: start, stop and record his route.";
+            return "Kaiju world event: The Run, city attacks, radiation, and test commands.";
         }
 
         public override string getHelp()
         {
             return "Usage:\n"
+                + "  kaiju run [reset]    The Run status: day, strip, radiation front, next attack (reset starts it over)\n"
+                + "  kaiju attack <city|start|end>  send him at a city now (a name from kaiju.xml, the start city, or this strip's end city)\n"
+                + "  kaiju radiation <on|off>  turn the radiation chase on or off\n"
                 + "  kaiju start          walk this session's recorded waypoints, else route.txt, else the built-in list\n"
                 + "  kaiju test [dist]    walk a straight line from dist m in front of you, through you (default 120)\n"
                 + "  kaiju stop           stop and remove him\n"
@@ -76,6 +79,35 @@ namespace KaijuMod
                 case "breath":
                     Breathe(_params);
                     break;
+                case "run":
+                    if (_params.Count > 1 && _params[1].ToLowerInvariant() == "reset")
+                    {
+                        KaijuRun.Instance.Reset();
+                        GameApi.ConsoleOut("The Run reset: the start city attack is pending again.");
+                    }
+                    GameApi.ConsoleOut(KaijuRun.Instance.Status());
+                    break;
+                case "attack":
+                {
+                    if (!KaijuRun.Instance.Active)
+                    {
+                        GameApi.ConsoleOut("No attack: this world has no kaiju.xml (load the Kaiju Snake world).");
+                        break;
+                    }
+                    string which = _params.Count > 1 ? string.Join(" ", _params.GetRange(1, _params.Count - 1)) : "end";
+                    if (KaijuRun.Instance.Attack(which.ToLowerInvariant() == "start" || which.ToLowerInvariant() == "end" ? which.ToLowerInvariant() : which))
+                        GameApi.ConsoleOut("Godzilla is attacking " + (director.Attacking ?? which) + ".");
+                    else
+                        GameApi.ConsoleOut("No such city: " + which + ". Use a settlement name from kaiju.xml, start, or end.");
+                    break;
+                }
+                case "radiation":
+                {
+                    if (_params.Count > 1 && (_params[1] == "on" || _params[1] == "off"))
+                        KaijuRun.Instance.SetRadiation(_params[1] == "on");
+                    GameApi.ConsoleOut(KaijuRun.Instance.Status());
+                    break;
+                }
                 case "stop":
                     director.Stop();
                     GameApi.ConsoleOut("Kaiju stopped.");

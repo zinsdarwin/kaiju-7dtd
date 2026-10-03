@@ -189,6 +189,91 @@ namespace KaijuMod
             return DataLoader.LoadAsset<T>("#@modfolder(KaijuMod):" + bundleFile + "?" + assetName);
         }
 
+        /// <summary>Folder of the world being played (where kaiju.xml sits), or null.</summary>
+        public static string WorldFolder()
+        {
+            // VERIFIED (V3.3): the game resolves a world's folder this way itself
+            // (BiomeIntensityMap, WorldBiomeProviderFromImage, ChunkProviderDisc).
+            string name = GamePrefs.GetString(EnumGamePrefs.GameWorld);
+            if (string.IsNullOrEmpty(name))
+                return null;
+            var location = PathAbstractions.WorldsSearchPaths.GetLocation(name);
+            return location.Type == PathAbstractions.EAbstractedLocationType.None ? null : location.FullPath;
+        }
+
+        /// <summary>Folder of the current save game, for the mod's own state file.</summary>
+        public static string SaveFolder()
+        {
+            // VERIFIED (V3.3): GameIO.GetSaveGameDir() = Saves/<GameWorld>/<GameName> for the current game.
+            return GameIO.GetSaveGameDir();
+        }
+
+        /// <summary>In-game time in ticks: 1000 per hour, 24000 per day; day 1 starts at 0.</summary>
+        public static ulong WorldTime(World world)
+        {
+            // VERIFIED (V3.3): World.worldTime; GameUtils.WorldTimeToDays = time / 24000 + 1.
+            return world.worldTime;
+        }
+
+        public static int Day(ulong worldTime)
+        {
+            // VERIFIED (V3.3)
+            return GameUtils.WorldTimeToDays(worldTime);
+        }
+
+        public static int Hour(ulong worldTime)
+        {
+            // VERIFIED (V3.3)
+            return GameUtils.WorldTimeToHours(worldTime);
+        }
+
+        public static ulong DayTimeToWorldTime(int day, int hour, int minute)
+        {
+            // VERIFIED (V3.3)
+            return GameUtils.DayTimeToWorldTime(day, hour, minute);
+        }
+
+        /// <summary>Day of the next (or current) blood moon.</summary>
+        public static int BloodMoonDay()
+        {
+            // VERIFIED (V3.3): AIDirectorBloodMoonComponent reads GameStats BloodMoonDay and moves it
+            // to the next blood moon once the current one ends.
+            return GameStats.GetInt(EnumGameStats.BloodMoonDay);
+        }
+
+        /// <summary>Dusk and dawn hours (Item1, Item2) for the game's day length setting.</summary>
+        public static (int, int) DuskDawn()
+        {
+            // VERIFIED (V3.3): World.DuskDawnInit uses CalcDuskDawnHours(GameStats DayLightLength).
+            return GameUtils.CalcDuskDawnHours(GameStats.GetInt(EnumGameStats.DayLightLength));
+        }
+
+        /// <summary>True from dusk on the blood moon day until dawn the next day: the horde night.</summary>
+        public static bool IsBloodMoonNow(World world)
+        {
+            // VERIFIED (V3.3): the same test AIDirectorBloodMoonComponent and DayTimeTracker use.
+            return GameUtils.IsBloodMoonTime(world.worldTime, DuskDawn(), BloodMoonDay());
+        }
+
+        /// <summary>Shows an on-screen tooltip to the local player.</summary>
+        public static void Tooltip(EntityPlayer player, string text)
+        {
+            // VERIFIED (V3.3): GameManager.ShowTooltip(EntityPlayerLocal, string, ...) queues a popup.
+            // UNVERIFIED in game: that plain text (not a localization key) is shown as is.
+            var local = player as EntityPlayerLocal;
+            if (local != null)
+                GameManager.ShowTooltip(local, text);
+        }
+
+        /// <summary>Radiation damage from the front.</summary>
+        public static void RadiationDamage(EntityPlayer player, int amount)
+        {
+            // VERIFIED (V3.3): EnumDamageTypes.Radiation exists; same DamageEntity call as Kill.
+            // UNVERIFIED in game: how much armour or radiation resistance reduces it.
+            var source = new DamageSource(EnumDamageSource.External, EnumDamageTypes.Radiation);
+            player.DamageEntity(source, amount, false, 0f);
+        }
+
         /// <summary>Writes a line to the F1 console, or the log when no console is available.</summary>
         public static void ConsoleOut(string line)
         {
