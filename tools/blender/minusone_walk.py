@@ -333,7 +333,9 @@ REST = pose_dict(0, (0, 0, 0), 0, 0, 0, 0, 0, 0, 0)
 # held level, jaw gaping, arms hanging forward, tail up.
 CROUCH = pose_dict(12, (14, 12, 8), 10, 8, 0, -10, 10, 3, 0.6)
 INHALE = pose_dict(10, (10, 8, 2), -14, -24, 25, -8, 8, 3, 0.6)
-FIRE = pose_dict(16, (18, 16, 12), -14, -22, 70, -15, 15, 3, 0.8)  # jaw: widest before it folds into the throat
+# Head thrown back against the bend so the gaping mouth (half the jaw angle below the head)
+# points straight ahead: neck + head = -(body bend 62 + jaw/2 35).
+FIRE = pose_dict(16, (18, 16, 12), -45, -52, 70, -15, 15, 3, 0.8)  # jaw: widest before it folds into the throat
 KEYS = [(0, REST), (40, CROUCH), (150, CROUCH), (162, INHALE), (168, FIRE), (228, FIRE), (264, REST)]
 ORDER = [HIPS] + THIGHS + SPINE + [NECK, HEAD, JAW, JAW2] + SHOULDERS + ELBOWS + TAIL
 

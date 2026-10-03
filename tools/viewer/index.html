@@ -176,6 +176,9 @@ function load() {
     camera.position.set(h * 1.4, h * 0.6, h * 2.0); // glTF front is +z
     beamScale = h / 6;
     controls.target.set(0, h * 0.5, 0);
+    findTeeth();
+    actions.walk && actions.walk.reset().play();
+    mixer.update(0);
     window.kv = { model, size, camera, controls, actions, mixer };
     status.textContent = 'Clips: ' + gltf.animations.map(c => c.name + ' ' + c.duration.toFixed(1) + 's').join(', ')
       + ' · glow materials: ' + glowMats.length + ' · drag to orbit, scroll to zoom';
@@ -219,16 +222,49 @@ function setGlow(t) {
   }
 }
 
+// Mouth: the front tips of the upper teeth (on the head bone) and lower teeth (on the jaw
+// bone), found once in the bind pose; the beam leaves from between them, away from the hinge.
+let upperTip = null, lowerTip = null;
+function findTeeth() {
+  upperTip = lowerTip = null;
+  const head = bones['Bone014_10'], jaw = bones['Bone022_7'];
+  if (!head || !jaw) return;
+  let upper = null, lower = null;
+  model.traverse(o => {
+    if (!o.isSkinnedMesh) return;
+    const n = o.geometry.attributes.position.count;
+    if (n === 1404) upper = o; else if (n === 1498) lower = o; // Object_9, Object_7
+  });
+  if (!upper || !lower) return;
+  const skel = upper.skeleton;
+  skel.pose();
+  model.updateMatrixWorld(true);
+  const tip = (mesh, bone) => {
+    const pos = mesh.geometry.attributes.position, v = new THREE.Vector3();
+    let best = null;
+    for (let i = 0; i < pos.count; i++) {
+      mesh.getVertexPosition(i, v);
+      v.applyMatrix4(mesh.matrixWorld);
+      if (!best || v.z > best.z) best = v.clone();
+    }
+    return bone.worldToLocal(best);
+  };
+  upperTip = tip(upper, head);
+  lowerTip = tip(lower, jaw);
+}
+
 const tmpA = new THREE.Vector3(), tmpB = new THREE.Vector3(), tmpC = new THREE.Vector3();
 function placeBeam(t) {
   const on = document.getElementById('beam').checked && t >= CHARGE && t < CHARGE + FIRE + FADE * 0.6;
-  beam.visible = on && !!bones['Bone022_7'];
+  beam.visible = on && !!upperTip;
   if (!beam.visible) return;
-  // Out of the mouth along the head's line: from the neck through the jaw hinge.
-  bones['Bone013_11'].getWorldPosition(tmpA);
-  bones['Bone022_7'].getWorldPosition(tmpB);
-  const dir = tmpC.subVectors(tmpB, tmpA).normalize();
-  const start = tmpB.clone().addScaledVector(dir, 0.5 * beamScale);
+  // Out of the middle of the open mouth, pointing away from the jaw hinge.
+  const up = bones['Bone014_10'].localToWorld(tmpA.copy(upperTip));
+  const lo = bones['Bone022_7'].localToWorld(tmpB.copy(lowerTip));
+  const mouth = up.add(lo).multiplyScalar(0.5);
+  const hinge = bones['Bone022_7'].getWorldPosition(tmpC);
+  const dir = hinge.subVectors(mouth, hinge).normalize();
+  const start = mouth.clone();
   const len = 40 * beamScale;
   const grow = Math.min(1, (t - CHARGE) / 0.25);
   const fade = t > CHARGE + FIRE ? 1 - (t - CHARGE - FIRE) / (FADE * 0.6) : 1;
