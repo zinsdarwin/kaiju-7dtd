@@ -528,6 +528,29 @@ class SnakeMap:
                 placed.append((x, z, max(w, dpt) / 2 + 60))
                 count += 1
 
+    # ---- lookout: where you start
+
+    def make_lookout(self, rise=55.0, radius=12, blend=20):
+        """A flat ledge cut into the mountainside south of the start city, rise metres above it:
+        you start there and watch him come out of the sea and fire on the city, well outside the
+        blast. Sets self.lookout = (x, z, ground height)."""
+        s = next(s for s in self.settlements if s["role"] == "start")
+        x = int(s["x"] - 80)
+        z = int(s["z"] - 300)
+        while z > -HALF + 100 and self.height(x, z) < s["pad"] + rise:
+            z -= 2
+        gh = snap_ground(self.height(x, z))
+        m = radius + blend
+        r0, r1 = z + HALF - m, z + HALF + m + 1
+        c0, c1 = x + HALF - m, x + HALF + m + 1
+        yy, xx = np.mgrid[r0:r1, c0:c1]
+        d = np.hypot(xx - (x + HALF), yy - (z + HALF))
+        w = 1 - smoothstep((d - radius) / float(blend))
+        self.h[r0:r1, c0:c1] = self.h[r0:r1, c0:c1] * (1 - w) + gh * w
+        self.lookout = (x, z, gh)
+        print("lookout at x %d z %d, ground %.1f (city %.1f), %.0f m from the city centre"
+              % (x, z, gh, s["pad"], math.hypot(x - s["x"], z - s["z"])))
+
     # ---- output
 
     def write(self, out, template, name):
@@ -571,15 +594,16 @@ class SnakeMap:
                 f.write('  <decoration type="model" name="%s" position="%d,%d,%d" rotation="%d" />\n' % (pname, x, y, z, b))
             f.write("</prefabs>\n")
 
-        # Spawn: on the main road in the middle of the start city, which he attacks seconds
-        # later, facing west to see him come out of the sea.
+        # Spawn: on the lookout above the start city, facing between the city and the sea
+        # where he comes ashore (yaw 0 = north, 90 = east).
         start = next(s for s in self.settlements if s["role"] == "start")
+        lx, lz, _ = self.lookout
+        yaw = int(round(math.degrees(math.atan2(start["x"] - 250 - lx, start["z"] - lz)))) % 360
         with open(os.path.join(out, "spawnpoints.xml"), "w", encoding="utf-8", newline="\n") as f:
             f.write('<?xml version="1.0" encoding="UTF-8"?>\n<spawnpoints>\n')
-            for k, dx in enumerate((0, 6, 12, 18)):
-                x = start["x"] + dx
-                z = start["z"] + (3 if k % 2 else -3)
-                f.write('  <spawnpoint position="%d,%.2f,%d" rotation="0,270,0" />\n' % (x, self.height(x, z) + 1, z))
+            for dx, dz in ((0, 0), (4, 0), (-4, 0), (0, -4)):
+                x, z = lx + dx, lz + dz
+                f.write('  <spawnpoint position="%d,%.2f,%d" rotation="0,%d,0" />\n' % (x, self.height(x, z) + 1, z, yaw))
             f.write("</spawnpoints>\n")
 
         shutil.copyfile(os.path.join(template, "main.ttw"), os.path.join(out, "main.ttw"))
@@ -670,6 +694,7 @@ def main():
     print("roads and pads done")
     m.build_settlements()
     m.build_wilderness()
+    m.make_lookout()
     print("prefabs:", len(m.prefabs))
     m.write(out, a.template, a.name)
     m.preview(a.preview)
