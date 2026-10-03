@@ -21,8 +21,8 @@ namespace KaijuMod
     {
         public static readonly KaijuRun Instance = new KaijuRun();
 
-        /// <summary>Real seconds after the first spawn before he attacks the start city.</summary>
-        public static float StartAttackDelay = 90f;
+        /// <summary>Real seconds after the first spawn before he attacks the start city. Short: his walk in from the sea is the lead-in.</summary>
+        public static float StartAttackDelay = 5f;
         /// <summary>In-game hours after an end-city attack before the next strip's front starts.</summary>
         public static int GraceHours = 4;
         /// <summary>The front stops this far short of the end city's inland edge, metres.</summary>
