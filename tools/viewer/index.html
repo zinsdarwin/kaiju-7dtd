@@ -91,11 +91,13 @@ function resize() {
 addEventListener('resize', resize);
 resize();
 
-// Beam: a glowing core and a soft outer cylinder from the mouth.
+// Beam: a glowing core and a soft outer cylinder from the mouth, as wide as the game's Minus One
+// beam looks (its LineRenderers are h*0.075 and h*0.225 across, but the soft texture shows about
+// half of that; h is about 6 here).
 const beam = new THREE.Group();
-const core = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.08, 1, 12, 1, true),
+const core = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.11, 1, 16, 1, true),
   new THREE.MeshBasicMaterial({ color: 0xdff0ff, transparent: true, opacity: 0.95 }));
-const outer = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.26, 1, 16, 1, true),
+const outer = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.34, 1, 24, 1, true),
   new THREE.MeshBasicMaterial({ color: 0x4f8dff, transparent: true, opacity: 0.45, blending: THREE.AdditiveBlending, depthWrite: false }));
 beam.add(core, outer);
 beam.visible = false;
@@ -180,6 +182,7 @@ function load() {
     actions.walk && actions.walk.reset().play();
     mixer.update(0);
     window.kv = { model, size, camera, controls, actions, mixer };
+    frameCam(side);
     status.textContent = 'Clips: ' + gltf.animations.map(c => c.name + ' ' + c.duration.toFixed(1) + 's').join(', ')
       + ' · glow materials: ' + glowMats.length + ' · drag to orbit, scroll to zoom';
     setMode(mode);
@@ -289,10 +292,21 @@ document.getElementById('breath').onclick = () => setMode('breath');
 document.getElementById('pause').onclick = e => { paused = !paused; e.target.classList.toggle('on', paused); };
 document.getElementById('speed').onchange = e => { speed = parseFloat(e.target.value); };
 document.getElementById('reload').onclick = load;
-document.getElementById('cam').onclick = () => {
+// Camera: frames his chest bone, from the side or three-quarters in front.
+function frameCam(sideView) {
+  const chest = bones['Bone012_12'];
+  if (!chest) return;
+  const p = chest.getWorldPosition(new THREE.Vector3());
+  const d = beamScale;
+  controls.target.copy(p);
+  if (sideView) camera.position.set(p.x + 7.5 * d, p.y + 0.6 * d, p.z + 1.0 * d);
+  else camera.position.set(p.x + 3.5 * d, p.y + 0.8 * d, p.z + 6.5 * d);
+  controls.update();
+}
+document.getElementById('cam').onclick = e => {
   side = !side;
-  const h = controls.target.y * 2;
-  if (side) camera.position.set(h * 2.6, h * 0.5, 0); else camera.position.set(h * 1.4, h * 0.6, h * 2.0);
+  e.target.textContent = side ? 'Front view' : 'Side view';
+  frameCam(side);
 };
 
 const clock = new THREE.Clock();

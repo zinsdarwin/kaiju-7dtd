@@ -333,10 +333,13 @@ REST = pose_dict(0, (0, 0, 0), 0, 0, 0, 0, 0, 0, 0)
 # held level, jaw gaping, arms hanging forward, tail up.
 CROUCH = pose_dict(12, (14, 12, 8), 10, 8, 0, -10, 10, 3, 0.6)
 INHALE = pose_dict(10, (10, 8, 2), -14, -24, 25, -8, 8, 3, 0.6)
+# Rears up and points his mouth at the sky (head 90 degrees back), jaw parted, drawing breath.
+SKY = pose_dict(0, (-4, -6, -8), -30, -42, 16, 12, 10, 2, 0.3)
 # Head thrown back against the bend so the gaping mouth (half the jaw angle below the head)
 # points straight ahead: neck + head = -(body bend 62 + jaw/2 35).
 FIRE = pose_dict(16, (18, 16, 12), -45, -52, 70, -15, 15, 3, 0.8)  # jaw: widest before it folds into the throat
-KEYS = [(0, REST), (40, CROUCH), (150, CROUCH), (162, INHALE), (168, FIRE), (228, FIRE), (264, REST)]
+# Charge crouched (plates light), rear up to the sky as they flare, whip the head down and fire.
+KEYS = [(0, REST), (36, CROUCH), (120, CROUCH), (144, SKY), (156, SKY), (168, FIRE), (228, FIRE), (264, REST)]
 ORDER = [HIPS] + THIGHS + SPINE + [NECK, HEAD, JAW, JAW2] + SHOULDERS + ELBOWS + TAIL
 
 
@@ -357,7 +360,7 @@ for f in range(0, BREATH_N + 1, 2):
         pb.location, pb.rotation_quaternion = base[pb.name][0].copy(), base[pb.name][1].copy()
     bpy.context.view_layer.update()
     pose = breath_pose(f)
-    if 40 < f < 150:     # straining as the charge builds
+    if 36 < f < 120:     # straining as the charge builds
         pose[HEAD] += 1.2 * math.sin(f * 0.9)
         pose[NECK] += 0.6 * math.sin(f * 0.7 + 1.0)
     if 168 < f < 228:    # recoil tremble while firing

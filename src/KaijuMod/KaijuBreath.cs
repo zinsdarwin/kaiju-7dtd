@@ -31,6 +31,8 @@ namespace KaijuMod
         public static float BlastScale = 3f; // crater ~61 m radius in a city attack at 100 m tall
         /// <summary>Minus One breath timing: plates light tail to neck, then one shot (matches the model's breath pose).</summary>
         public static float MegaChargeTime = 7f, MegaFireTime = 2.5f, MegaFadeTime = 1.5f;
+        /// <summary>Width of the Minus One beam relative to a normal breath.</summary>
+        public static float MegaBeamWidth = 2.5f;
         /// <summary>Called with the blast point when a mega breath detonates.</summary>
         public System.Action<Vector3> Blasted;
 
@@ -540,8 +542,9 @@ namespace KaijuMod
             Vector3 end = !beamOn ? mouth
                 : traceFront < traceLength ? mouth + traceDir * traceFront
                 : GameApi.WorldToScene(beamEnd);
-            SetLine(core, mouth, end, h * 0.03f * widthScale * flicker, beamOn);
-            SetLine(glow, mouth, end, h * 0.09f * widthScale * (2f - flicker), beamOn);
+            float bw = mega ? MegaBeamWidth : 1f;
+            SetLine(core, mouth, end, h * 0.03f * bw * widthScale * flicker, beamOn);
+            SetLine(glow, mouth, end, h * 0.09f * bw * widthScale * (2f - flicker), beamOn);
 
             bool hitting = phase == Phase.Fire && traceFront >= traceLength - 0.5f;
             Vector3 impact = GameApi.WorldToScene(beamEnd);
