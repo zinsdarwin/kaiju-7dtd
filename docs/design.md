@@ -31,7 +31,7 @@ Defaults picked where the plan does not say yet (tunable):
   2. Burnt forest, east to west
   3. Desert, west to east
   4. Snow, east to west
-  5. Wasteland, west to east (finale; later the Oxygen Destroyer)
+  5. Wasteland, west to east (finale: the Oxygen Destroyer)
 - High mountain ranges between strips. Each has one pass, at alternating ends, beside that strip's end city: the only way north.
 - A big city at the far (coastal) end of each strip, plus the starting city at the west end of the pine strip.
 - One main road snakes through all five strips and every pass, with towns along it.
@@ -39,8 +39,13 @@ Defaults picked where the plan does not say yet (tunable):
 ### Building it
 The game's random world generator can't make this layout, so it is a custom world written by a Python script in `tools/snakemap`. It uses a V3.2 random-generated 6k world as a read-only format reference and writes a new world folder ("Kaiju Snake") into GeneratedWorlds. It also writes the road's waypoints and the end cities' positions for the mod.
 
-### 2. Oxygen Destroyer (later)
-Find components across the map, assemble the device at a workbench, plant it in a city on his route. If he walks into its radius while it's armed: death sequence, run won.
+### The finale: the Oxygen Destroyer
+Part of The Run. Decided by Darwin 2026-10-03.
+
+- Four pieces of the Oxygen Destroyer, one in each of Cedar Harbor, Cinder Bay, Dune Point and Frostport. Port Hemlock falls on day 1, too soon to loot, so it has none.
+- Each piece is in a glowing crate somewhere in its city. A compass marker shows it once you reach the city. Grab it before Godzilla destroys the city after the blood moon. The crate survives his attack, so a missed piece can still be dug out of the ruins during the grace hours, ahead of the radiation.
+- In Ashmouth, the wasteland's end city, craft the Oxygen Destroyer at a workbench from the four pieces, place it inside the city and arm it.
+- When the final blood moon horde ends, Godzilla attacks Ashmouth. If he walks into the armed device's radius: death sequence, run won. Otherwise he levels Ashmouth and the run is lost.
 
 ## Architecture
 
