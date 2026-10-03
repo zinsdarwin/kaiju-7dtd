@@ -31,3 +31,6 @@ assets-local/
 
 # Per-machine Claude Code settings
 .claude/settings.local.json
+
+# Snake map generator previews (renders of a generated world)
+tools/snakemap/out/
