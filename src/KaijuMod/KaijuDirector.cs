@@ -28,6 +28,11 @@ namespace KaijuMod
         public KaijuDirector()
         {
             breath = new KaijuBreath(visual);
+            breath.Blasted = pos =>
+            {
+                if (Attacking != null)
+                    KaijuRun.Instance.OnCityBlasted(Attacking, pos);
+            };
         }
 
         public bool Breathing { get { return breath.Active; } }
@@ -45,6 +50,11 @@ namespace KaijuMod
         private readonly List<BreathEvent> events = new List<BreathEvent>();
         private int nextEvent;
         private float breathScale = 1f;
+        // Minus One attacks: one mega breath, roars at set distances instead of at random.
+        private bool megaAttack;
+        private float blastKillRadius;
+        private readonly List<float> roarAt = new List<float>();
+        private int nextRoarAt;
         private float traveled, routeLength;
         private bool fromSea;
         private float normalSpeed = -1f;
@@ -127,6 +137,9 @@ namespace KaijuMod
             events.Clear();
             nextEvent = 0;
             breathScale = 1f;
+            megaAttack = false;
+            roarAt.Clear();
+            nextRoarAt = 0;
             fromSea = false;
             Attacking = null;
             if (normalSpeed > 0f)
@@ -146,6 +159,11 @@ namespace KaijuMod
             events.Sort((a, b) => a.Distance.CompareTo(b.Distance));
             nextEvent = 0;
             breathScale = CityAttack.BreathScale;
+            megaAttack = plan.Mega;
+            blastKillRadius = plan.BlastKillRadius;
+            roarAt.AddRange(plan.Roars);
+            roarAt.Sort();
+            nextRoarAt = 0;
             fromSea = true;
             Attacking = plan.City.Name;
             roaredRise = roaredFirstBreath = false;
@@ -190,19 +208,25 @@ namespace KaijuMod
                 roaredRise = true;
                 Roar();
             }
-            if (!breath.Active && Time.time >= nextRoar)
+            if (!breath.Active && nextRoarAt < roarAt.Count && traveled >= roarAt[nextRoarAt])
+            {
+                nextRoarAt++;
+                Roar();
+            }
+            if (!megaAttack && !breath.Active && Time.time >= nextRoar)
             {
                 nextRoar = Time.time + Random.Range(30f, 60f);
                 Roar();
             }
             if (!breath.Active && nextEvent < events.Count && traveled >= events[nextEvent].Distance)
             {
-                if (!roaredFirstBreath)
+                // Classic: a roar before the first breath. Minus One: he charges in silence.
+                if (!roaredFirstBreath && !megaAttack)
                 {
                     roaredFirstBreath = true;
                     Roar();
                 }
-                breath.Begin(events[nextEvent].Target, Footprint.Height, breathScale);
+                breath.Begin(events[nextEvent].Target, Footprint.Height, breathScale, megaAttack, blastKillRadius);
                 nextEvent++;
             }
             UpdateBaseY(world, dt);

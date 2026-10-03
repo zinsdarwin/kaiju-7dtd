@@ -29,6 +29,10 @@ namespace KaijuMod
         public static int ReadBudget = 8000;
         /// <summary>Blast crater radius as a multiple of the beam's damage radius (Minus One style detonation).</summary>
         public static float BlastScale = 3f; // crater ~61 m radius in a city attack at 100 m tall
+        /// <summary>Minus One breath timing: plates light tail to neck, then one shot (matches the model's breath pose).</summary>
+        public static float MegaChargeTime = 7f, MegaFireTime = 2.5f, MegaFadeTime = 1.5f;
+        /// <summary>Called with the blast point when a mega breath detonates.</summary>
+        public System.Action<Vector3> Blasted;
 
         private static readonly Color CoreColor = new Color(0.85f, 0.95f, 1f, 1f);
         private static readonly Color GlowColor = new Color(0.25f, 0.55f, 1f, 0.7f);
@@ -44,6 +48,10 @@ namespace KaijuMod
         private Vector3 beamEnd;       // current beam end, world coordinates
         private float height = 100f;
         private float aimWeight;
+        // This breath: timing, and whether it is the Minus One city-destroying kind.
+        private float chargeTime = 3f, fireTime = 4f, fadeTime = 1.2f;
+        private bool mega;
+        private float killRadius;
 
         // Damage along the beam: cells within radius of the traced segment, nearest the mouth first.
         private Vector3 traceFrom, traceDir;
@@ -84,11 +92,22 @@ namespace KaijuMod
             get { return Active ? new Vector2(target.x, target.z) : (Vector2?)null; }
         }
 
-        /// <summary>Starts a breath at a world-space target point.</summary>
-        public void Begin(Vector3 worldTarget, float kaijuHeight, float radiusScale = 1f)
+        /// <summary>
+        /// Starts a breath at a world-space target point. mega: the Minus One kind, a long charge
+        /// in the breath pose and one nuclear blast at the target that kills anyone within
+        /// killRadius, leaving blocks standing.
+        /// </summary>
+        public void Begin(Vector3 worldTarget, float kaijuHeight, float radiusScale = 1f, bool mega = false, float killRadius = 0f)
         {
             this.radiusScale = Mathf.Max(0.1f, radiusScale);
             Cancel();
+            this.mega = mega;
+            this.killRadius = killRadius;
+            chargeTime = mega ? MegaChargeTime : ChargeTime;
+            fireTime = mega ? MegaFireTime : FireTime;
+            fadeTime = mega ? MegaFadeTime : FadeTime;
+            if (mega)
+                visual.PlayBreathPose();
             target = worldTarget;
             height = Mathf.Max(5f, kaijuHeight);
             phase = Phase.Charge;
@@ -125,15 +144,17 @@ namespace KaijuMod
             switch (phase)
             {
                 case Phase.Charge:
-                    aimWeight = Mathf.SmoothStep(0f, 1f, t / ChargeTime);
-                    if (t >= ChargeTime)
+                    // Mega: his head is down in the charge pose; he only aims as he rears up.
+                    aimWeight = mega ? Mathf.SmoothStep(0f, 1f, (t - (chargeTime - 1.2f)) / 1.2f)
+                        : Mathf.SmoothStep(0f, 1f, t / chargeTime);
+                    if (t >= chargeTime)
                         StartFire();
                     break;
                 case Phase.Fire:
                     aimWeight = 1f;
                     Trace(world);
                     KillPlayersInBeam(world);
-                    if (t >= FireTime)
+                    if (t >= fireTime)
                     {
                         phase = Phase.Fade;
                         t = 0f;
@@ -143,8 +164,8 @@ namespace KaijuMod
                     }
                     break;
                 case Phase.Fade:
-                    aimWeight = 1f - Mathf.SmoothStep(0f, 1f, t / FadeTime);
-                    if (t >= FadeTime)
+                    aimWeight = 1f - Mathf.SmoothStep(0f, 1f, t / fadeTime);
+                    if (t >= fadeTime)
                         Finish();
                     break;
             }
@@ -170,7 +191,8 @@ namespace KaijuMod
             // The beam stops at the first thing it hits (terrain, buildings, you) or at its range.
             // Physics colliders only exist near the player, so a far target can be missed: fall back
             // to marching through block data, which is loaded much further out.
-            Vector3? hit = GameApi.Raycast(traceFrom, traceDir, Range);
+            // A mega breath goes all the way to its target (the city centre), through anything.
+            Vector3? hit = mega ? target : GameApi.Raycast(traceFrom, traceDir, Range);
             if (!hit.HasValue && GameApi.World != null)
                 hit = GameApi.BlockRaycast(GameApi.World, traceFrom, traceDir, Range);
             beamEnd = hit ?? traceFrom + traceDir * Range;
@@ -188,6 +210,8 @@ namespace KaijuMod
         {
             phase = Phase.Idle;
             visual.SetPlateGlow(0f);
+            if (mega)
+                visual.EndBreathPose();
             visual.AimHead(Vector3.zero, 0f);
             if (fx == null)
                 return;
@@ -226,6 +250,8 @@ namespace KaijuMod
         private void Trace(World world)
         {
             traceFront = Mathf.Min(traceLength, traceFront + BeamSpeed * Time.deltaTime);
+            if (mega)
+                return; // no blocks destroyed: the blast does the work
             float r = DamageRadius;
             int reads = 0;
             while (traced <= traceFront && reads < ReadBudget)
@@ -289,6 +315,11 @@ namespace KaijuMod
         /// </summary>
         private void Detonate(World world)
         {
+            if (mega)
+            {
+                MegaDetonate(world);
+                return;
+            }
             float r = DamageRadius * BlastScale;
             KaijuEffects.Explosion(beamEnd, height, visual.EffectMaterial("KaijuSmoke"), visual.EffectMaterial("KaijuSpark"));
             KaijuAudio.Blast(beamEnd, r);
@@ -304,6 +335,32 @@ namespace KaijuMod
                 }
             }
             Log.Out("[KaijuMod] Atomic blast at " + beamEnd + ", crater radius " + Mathf.Round(r) + " m");
+        }
+
+        /// <summary>
+        /// The Minus One blast: a fireball, a mushroom cloud far wider than his normal ones, a
+        /// shockwave racing out past the city's edge, and death for anyone within killRadius. No
+        /// blocks are destroyed; the city is left standing but irradiated (Blasted tells The Run).
+        /// </summary>
+        private void MegaDetonate(World world)
+        {
+            float r = Mathf.Max(killRadius, height);
+            KaijuEffects.MegaExplosion(beamEnd, height, r, visual.EffectMaterial("KaijuSmoke"), visual.EffectMaterial("KaijuSpark"));
+            KaijuAudio.Blast(beamEnd, r * 0.4f);
+            foreach (EntityPlayer player in GameApi.Players(world))
+            {
+                if (!GameApi.IsAlive(player))
+                    continue;
+                Vector3 p = GameApi.Position(player);
+                if (new Vector2(p.x - beamEnd.x, p.z - beamEnd.z).sqrMagnitude <= r * r)
+                {
+                    Log.Out("[KaijuMod] Mega blast hit player at " + p);
+                    GameApi.Kill(player);
+                }
+            }
+            Log.Out("[KaijuMod] Mega blast at " + beamEnd + ", kill radius " + Mathf.Round(r) + " m");
+            if (Blasted != null)
+                Blasted(beamEnd);
         }
 
         /// <summary>Scans queued craters one horizontal slice at a time, top down, within the read budget.</summary>
@@ -449,11 +506,19 @@ namespace KaijuMod
             float h = height;
             float flicker = 1f + 0.18f * (Mathf.PerlinNoise(Time.time * 18f, 0.3f) - 0.5f) * 2f;
             Vector3 mouth = GameApi.WorldToScene(mouthWorld);
-            visual.SetPlateGlow(PlateLevel(flicker));
+            if (mega && phase == Phase.Charge)
+            {
+                // Minus One: the plates light one band at a time from the tail tip to the neck,
+                // then all flare together just before he fires.
+                float lit = chargeTime * 0.85f;
+                visual.SetPlateCharge(Mathf.Clamp01(t / lit), (t > lit ? 5f : 3.2f) * flicker);
+            }
+            else
+                visual.SetPlateGlow(PlateLevel(flicker));
 
-            float mouthIntensity = phase == Phase.Charge ? Mathf.Lerp(0f, 3f, t / ChargeTime)
+            float mouthIntensity = phase == Phase.Charge ? Mathf.Lerp(0f, 3f, t / chargeTime)
                 : phase == Phase.Fire ? 6f * flicker
-                : Mathf.Lerp(6f, 0f, t / FadeTime);
+                : Mathf.Lerp(6f, 0f, t / fadeTime);
             if (mouthLight != null)
             {
                 mouthLight.transform.position = mouth;
@@ -461,7 +526,7 @@ namespace KaijuMod
             }
 
             bool beamOn = phase == Phase.Fire || phase == Phase.Fade;
-            float widthScale = phase == Phase.Fire ? Mathf.Clamp01(t / 0.25f) : phase == Phase.Fade ? 1f - Mathf.Clamp01(t / (FadeTime * 0.6f)) : 0f;
+            float widthScale = phase == Phase.Fire ? Mathf.Clamp01(t / 0.25f) : phase == Phase.Fade ? 1f - Mathf.Clamp01(t / (fadeTime * 0.6f)) : 0f;
             // The beam's start follows the mouth; its end grows out at BeamSpeed to the traced hit point.
             Vector3 end = !beamOn ? mouth
                 : traceFront < traceLength ? mouth + traceDir * traceFront
@@ -507,13 +572,13 @@ namespace KaijuMod
             {
                 case Phase.Charge:
                     // Brightens in pulses that come faster as the charge builds.
-                    float k = t / ChargeTime;
+                    float k = t / chargeTime;
                     float pulse = 0.65f + 0.35f * Mathf.Sin(t * Mathf.Lerp(6f, 22f, k));
                     return Mathf.Lerp(0f, 4f, k * k) * pulse;
                 case Phase.Fire:
                     return 5f * flicker;
                 case Phase.Fade:
-                    return Mathf.Lerp(5f, 0f, t / FadeTime);
+                    return Mathf.Lerp(5f, 0f, t / fadeTime);
             }
             return 0f;
         }

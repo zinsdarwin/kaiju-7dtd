@@ -37,6 +37,30 @@ namespace KaijuMod
             clouds.Add(go);
         }
 
+        /// <summary>Width of the Minus One blast's mushroom cloud relative to a normal one (same height).</summary>
+        public static float MegaWidth = 2.2f;
+
+        /// <summary>
+        /// The Minus One blast: a blinding flash, a fireball and a mushroom cloud MegaWidth times
+        /// as wide as a normal one, a condensation dome, and a dust shockwave racing out along the
+        /// ground to past radius. height: his height.
+        /// </summary>
+        public static void MegaExplosion(Vector3 worldPos, float height, float radius, Material smoke, Material spark)
+        {
+            clouds.RemoveAll(c => c == null);
+            while (clouds.Count >= MaxClouds)
+            {
+                Object.Destroy(clouds[0]);
+                clouds.RemoveAt(0);
+            }
+            var go = new GameObject("KaijuMegaCloud");
+            Object.DontDestroyOnLoad(go);
+            go.AddComponent<MushroomCloud>().Init(worldPos, height * ExplosionScale, smoke, spark, MegaWidth);
+            clouds.Add(go);
+            Flash(worldPos + Vector3.up * height, radius * 8f, 14f, 3.5f, new Color(1f, 0.98f, 0.92f));
+            Shockwave.Create(worldPos, radius * 1.6f, smoke);
+        }
+
         /// <summary>A brief bright light, e.g. the Oxygen Destroyer going off.</summary>
         public static void Flash(Vector3 worldPos, float range, float intensity, float seconds, Color color)
         {
@@ -196,6 +220,99 @@ namespace KaijuMod
         private void Update()
         {
             worldPos = Vector3.MoveTowards(worldPos, target, MoveSpeed * Time.deltaTime);
+        }
+    }
+
+    /// <summary>
+    /// The blast's shockwave: a wall of dust racing out along the ground from the blast to
+    /// radius, fast at first and slowing, with a white condensation dome flashing out around
+    /// the fireball as it starts.
+    /// </summary>
+    public class Shockwave : WorldAnchored
+    {
+        /// <summary>Seconds for the dust wall to reach its full radius.</summary>
+        public static float Duration = 4.5f;
+
+        private ParticleSystem wave;
+        private float radius, t;
+
+        public static void Create(Vector3 worldPos, float radius, Material smoke)
+        {
+            if (smoke == null)
+                return;
+            var go = new GameObject("KaijuShockwave");
+            Object.DontDestroyOnLoad(go);
+            var s = go.AddComponent<Shockwave>();
+            s.worldPos = worldPos;
+            s.radius = Mathf.Max(20f, radius);
+            s.LateUpdate();
+            s.Build(smoke);
+        }
+
+        private void Build(Material smoke)
+        {
+            wave = KaijuEffects.Particles(transform, "Wave", smoke, 5000, true);
+            var main = wave.main;
+            main.startLifetime = new ParticleSystem.MinMaxCurve(2.5f, 4.5f);
+            main.startSpeed = 0f;
+            main.startSize = new ParticleSystem.MinMaxCurve(radius * 0.07f, radius * 0.14f);
+            main.startColor = new ParticleSystem.MinMaxGradient(new Color(0.62f, 0.57f, 0.5f, 0.8f), new Color(0.48f, 0.44f, 0.4f, 0.7f));
+            var shape = wave.shape;
+            shape.enabled = true;
+            shape.shapeType = ParticleSystemShapeType.Circle;
+            shape.radius = 1f;
+            shape.radiusThickness = 0f; // the edge only: a ring
+            shape.rotation = new Vector3(-90f, 0f, 0f);
+            var vel = wave.velocityOverLifetime;
+            vel.enabled = true;
+            vel.space = ParticleSystemSimulationSpace.Local;
+            vel.x = new ParticleSystem.MinMaxCurve(0f);
+            vel.y = new ParticleSystem.MinMaxCurve(radius * 0.01f, radius * 0.03f);
+            vel.z = new ParticleSystem.MinMaxCurve(0f);
+            var size = wave.sizeOverLifetime;
+            size.enabled = true;
+            size.size = new ParticleSystem.MinMaxCurve(1f, AnimationCurve.Linear(0f, 0.7f, 1f, 2.2f));
+            var col = wave.colorOverLifetime;
+            col.enabled = true;
+            col.color = KaijuEffects.Fade(Color.white, Color.white, 0.05f, 0.45f);
+
+            // Condensation dome: a white shell bursting out over the fireball and fading fast.
+            var dome = KaijuEffects.Particles(transform, "Dome", smoke, 600, true);
+            main = dome.main;
+            main.loop = false;
+            main.startLifetime = new ParticleSystem.MinMaxCurve(1.2f, 2.2f);
+            main.startSpeed = new ParticleSystem.MinMaxCurve(radius * 0.35f, radius * 0.5f);
+            main.startSize = new ParticleSystem.MinMaxCurve(radius * 0.08f, radius * 0.16f);
+            main.startColor = new Color(0.95f, 0.95f, 0.97f, 0.55f);
+            shape = dome.shape;
+            shape.enabled = true;
+            shape.shapeType = ParticleSystemShapeType.Hemisphere;
+            shape.radius = radius * 0.05f;
+            shape.rotation = new Vector3(-90f, 0f, 0f);
+            var limit = dome.limitVelocityOverLifetime;
+            limit.enabled = true;
+            limit.limit = radius * 0.05f;
+            limit.dampen = 0.15f;
+            col = dome.colorOverLifetime;
+            col.enabled = true;
+            col.color = KaijuEffects.Fade(Color.white, Color.white, 0.02f, 0.3f);
+            dome.Emit(500);
+        }
+
+        private void Update()
+        {
+            t += Time.deltaTime;
+            float k = Mathf.Clamp01(t / Duration);
+            if (k < 1f && wave != null)
+            {
+                // Fast out of the blast, slowing as it spreads.
+                float r = radius * (1f - Mathf.Pow(1f - k, 2.2f));
+                var shape = wave.shape;
+                shape.radius = Mathf.Max(1f, r);
+                wave.Emit(Mathf.Clamp(Mathf.CeilToInt(r * 0.12f), 4, 60));
+            }
+            if (t > Duration + 6f)
+                Destroy(gameObject);
         }
     }
 
@@ -361,22 +478,23 @@ namespace KaijuMod
         private const float CapEmitFor = 75f;  // seconds the cap keeps building
         private const float LifeSpan = 260f;
 
-        private float h, t;
+        private float h, t, w; // w: width scale (the Minus One blast is wider, not taller)
         private Transform capRoot;
         private ParticleSystem ring, stem, cap, fire;
         private Light glow;
 
-        public void Init(Vector3 pos, float height, Material smoke, Material spark)
+        public void Init(Vector3 pos, float height, Material smoke, Material spark, float wide = 1f)
         {
             worldPos = pos;
             h = Mathf.Max(10f, height);
+            w = Mathf.Max(0.1f, wide);
             LateUpdate();
 
-            KaijuEffects.Flash(pos + Vector3.up * h * 0.5f, h * 20f, 10f, 1.8f, new Color(1f, 0.97f, 0.9f));
+            KaijuEffects.Flash(pos + Vector3.up * h * 0.5f, h * 20f * w, 10f, 1.8f, new Color(1f, 0.97f, 0.9f));
             glow = gameObject.AddComponent<Light>();
             glow.type = LightType.Point;
             glow.color = new Color(1f, 0.55f, 0.25f);
-            glow.range = h * 4f;
+            glow.range = h * 4f * w;
             glow.intensity = 4f;
             glow.shadows = LightShadows.None;
 
@@ -387,17 +505,17 @@ namespace KaijuMod
                 var main = ring.main;
                 main.loop = false;
                 main.startLifetime = new ParticleSystem.MinMaxCurve(3f, 5f);
-                main.startSpeed = new ParticleSystem.MinMaxCurve(h * 0.9f, h * 1.4f);
-                main.startSize = new ParticleSystem.MinMaxCurve(h * 0.2f, h * 0.4f);
+                main.startSpeed = new ParticleSystem.MinMaxCurve(h * 0.9f * w, h * 1.4f * w);
+                main.startSize = new ParticleSystem.MinMaxCurve(h * 0.2f * w, h * 0.4f * w);
                 main.startColor = new Color(0.55f, 0.5f, 0.45f, 0.7f);
                 var shape = ring.shape;
                 shape.enabled = true;
                 shape.shapeType = ParticleSystemShapeType.Circle;
-                shape.radius = h * 0.15f;
+                shape.radius = h * 0.15f * w;
                 shape.rotation = new Vector3(-90f, 0f, 0f);
                 var limit = ring.limitVelocityOverLifetime;
                 limit.enabled = true;
-                limit.limit = h * 0.1f;
+                limit.limit = h * 0.1f * w;
                 limit.dampen = 0.08f;
                 var col = ring.colorOverLifetime;
                 col.enabled = true;
@@ -412,12 +530,12 @@ namespace KaijuMod
                 main = stem.main;
                 main.startLifetime = new ParticleSystem.MinMaxCurve(25f, 35f);
                 main.startSpeed = new ParticleSystem.MinMaxCurve(h * 0.12f, h * 0.16f);
-                main.startSize = new ParticleSystem.MinMaxCurve(h * 0.25f, h * 0.45f);
+                main.startSize = new ParticleSystem.MinMaxCurve(h * 0.25f * w, h * 0.45f * w);
                 shape = stem.shape;
                 shape.enabled = true;
                 shape.shapeType = ParticleSystemShapeType.Cone;
                 shape.angle = 4f;
-                shape.radius = h * 0.08f;
+                shape.radius = h * 0.08f * w;
                 shape.rotation = new Vector3(-90f, 0f, 0f);
                 col = stem.colorOverLifetime;
                 col.enabled = true;
@@ -436,11 +554,11 @@ namespace KaijuMod
                 main = cap.main;
                 main.startLifetime = new ParticleSystem.MinMaxCurve(110f, 170f);
                 main.startSpeed = new ParticleSystem.MinMaxCurve(h * 0.02f, h * 0.08f);
-                main.startSize = new ParticleSystem.MinMaxCurve(h * 0.8f, h * 1.5f);
+                main.startSize = new ParticleSystem.MinMaxCurve(h * 0.8f * w, h * 1.5f * w);
                 shape = cap.shape;
                 shape.enabled = true;
                 shape.shapeType = ParticleSystemShapeType.Sphere;
-                shape.radius = h * 0.5f;
+                shape.radius = h * 0.5f * w;
                 col = cap.colorOverLifetime;
                 col.enabled = true;
                 col.color = KaijuEffects.Fade(Color.white, Color.white, 0.03f, 0.8f);
@@ -464,12 +582,12 @@ namespace KaijuMod
                 var main = fire.main;
                 main.startLifetime = new ParticleSystem.MinMaxCurve(2f, 4f);
                 main.startSpeed = new ParticleSystem.MinMaxCurve(h * 0.02f, h * 0.06f);
-                main.startSize = new ParticleSystem.MinMaxCurve(h * 0.4f, h * 0.8f);
+                main.startSize = new ParticleSystem.MinMaxCurve(h * 0.4f * w, h * 0.8f * w);
                 main.startColor = new ParticleSystem.MinMaxGradient(new Color(1f, 0.6f, 0.2f, 0.8f), new Color(1f, 0.3f, 0.1f, 0.6f));
                 var shape = fire.shape;
                 shape.enabled = true;
                 shape.shapeType = ParticleSystemShapeType.Sphere;
-                shape.radius = h * 0.4f;
+                shape.radius = h * 0.4f * w;
                 var col = fire.colorOverLifetime;
                 col.enabled = true;
                 col.color = KaijuEffects.Fade(Color.white, new Color(1f, 0.4f, 0.2f), 0.1f, 0.5f);
@@ -488,7 +606,7 @@ namespace KaijuMod
                 float rise = 1f - Mathf.Exp(-t / (CapRise / 3f));
                 capRoot.localPosition = new Vector3(0f, h * (0.6f + 4.4f * rise), 0f);
                 var shape = cap.shape;
-                shape.radius = h * Mathf.Lerp(0.5f, 1.6f, rise);
+                shape.radius = h * Mathf.Lerp(0.5f, 1.6f, rise) * w;
             }
             // Orange lit underneath at first, grey later.
             float heat = Mathf.Clamp01(1f - t / 20f);

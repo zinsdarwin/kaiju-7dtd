@@ -9,8 +9,9 @@ using UnityEngine;
 /// Batch-mode builder for the Kaiju asset bundle:
 ///   Unity.exe -batchmode -projectPath . -executeMethod BuildKaiju.Build -kaijuOut <dir> -quit
 /// Makes prefab "Kaiju" from Assets/Model/godzilla.glb: feet at the origin, facing +z, 1 unit
-/// tall, Standard-shader materials, legacy Animation playing the walk on loop (plus "roar", if the
-/// model has a clip named Roar, holding only the bones it moves, for the mod to layer on top), and an empty
+/// tall, Standard-shader materials, legacy Animation playing the walk on loop (plus "roar" and
+/// "breath", if the model has clips so named, holding only the bones they move, for the mod to
+/// layer on top), and an empty
 /// "Mouth" on the head bone (forward = where the breath goes). The dorsal plate material
 /// (name contains "Scales") has emission enabled at black so the mod can light it. Also bundles
 /// the atomic breath materials KaijuBeam, KaijuSpark and KaijuSmoke. Writes kaiju.unity3d,
@@ -45,16 +46,22 @@ public static class BuildKaiju
         var anim = inst.GetComponent<Animation>();
         if (anim == null) anim = inst.AddComponent<Animation>(); // not ??: Unity fakes null for missing components
         AnimationClip walk = null;
-        // The roar (optional) plays on top of the walk: only the bones it moves are kept.
-        var roarSrc = clips.FirstOrDefault(c => c.name.IndexOf("roar", StringComparison.OrdinalIgnoreCase) >= 0);
-        if (roarSrc != null)
+        // Overlays (optional) play on top of the walk: "roar" keeps only the bones it moves (neck,
+        // head, jaw) so he walks on while roaring; "breath" holds the whole body (he stands planted).
+        var overlays = new List<AnimationClip>();
+        foreach (var key in new[] { "roar", "breath" })
         {
-            var roar = Legacy(roarSrc, "roar");
-            StripStillCurves(roar);
-            roar.wrapMode = WrapMode.Once;
-            anim.AddClip(roar, "roar");
+            var src = clips.FirstOrDefault(c => c.name.IndexOf(key, StringComparison.OrdinalIgnoreCase) >= 0);
+            if (src == null)
+                continue;
+            overlays.Add(src);
+            var clip = Legacy(src, key);
+            if (key == "roar")
+                StripStillCurves(clip);
+            clip.wrapMode = WrapMode.Once;
+            anim.AddClip(clip, key);
         }
-        var walks = clips.Where(c => c != roarSrc).ToList();
+        var walks = clips.Where(c => !overlays.Contains(c)).ToList();
         if (walks.Count > 0)
         {
             walk = walks.FirstOrDefault(c => c.name.IndexOf("walk", StringComparison.OrdinalIgnoreCase) >= 0)

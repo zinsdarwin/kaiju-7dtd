@@ -10,8 +10,13 @@ namespace KaijuMod
         public Vector3 Target; // world coordinates
     }
 
+    public enum AttackStyle { Classic, MinusOne }
+
     /// <summary>
-    /// How Godzilla attacks a coastal city: he rises from the sea offshore, walks in along the
+    /// How Godzilla attacks a coastal city. Minus One (the default): he rises from the sea, roars
+    /// as he wades ashore, stops at the city's sea edge, charges and fires one breath into the
+    /// middle of the city: a huge nuclear blast that kills anyone in the city and leaves it all
+    /// irradiated, without destroying blocks; then he goes back to sea. Classic: he rises from the sea offshore, walks in along the
     /// city's main road to its inland edge, crosses to the next street north and walks back out
     /// to sea along it, then sinks. Six breaths hit the rows he does not walk, so the whole city
     /// reads as destroyed rather than two trenches. Distances suit a 50-100 m Godzilla; the city
@@ -27,6 +32,19 @@ namespace KaijuMod
         public static float BreathScale = 2.5f;
         /// <summary>Walking speed during an attack, m/s.</summary>
         public static float Speed = 10f;
+        /// <summary>Which attack plays (`kaiju style`).</summary>
+        public static AttackStyle Style = AttackStyle.MinusOne;
+        /// <summary>Minus One: he stops this far outside the city's sea edge to fire, metres.</summary>
+        public static float StandOff = 40f;
+        /// <summary>Minus One: anyone within the city's half width plus this of the blast dies, metres.</summary>
+        public static float BlastKillMargin = 0f;
+
+        /// <summary>One city-destroying breath (Minus One) instead of block-destroying breaths.</summary>
+        public bool Mega;
+        /// <summary>Mega blast: players within this many metres of it die.</summary>
+        public float BlastKillRadius;
+        /// <summary>Distances walked at which he roars.</summary>
+        public readonly List<float> Roars = new List<float>();
 
         public Settlement City;
         public readonly List<Vector2> Route = new List<Vector2>();
@@ -34,6 +52,8 @@ namespace KaijuMod
 
         public static CityAttack Plan(KaijuWorldData data, Settlement city)
         {
+            if (Style == AttackStyle.MinusOne)
+                return PlanMinusOne(data, city);
             var a = new CityAttack { City = city };
             float s = city.X < 0 ? -1f : 1f;           // sea side
             float c = city.X;
@@ -59,6 +79,32 @@ namespace KaijuMod
             a.Add(leg2Start + Mathf.Abs((c - s * 0.5f * h) - inland), new Vector3(c - s * 0.1f * h, y, z1 + 0.5f * BlockSpacing));
             a.Add(leg2Start + Mathf.Abs((c + s * 0.3f * h) - inland), new Vector3(c + s * 0.8f * h, y, z1 + 0.5f * BlockSpacing));
             a.Add(leg2Start + Mathf.Abs((c + s * 0.9f * h) - inland), new Vector3(c + s * 0.5f * h, y, z0 - 0.5f * BlockSpacing));
+            return a;
+        }
+
+        /// <summary>
+        /// Minus One: in along the main road to just outside the city's sea edge, one breath at the
+        /// city centre, then a wide turn back out to sea.
+        /// </summary>
+        private static CityAttack PlanMinusOne(KaijuWorldData data, Settlement city)
+        {
+            var a = new CityAttack { City = city, Mega = true };
+            float s = city.X < 0 ? -1f : 1f;           // sea side
+            float c = city.X;
+            float h = city.HalfWidth;
+            float sea = s * (data.Size / 2f - OffshoreMargin);
+            float stand = c + s * (h + StandOff);
+            float z0 = city.Z;
+            a.Route.Add(new Vector2(sea, z0));
+            a.Route.Add(new Vector2(stand, z0));
+            a.Route.Add(new Vector2(stand + s * 80f, z0 + 70f));
+            a.Route.Add(new Vector2(sea, z0 + 70f));
+            float leg1 = Mathf.Abs(stand - sea);
+            // Besides the roar as he rises: two more as he wades ashore.
+            a.Roars.Add(leg1 * 0.45f);
+            a.Roars.Add(leg1 * 0.8f);
+            a.Add(leg1, new Vector3(c, city.Y + 3f, z0));
+            a.BlastKillRadius = h + BlastKillMargin;
             return a;
         }
 

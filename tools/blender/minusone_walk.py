@@ -1,6 +1,8 @@
 # Blender: blender -b -P walk.py -- <minusone_rigged.glb> <out_dir>
-# Gives the rigged Minus One model a looping in-place walk on its own skeleton (and a roar for
-# the neck, head and jaw only, played on top of the walk by the mod) and exports
+# Gives the rigged Minus One model a looping in-place walk on its own skeleton, plus a roar (neck,
+# head and jaw) and the Minus One atomic breath pose, both played on top of the walk by the mod.
+# The dorsal plates are split into bands from tail tip to neck so the mod can light them in
+# order while he charges. Exports
 # <out_dir>/godzilla.glb for the Unity bundle build, plus preview renders (walk_sheet.png,
 # walk.mp4). Legs use IK targets (planted feet, no sliding when the game's stride matches
 # STRIDE), hips bob and sway, spine counter-rotates, arms swing, tail waves; then everything
@@ -204,13 +206,64 @@ for f in (0, 6, 12, 18, 24, 30, 36, 42):
     scene.frame_set(f)
     print("check", f, "L toe", tuple(round(c, 3) for c in wtail(LEGS['L'][2])), "R toe", tuple(round(c, 3) for c in wtail(LEGS['R'][2])))
 
-# Plates glow: their materials share the Material_029 textures.
+# Plates glow, band by band from the tail tip to the neck (Minus One charge). All plate meshes
+# share the Material_029 textures, so one set of band materials serves them all; the name keeps
+# "Scales" (the mod's glow key) and "NoSplit" (no claw split in the bundle build).
 plate_objs = {'Object_15', 'Object_17', 'Object_19', 'Object_21', 'Object_23', 'Object_25'}
+PLATE_BANDS = 10
+
+
+def rest_head(n):
+    return W @ P[n].bone.head_local
+
+
+path = ([W @ P[TAIL[-1]].bone.tail_local] + [rest_head(n) for n in reversed(TAIL)]
+        + [rest_head(n) for n in SPINE[1:]] + [rest_head(NECK), rest_head(HEAD)])
+pa = np.array([tuple(v) for v in path])
+seg = pa[1:] - pa[:-1]
+seg_len = np.linalg.norm(seg, axis=1)
+cum = np.concatenate([[0.0], np.cumsum(seg_len)])
+plate_src = next(o for o in meshes if o.name == 'Object_15').material_slots[0].material
+bands = []
+for k in range(PLATE_BANDS):
+    m = plate_src.copy()
+    m.name = "Scales_NoSplit_Band%02d" % k
+    bands.append(m)
+counts = [0] * PLATE_BANDS
 for o in meshes:
-    for s in o.material_slots:
-        if s.material and o.name in plate_objs and "Scales" not in s.material.name:
-            s.material.name = "Scales_NoSplit_" + s.material.name
-        print("material", o.name, s.material.name if s.material else None)
+    if o.name not in plate_objs:
+        continue
+    me = o.data
+    co = np.empty(len(me.vertices) * 3)
+    me.vertices.foreach_get('co', co)
+    mw = np.array(o.matrix_world)
+    wco = co.reshape(-1, 3) @ mw[:3, :3].T + mw[:3, 3]
+    idx = np.empty(len(me.polygons) * 3, dtype=np.int64)
+    # Face centres from the first three corners (good enough for small plate faces).
+    loops = np.empty(len(me.loops), dtype=np.int64)
+    me.loops.foreach_get('vertex_index', loops)
+    starts = np.empty(len(me.polygons), dtype=np.int64)
+    me.polygons.foreach_get('loop_start', starts)
+    c = (wco[loops[starts]] + wco[loops[starts + 1]] + wco[loops[starts + 2]]) / 3.0
+    best_d = np.full(len(c), 1e9)
+    best_t = np.zeros(len(c))
+    for i in range(len(seg)):
+        t = np.clip(((c - pa[i]) @ seg[i]) / max(seg_len[i] ** 2, 1e-9), 0, 1)
+        d = np.linalg.norm(pa[i] + t[:, None] * seg[i] - c, axis=1)
+        better = d < best_d
+        best_d = np.where(better, d, best_d)
+        best_t = np.where(better, cum[i] + t * seg_len[i], best_t)
+    band = np.clip((best_t / cum[-1] * PLATE_BANDS).astype(np.int64), 0, PLATE_BANDS - 1)
+    me.materials.clear()
+    for m in bands:
+        me.materials.append(m)
+    me.polygons.foreach_set('material_index', band.astype(np.int32))
+    me.update()
+    for b in band:
+        counts[b] += 1
+print("plate bands (faces, tail tip first):", counts)
+for o in meshes:
+    print("material", o.name, [s.material.name for s in o.material_slots if s.material][:3])
 
 # ---- Roar: neck and head tip back, jaw opens wide, trembles, closes. Only these bones are
 # keyed, so in the game it layers over the walk without touching the legs, arms or tail.
@@ -243,10 +296,77 @@ for f in range(0, ROAR_N + 1, 2):
         P[name].rotation_quaternion = Euler((math.radians(deg * amount), 0, 0)).to_quaternion()
         P[name].keyframe_insert("rotation_quaternion", frame=f)
 
-# Both actions on NLA tracks so the exporter writes each as its own animation.
+# ---- Breath (Minus One): crouches and lowers his head while the plates light tail to neck,
+# inhales and rears up, then lunges into the shot: jaw wide, arms back, tail up; holds while
+# firing, then straightens. Angles in degrees about the world X axis (forward is -Y, so
+# + bends an upright bone forward, lowers the head, opens the jaw, swings an arm back and
+# lifts the tail). Times match the mod: charge 7 s, fire 2.5 s, fade 1.5 s.
+BREATH_N = 264  # 11 s
+JAW, JAW2 = 'Bone.022_7', 'Bone.024_6'
+SHOULDERS = [ARMS['L'][0], ARMS['R'][0]]
+ELBOWS = [ARMS['L'][1], ARMS['R'][1]]
+THIGHS = [LEGS['L'][0], LEGS['R'][0]]
+
+
+def pose_dict(hips, spine, neck, head, jaw, arms, elbows, tail0, tail):
+    d = {HIPS: hips, SPINE[0]: spine[0], SPINE[1]: spine[1], SPINE[2]: spine[2], NECK: neck,
+         HEAD: head, JAW: jaw, JAW2: -jaw * 0.15}
+    for b in SHOULDERS:
+        d[b] = arms
+    for b in ELBOWS:
+        d[b] = elbows
+    for i, b in enumerate(TAIL):
+        d[b] = tail0 if i == 0 else tail
+    return d
+
+
+REST = pose_dict(0, (0, 0, 0), 0, 0, 0, 0, 0, 0, 0)
+CROUCH = pose_dict(7, (8, 8, 6), 14, 20, 0, 22, 14, 4, 1.2)
+INHALE = pose_dict(2, (2, 0, -6), -12, -22, 14, 12, 8, 3, 1.0)
+FIRE = pose_dict(9, (10, 8, 4), 6, 4, 42, 32, 22, 7, 2.0)
+KEYS = [(0, REST), (40, CROUCH), (150, CROUCH), (162, INHALE), (168, FIRE), (228, FIRE), (264, REST)]
+ORDER = [HIPS] + THIGHS + SPINE + [NECK, HEAD, JAW, JAW2] + SHOULDERS + ELBOWS + TAIL
+
+
+def breath_pose(f):
+    for (f0, p0), (f1, p1) in zip(KEYS, KEYS[1:]):
+        if f0 <= f <= f1:
+            u = (f - f0) / (f1 - f0)
+            u = u * u * (3 - 2 * u)
+            return {b: p0[b] + (p1[b] - p0[b]) * u for b in p0}
+    return dict(REST)
+
+
+breath = bpy.data.actions.new("Breath")
+arm.animation_data.action = breath
+for f in range(0, BREATH_N + 1, 2):
+    scene.frame_set(f)
+    for pb in P:
+        pb.location, pb.rotation_quaternion = base[pb.name][0].copy(), base[pb.name][1].copy()
+    bpy.context.view_layer.update()
+    pose = breath_pose(f)
+    if 40 < f < 150:     # straining as the charge builds
+        pose[HEAD] += 1.2 * math.sin(f * 0.9)
+        pose[NECK] += 0.6 * math.sin(f * 0.7 + 1.0)
+    if 168 < f < 228:    # recoil tremble while firing
+        pose[HEAD] += 1.5 * math.sin(f * 2.3)
+        pose[JAW] += 2.0 * math.sin(f * 1.7)
+    for b in ORDER:
+        if b in THIGHS:
+            # Keep the legs where they stand while the pelvis tips forward.
+            turn(b, rot((1, 0, 0), -pose[HIPS]))
+        elif b == HIPS:
+            turn(b, rot((1, 0, 0), pose[b]), HIP_PIVOT)
+        else:
+            turn(b, rot((1, 0, 0), pose[b]))
+    for b in ORDER:
+        P[b].keyframe_insert("location", frame=f)
+        P[b].keyframe_insert("rotation_quaternion", frame=f)
+
+# All actions on NLA tracks so the exporter writes each as its own animation.
 ad = arm.animation_data
 tracks = []
-for act in (walk_action, roar):
+for act in (walk_action, roar, breath):
     tr = ad.nla_tracks.new()
     tr.name = act.name
     tr.strips.new(act.name, 0, act)
@@ -356,6 +476,30 @@ print("sheet", out.filepath_raw)
 
 for f in (0, 16, 50, 96):
     head_shot(os.path.join(outdir, "frames", "roar_%02d.png" % f), f)
+
+# Breath pose, full body from the side and three-quarter front.
+ad.action = breath
+btiles = []
+for f in (0, 100, 162, 190, 264):
+    for name, (cl, lk) in (("side", (side_cam, side_look)), ("front", (front_cam, front_look))):
+        pth = os.path.join(tmp, "breath_%s_%03d.png" % (name, f))
+        shoot(pth, f, cl, lk, w=480, h=360)
+        btiles.append((name, f, pth))
+ad.action = walk_action
+bsheet = np.zeros((2 * 360, 5 * 480, 4), dtype=np.float32)
+for i, f in enumerate((0, 100, 162, 190, 264)):
+    for name, pth in [(n, q) for n, ff, q in btiles if ff == f]:
+        img = bpy.data.images.load(pth)
+        px = np.array(img.pixels[:], dtype=np.float32).reshape(360, 480, 4)
+        r = 1 if name == "side" else 0
+        bsheet[r * 360:(r + 1) * 360, i * 480:(i + 1) * 480] = px
+        bpy.data.images.remove(img)
+bimg = bpy.data.images.new("bsheet", 5 * 480, 2 * 360, alpha=True)
+bimg.pixels[:] = bsheet.ravel()
+bimg.filepath_raw = os.path.join(outdir, "breath_sheet.png")
+bimg.file_format = 'PNG'
+bimg.save()
+print("breath sheet", bimg.filepath_raw)
 
 # Video: two loops from the three-quarter view.
 try:

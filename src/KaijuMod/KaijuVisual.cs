@@ -25,7 +25,7 @@ namespace KaijuMod
 
         private GameObject go;
         private Animation anim;
-        private AnimationState walkState, roarState;
+        private AnimationState walkState, roarState, breathState;
         private float clipLength;
         private Vector3 lastBase;
         private bool haveLast;
@@ -37,6 +37,9 @@ namespace KaijuMod
         // plate materials (emission enabled at black by the bundle build).
         private Transform mouth;
         private readonly List<Material> plates = new List<Material>();
+        // Band of each plate material, tail tip = 0 (-1 for an unbanded model), and the band count.
+        private readonly List<int> plateBand = new List<int>();
+        private int plateBands;
         private static readonly Color PlateGlowColor = new Color(0.3f, 0.6f, 1f);
         private readonly Dictionary<string, Material> effectMaterials = new Dictionary<string, Material>();
         private Vector3 lastPlaceBase;
@@ -81,18 +84,34 @@ namespace KaijuMod
             walkState = anim != null && anim.clip != null ? anim[anim.clip.name] : null;
             // The roar (neck, head and jaw only) plays on a layer above the walk.
             roarState = anim != null ? anim["roar"] : null;
-            if (roarState != null)
+            breathState = anim != null ? anim["breath"] : null;
+            foreach (var st in new[] { roarState, breathState })
             {
-                roarState.layer = 1;
-                roarState.wrapMode = WrapMode.Once;
+                if (st == null)
+                    continue;
+                st.layer = 1;
+                st.wrapMode = WrapMode.Once;
             }
+            // The breath holds its last frame until EndBreathPose blends it out.
+            if (breathState != null)
+                breathState.wrapMode = WrapMode.ClampForever;
             haveLast = false;
             mouth = FindChild(go.transform, "Mouth");
             plates.Clear();
+            plateBand.Clear();
+            plateBands = 0;
             foreach (var r in go.GetComponentsInChildren<Renderer>())
                 foreach (var m in r.materials) // per-instance copies, so the glow stays on this model
                     if (m.name.Contains("Scales") && m.HasProperty("_EmissionColor"))
+                    {
+                        // "..._BandNN": plate band NN counted from the tail tip (Minus One charge).
+                        int band = -1, at = m.name.IndexOf("Band", System.StringComparison.Ordinal);
+                        if (at < 0 || at + 6 > m.name.Length || !int.TryParse(m.name.Substring(at + 4, 2), out band))
+                            band = -1;
                         plates.Add(m);
+                        plateBand.Add(band);
+                        plateBands = Mathf.Max(plateBands, band + 1);
+                    }
             if (mouth == null)
                 Log.Warning("[KaijuMod] Model has no Mouth marker (older bundle?); breath fires from an estimated point");
         }
@@ -148,6 +167,47 @@ namespace KaijuMod
             roarState.speed = 1f;
             anim.CrossFade(roarState.name, 0.2f, PlayMode.StopSameLayer);
             return true;
+        }
+
+        /// <summary>The Minus One breath pose (crouch and charge, rear up, fire), over the walk. False if the model has none.</summary>
+        public bool PlayBreathPose()
+        {
+            if (anim == null || breathState == null)
+                return false;
+            breathState.speed = 1f;
+            breathState.time = 0f;
+            anim.CrossFade(breathState.name, 0.4f, PlayMode.StopSameLayer);
+            return true;
+        }
+
+        /// <summary>Blends the breath pose back out into the walk.</summary>
+        public void EndBreathPose()
+        {
+            if (anim != null && breathState != null && breathState.enabled)
+                anim.Blend(breathState.name, 0f, 0.6f);
+        }
+
+        /// <summary>
+        /// Lights the plates band by band from the tail tip as progress goes 0 to 1, each band
+        /// flaring as it comes on, at level (as SetPlateGlow). A model without bands just brightens.
+        /// </summary>
+        public void SetPlateCharge(float progress, float level)
+        {
+            for (int i = 0; i < plates.Count; i++)
+            {
+                var m = plates[i];
+                if (m == null)
+                    continue;
+                float k;
+                if (plateBand[i] < 0 || plateBands == 0)
+                    k = progress;
+                else
+                {
+                    float on = Mathf.Clamp01(progress * plateBands - plateBand[i]);
+                    k = on <= 0f ? 0f : 1f + 0.8f * (1f - on); // a flash as it lights, then steady
+                }
+                m.SetColor("_EmissionColor", PlateGlowColor * Mathf.Max(0f, level * k));
+            }
         }
 
         /// <summary>Seconds into the roar animation when his mouth is fully open (the sound starts then).</summary>

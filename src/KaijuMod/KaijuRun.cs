@@ -59,6 +59,8 @@ namespace KaijuMod
             public string Outcome = "";     // "", "won" or "lost"
             // Cities he has attacked: fallout hangs over them for the rest of the run.
             public readonly List<string> Ruined = new List<string>();
+            // Cities wiped out by a Minus One blast: the whole city is irradiated for good.
+            public readonly List<string> Blasted = new List<string>();
         }
 
         /// <summary>Fallout haze colour and fog density while you are in the radiation.</summary>
@@ -326,6 +328,8 @@ namespace KaijuMod
             strip = -1;
             if (data == null || !st.RadiationOn || st.Strip < 0)
                 return false;
+            if (BlastedCityAt(p) != null)
+                return true;
             int ps = data.StripOf(p.z);
             if (now < st.FrontStart)
             {
@@ -367,8 +371,10 @@ namespace KaijuMod
                     if (Time.time >= nextWarn)
                     {
                         nextWarn = Time.time + 6f;
+                        var city = BlastedCityAt(p);
                         string way = strip >= 0 ? (data.Direction(strip) > 0 ? "east" : "west") : "north";
-                        GameApi.Tooltip(player, "RADIATION! Get " + way + ", ahead of the front.");
+                        GameApi.Tooltip(player, city != null ? "RADIATION! Get out of " + city.Name + "!"
+                            : "RADIATION! Get " + way + ", ahead of the front.");
                     }
                 }
                 else if (strip >= 0 && Mathf.Abs(p.x - fx) < WarnDistance && Time.time >= nextWarn)
@@ -392,6 +398,37 @@ namespace KaijuMod
             st = new State();
             startTimer = 0f;
             Save();
+        }
+
+        // ---- Minus One blasts
+
+        /// <summary>A Minus One breath has wiped out a city: all of it is irradiated from now on.</summary>
+        public void OnCityBlasted(string cityName, Vector3 pos)
+        {
+            if (data == null || cityName == null)
+                return;
+            if (!st.Blasted.Contains(cityName))
+            {
+                st.Blasted.Add(cityName);
+                Save();
+            }
+            Log.Out("[KaijuMod] " + cityName + " is irradiated");
+            var player = GameApi.LocalPlayer(boundWorld);
+            if (player != null && GameApi.IsAlive(player))
+                GameApi.Tooltip(player, cityName + " is gone. The whole city is irradiated.");
+        }
+
+        /// <summary>The blasted city a position is in (with a margin), or null.</summary>
+        private Settlement BlastedCityAt(Vector3 p)
+        {
+            foreach (string name in st.Blasted)
+            {
+                var c = data.Find(name);
+                if (c != null && Mathf.Abs(p.x - c.X) <= c.HalfWidth + 40f
+                    && Mathf.Abs(p.z - c.Z) <= 2.2f * CityAttack.BlockSpacing + 40f)
+                    return c;
+            }
+            return null;
         }
 
         // ---- Fallout
@@ -823,6 +860,12 @@ namespace KaijuMod
                     r.SetAttribute("name", name);
                     e.AppendChild(r);
                 }
+                foreach (string name in st.Blasted)
+                {
+                    var r = doc.CreateElement("blasted");
+                    r.SetAttribute("name", name);
+                    e.AppendChild(r);
+                }
                 for (int i = 0; i < Parts; i++)
                 {
                     var c = doc.CreateElement("crate");
@@ -874,6 +917,8 @@ namespace KaijuMod
                 st.Outcome = e.GetAttribute("outcome") ?? "";
                 foreach (XmlElement r in e.SelectNodes("ruined"))
                     st.Ruined.Add(r.GetAttribute("name"));
+                foreach (XmlElement r in e.SelectNodes("blasted"))
+                    st.Blasted.Add(r.GetAttribute("name"));
                 foreach (XmlElement c in e.SelectNodes("crate"))
                 {
                     int i;

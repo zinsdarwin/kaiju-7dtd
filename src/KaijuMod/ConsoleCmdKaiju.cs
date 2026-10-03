@@ -31,6 +31,7 @@ namespace KaijuMod
                 + "  kaiju run [reset]    The Run status: day, strip, radiation front, next attack (reset starts it over)\n"
                 + "  kaiju attack <city|start|end|finale>  send him at a city now (a name from kaiju.xml, the start city, this strip's end city, or the final attack with the Oxygen Destroyer check)\n"
                 + "  kaiju parts          Oxygen Destroyer parts: where each crate is, which you carry, device and finale state\n"
+                + "  kaiju style <minusone|classic>  city attacks: one city-destroying blast (default), or six breaths along the streets\n"
                 + "  kaiju give <1-4|all> put Oxygen Destroyer parts in your backpack (testing)\n"
                 + "  kaiju radiation <on|off>  turn the radiation chase on or off\n"
                 + "  kaiju start          walk this session's recorded waypoints, else route.txt, else the built-in list\n"
@@ -120,6 +121,19 @@ namespace KaijuMod
                 case "parts":
                     GameApi.ConsoleOut(KaijuRun.Instance.PartsStatus());
                     break;
+                case "style":
+                {
+                    string want = _params.Count > 1 ? _params[1].ToLowerInvariant() : "";
+                    if (want == "classic")
+                        CityAttack.Style = AttackStyle.Classic;
+                    else if (want == "minusone" || want == "minus" || want == "mega")
+                        CityAttack.Style = AttackStyle.MinusOne;
+                    GameApi.ConsoleOut("City attack style: " + (CityAttack.Style == AttackStyle.MinusOne
+                        ? "minusone (one breath into the city centre: a nuclear blast that irradiates the whole city)"
+                        : "classic (six breaths along the streets, blocks destroyed)")
+                        + ". Use kaiju style <minusone|classic>; applies to the next attack.");
+                    break;
+                }
                 case "give":
                 {
                     string arg = _params.Count > 1 ? _params[1].ToLowerInvariant() : "";
