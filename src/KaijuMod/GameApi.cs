@@ -111,7 +111,99 @@ namespace KaijuMod
             var block = bv.Block;
             if (block == null || block.shape == null)
                 return false;
+            // The mod's own blocks (part crates, the Oxygen Destroyer) survive him.
+            // VERIFIED (V3.3): Block.GetBlockName().
+            if (IsKaijuBlock(block))
+                return false;
             return !block.shape.IsTerrain();
+        }
+
+        /// <summary>True for blocks this mod defines (all named kaiju*): Godzilla never destroys them.</summary>
+        public static bool IsKaijuBlock(Block block)
+        {
+            string name = block.GetBlockName();
+            return name != null && name.StartsWith("kaiju", System.StringComparison.Ordinal);
+        }
+
+        /// <summary>Name of the block at a position, or null for air or an unloaded chunk.</summary>
+        public static string BlockName(World world, Vector3i pos)
+        {
+            // VERIFIED (V3.3): World.GetBlock, BlockValue.isair, Block.GetBlockName.
+            if (!IsChunkLoaded(world, pos.x, pos.z))
+                return null;
+            BlockValue bv = world.GetBlock(pos);
+            if (bv.isair || bv.Block == null)
+                return null;
+            return bv.Block.GetBlockName();
+        }
+
+        /// <summary>True if the position holds air (water counts as air: it is stored separately).</summary>
+        public static bool IsAir(World world, Vector3i pos)
+        {
+            // VERIFIED (V3.3): World.GetBlock, BlockValue.isair.
+            return world.GetBlock(pos).isair;
+        }
+
+        /// <summary>Places a block by name. Returns false if the name is unknown.</summary>
+        public static bool PlaceBlock(World world, Vector3i pos, string blockName)
+        {
+            // VERIFIED (V3.3): Block.GetBlockValue(name) and WorldBase.SetBlockRPC(BlockValueRef, BlockValue)
+            // (Vector3i converts to BlockValueRef). A CompositeTileEntity block creates its tile entity
+            // (the loot container) when added. UNVERIFIED in game: the loot list fills on first open.
+            BlockValue bv = Block.GetBlockValue(blockName);
+            if (bv.isair)
+                return false;
+            world.SetBlockRPC(pos, bv);
+            return true;
+        }
+
+        /// <summary>POIs placed in the world: name and bounding box (world coordinates, min corner).</summary>
+        public static List<PrefabInstance> Pois()
+        {
+            // VERIFIED (V3.3): GameManager.GetDynamicPrefabDecorator().allPrefabs; PrefabInstance has
+            // name, boundingBoxPosition and boundingBoxSize.
+            var decorator = GameManager.Instance.GetDynamicPrefabDecorator();
+            return decorator != null ? decorator.allPrefabs : new List<PrefabInstance>();
+        }
+
+        /// <summary>How many of an item the player carries (backpack and toolbelt).</summary>
+        public static int ItemCount(EntityPlayer player, string itemName)
+        {
+            // VERIFIED (V3.3): ItemClass.GetItem(name), Entity.bag.GetItemCount, EntityAlive.inventory.GetItemCount.
+            ItemValue item = ItemClass.GetItem(itemName);
+            if (item == null || item.IsEmpty())
+                return 0;
+            int n = 0;
+            if (player.bag != null)
+                n += player.bag.GetItemCount(item);
+            if (player.inventory != null)
+                n += player.inventory.GetItemCount(item);
+            return n;
+        }
+
+        /// <summary>Puts one of an item in the player's backpack. Returns false if it did not fit.</summary>
+        public static bool GiveItem(EntityPlayer player, string itemName)
+        {
+            // VERIFIED (V3.3): Bag.AddItem(ItemStack). UNVERIFIED in game: the backpack UI refreshes.
+            ItemValue item = ItemClass.GetItem(itemName);
+            if (item == null || item.IsEmpty() || player.bag == null)
+                return false;
+            return player.bag.AddItem(new ItemStack(item, 1));
+        }
+
+        /// <summary>A compass and map marker at a world position, using a nav_objects.xml class.</summary>
+        public static NavObject AddMarker(string navClass, Vector3 worldPos)
+        {
+            // VERIFIED (V3.3): NavObjectManager.Instance.RegisterNavObject(class, Vector3 position);
+            // the game passes world block positions (BlockUtilityNavIcon, POIWaypoint).
+            return NavObjectManager.Instance != null ? NavObjectManager.Instance.RegisterNavObject(navClass, worldPos) : null;
+        }
+
+        public static void RemoveMarker(NavObject marker)
+        {
+            // VERIFIED (V3.3): NavObjectManager.UnRegisterNavObject(NavObject).
+            if (marker != null && NavObjectManager.Instance != null)
+                NavObjectManager.Instance.UnRegisterNavObject(marker);
         }
 
         /// <summary>Sets every listed position to air in one batched change.</summary>

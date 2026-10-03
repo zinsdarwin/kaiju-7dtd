@@ -46,6 +46,12 @@ namespace KaijuMod
         public float EmergeDistance = 90f;
         /// <summary>Name of the city being attacked, or null.</summary>
         public string Attacking { get; private set; }
+        // Death sequence (Oxygen Destroyer): he stops, the water boils, he sinks and is gone.
+        private bool dying;
+        private float dieTimer;
+        /// <summary>Seconds the death sequence takes.</summary>
+        public float DeathTime = 12f;
+        public bool Dying { get { return dying; } }
         private Vector2 position;
         private Vector2 heading;
         private float baseY;
@@ -104,6 +110,7 @@ namespace KaijuMod
                 Log.Out("[KaijuMod] Stopped at " + position + ", " + Footprint.TotalCleared + " blocks cleared"
                     + (Attacking != null ? " (attack on " + Attacking + ")" : ""));
             Running = false;
+            dying = false;
             breath.Cancel();
             visual.Hide();
             events.Clear();
@@ -141,12 +148,24 @@ namespace KaijuMod
         public void Tick(float dt)
         {
             if (!Running)
+            {
+                // Blast craters from his last breath keep clearing after he has gone.
+                World w = GameApi.World;
+                if (w != null)
+                    breath.Tick(w, dt);
                 return;
+            }
             World world = GameApi.World;
             if (world == null)
             {
                 // Left the game: drop the event rather than carry it into the next world.
                 Stop();
+                return;
+            }
+
+            if (dying)
+            {
+                TickDeath(world, dt);
                 return;
             }
 
@@ -192,6 +211,38 @@ namespace KaijuMod
             }
             breath.Begin(worldTarget, Footprint.Height);
             return true;
+        }
+
+        /// <summary>
+        /// The Oxygen Destroyer has gone off: he stops where he is, a flash and boiling bubbles
+        /// surround him, and he sinks into the ground over DeathTime seconds, then is gone.
+        /// </summary>
+        public void Die(Vector3 deviceWorldPos)
+        {
+            if (!Running || dying)
+                return;
+            dying = true;
+            dieTimer = 0f;
+            breath.Cancel();
+            float h = Footprint.Height;
+            KaijuEffects.Flash(deviceWorldPos + Vector3.up * 3f, h * 15f, 9f, 2.5f, new Color(0.8f, 0.95f, 1f));
+            KaijuEffects.Bubbles(new Vector3(position.x, baseY, position.y), h, DeathTime, visual.EffectMaterial("KaijuSpark"));
+            Log.Out("[KaijuMod] Oxygen Destroyer: Godzilla is dying at " + position);
+        }
+
+        private void TickDeath(World world, float dt)
+        {
+            dieTimer += dt;
+            float k = Mathf.Clamp01(dieTimer / DeathTime);
+            // A last stagger, then a slow collapse into the ground.
+            float sink = k * k * (3f - 2f * k);
+            visual.Place(new Vector3(position.x, baseY - sink * Footprint.Height * 1.05f, position.y), facing, Footprint.Radius * 2f, Footprint.Height);
+            visual.SetPlateGlow(Mathf.Max(0f, 3f * (1f - k)) * (0.5f + 0.5f * Mathf.Sin(dieTimer * 9f)));
+            if (k >= 1f)
+            {
+                Log.Out("[KaijuMod] Godzilla is dead");
+                Stop();
+            }
         }
 
         /// <summary>How far under the sea he is during an attack: 1 = fully, 0 = standing on the ground.</summary>

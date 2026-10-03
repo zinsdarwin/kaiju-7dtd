@@ -39,6 +39,9 @@ Defaults picked where the plan does not say yet (tunable):
 ### Building it
 The game's random world generator can't make this layout, so it is a custom world written by a Python script in `tools/snakemap`. It uses a V3.2 random-generated 6k world as a read-only format reference and writes a new world folder ("Kaiju Snake") into GeneratedWorlds. It also writes the road's waypoints and the end cities' positions for the mod.
 
+### The atomic breath
+His breath ends in an atomic blast, as in Minus One: flash, shockwave, a crater much wider than the beam, and a mushroom cloud a few hundred metres tall. He uses it on each city he attacks.
+
 ### The finale: the Oxygen Destroyer
 Part of The Run. Decided by Darwin 2026-10-03.
 

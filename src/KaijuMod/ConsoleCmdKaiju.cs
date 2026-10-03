@@ -29,7 +29,9 @@ namespace KaijuMod
         {
             return "Usage:\n"
                 + "  kaiju run [reset]    The Run status: day, strip, radiation front, next attack (reset starts it over)\n"
-                + "  kaiju attack <city|start|end>  send him at a city now (a name from kaiju.xml, the start city, or this strip's end city)\n"
+                + "  kaiju attack <city|start|end|finale>  send him at a city now (a name from kaiju.xml, the start city, this strip's end city, or the final attack with the Oxygen Destroyer check)\n"
+                + "  kaiju parts          Oxygen Destroyer parts: where each crate is, which you carry, device and finale state\n"
+                + "  kaiju give <1-4|all> put Oxygen Destroyer parts in your backpack (testing)\n"
                 + "  kaiju radiation <on|off>  turn the radiation chase on or off\n"
                 + "  kaiju start          walk this session's recorded waypoints, else route.txt, else the built-in list\n"
                 + "  kaiju test [dist]    walk a straight line from dist m in front of you, through you (default 120)\n"
@@ -95,10 +97,30 @@ namespace KaijuMod
                         break;
                     }
                     string which = _params.Count > 1 ? string.Join(" ", _params.GetRange(1, _params.Count - 1)) : "end";
-                    if (KaijuRun.Instance.Attack(which.ToLowerInvariant() == "start" || which.ToLowerInvariant() == "end" ? which.ToLowerInvariant() : which))
+                    string key = which.ToLowerInvariant();
+                    if (KaijuRun.Instance.Attack(key == "start" || key == "end" || key == "finale" ? key : which))
                         GameApi.ConsoleOut("Godzilla is attacking " + (director.Attacking ?? which) + ".");
                     else
                         GameApi.ConsoleOut("No such city: " + which + ". Use a settlement name from kaiju.xml, start, or end.");
+                    break;
+                }
+                case "parts":
+                    GameApi.ConsoleOut(KaijuRun.Instance.PartsStatus());
+                    break;
+                case "give":
+                {
+                    string arg = _params.Count > 1 ? _params[1].ToLowerInvariant() : "";
+                    int n;
+                    if (arg == "all")
+                    {
+                        for (int i = 0; i < KaijuRun.Parts; i++)
+                            KaijuRun.Instance.GivePart(i);
+                        GameApi.ConsoleOut("Gave all " + KaijuRun.Parts + " Oxygen Destroyer parts.");
+                    }
+                    else if (int.TryParse(arg, out n) && n >= 1 && n <= KaijuRun.Parts)
+                        GameApi.ConsoleOut(KaijuRun.Instance.GivePart(n - 1) ? "Gave Oxygen Destroyer part " + n + "." : "Could not give it (backpack full?).");
+                    else
+                        GameApi.ConsoleOut("Usage: kaiju give <1-" + KaijuRun.Parts + "|all>");
                     break;
                 }
                 case "radiation":

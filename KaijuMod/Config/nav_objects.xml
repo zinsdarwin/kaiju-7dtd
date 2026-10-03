@@ -1,0 +1,29 @@
+<configs>
+	<!-- Compass and map marker for an Oxygen Destroyer part crate, shown once you reach its city. -->
+	<append xpath="/nav_object_classes">
+		<nav_object_class name="kaiju_part">
+			<map_settings>
+				<property name="sprite_name" value="ui_game_symbol_airdrop"/>
+				<property name="min_distance" value="0"/>
+				<property name="max_distance" value="-1"/>
+				<property name="color" value="127,212,255,255"/>
+				<property name="has_pulse" value="true"/>
+			</map_settings>
+			<compass_settings>
+				<property name="sprite_name" value="ui_game_symbol_airdrop"/>
+				<property name="min_distance" value="0"/>
+				<property name="max_distance" value="2048"/>
+				<property name="max_scale_distance" value="512"/>
+				<property name="color" value="127,212,255,255"/>
+				<property name="has_pulse" value="true"/>
+				<property name="icon_clamped" value="false"/>
+			</compass_settings>
+			<onscreen_settings>
+				<property name="sprite_name" value="ui_game_symbol_airdrop"/>
+				<property name="min_distance" value="0"/>
+				<property name="max_distance" value="300"/>
+				<property name="color" value="127,212,255,255"/>
+			</onscreen_settings>
+		</nav_object_class>
+	</append>
+</configs>
