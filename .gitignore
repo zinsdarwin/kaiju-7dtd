@@ -34,3 +34,6 @@ assets-local/
 
 # Snake map generator previews (renders of a generated world)
 tools/snakemap/out/
+
+# Python bytecode
+__pycache__/
