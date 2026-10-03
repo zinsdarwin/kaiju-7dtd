@@ -152,14 +152,15 @@ namespace KaijuMod
             switch (phase)
             {
                 case Phase.Charge:
-                    // Mega: his head is down in the charge pose; he only aims as he rears up.
-                    aimWeight = mega ? Mathf.SmoothStep(0f, 1f, (t - (chargeTime - 1.2f)) / 1.2f)
-                        : Mathf.SmoothStep(0f, 1f, t / chargeTime);
+                    // Mega: the breath pose holds his head (thrown back, mouth gaping forward); turning
+                    // the head to aim the snout would tip the open mouth down. The beam still goes
+                    // from the mouth to the target.
+                    aimWeight = mega ? 0f : Mathf.SmoothStep(0f, 1f, t / chargeTime);
                     if (t >= chargeTime)
                         StartFire();
                     break;
                 case Phase.Fire:
-                    aimWeight = 1f;
+                    aimWeight = mega ? 0f : 1f;
                     Trace(world);
                     KillPlayersInBeam(world);
                     if (t >= fireTime)
@@ -172,7 +173,7 @@ namespace KaijuMod
                     }
                     break;
                 case Phase.Fade:
-                    aimWeight = 1f - Mathf.SmoothStep(0f, 1f, t / fadeTime);
+                    aimWeight = mega ? 0f : 1f - Mathf.SmoothStep(0f, 1f, t / fadeTime);
                     if (t >= fadeTime)
                         Finish();
                     break;
