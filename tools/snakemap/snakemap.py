@@ -407,6 +407,10 @@ class SnakeMap:
     # ---- settlements: street grids and POIs
 
     def build_settlements(self):
+        # The first pine town after the start city is where the game really starts (Godzilla
+        # destroys the start city; the opening quest goes there): it gets Trader Jen.
+        first_pine = [s for s in self.settlements if s["strip"] == 0 and s["kind"] == "town"][0]
+        self.first_traders = [t for t in self.traders if t.name == "trader_jen"] or self.traders
         for s in self.settlements:
             x0, x1, z0, z1, zc = self.settlement_rect(s)
             n = s["rows"]
@@ -441,7 +445,7 @@ class SnakeMap:
                         # spot it fits.
                         want_trader = (not trader_done and try_trader and abs(face_z - zc) < 1
                                        and c >= len(cross_x) // 2 - 1)
-                        cand = self.traders if want_trader else pool
+                        cand = (self.first_traders if s is first_pine else self.traders) if want_trader else pool
                         placed = self.place_lot(cand, s, x, bx1, face_z, hw_face, depth, north_of_main)
                         if placed is None:
                             if want_trader:
@@ -454,10 +458,10 @@ class SnakeMap:
                         x = placed + LOT_GAP
             if not trader_done:
                 print("warning: no trader fits in", s["name"])
-        # The start city is the first attack, so the middle pine town is where the game really starts.
-        mid = [s for s in self.settlements if s["strip"] == 0 and s["kind"] == "town"][1]
-        if "trader" not in mid:
-            raise SystemExit("no trader in %s (middle pine town); try another --seed" % mid["name"])
+        # The start city is the first attack, so the first pine town is where the game really starts.
+        first = [s for s in self.settlements if s["strip"] == 0 and s["kind"] == "town"][0]
+        if "trader" not in first:
+            raise SystemExit("no trader in %s (first pine town); try another --seed" % first["name"])
         print("traders:", ", ".join("%s %s" % (s["name"], s.get("trader", "-")) for s in self.settlements))
 
     def place_lot(self, pool, s, x, xmax, face_z, hw_face, depth, north_of_main):
