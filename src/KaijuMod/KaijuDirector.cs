@@ -147,6 +147,13 @@ namespace KaijuMod
             normalSpeed = -1f;
         }
 
+        /// <summary>Stops him and drops any blast damage still being worked through (starting over).</summary>
+        public void StopAll()
+        {
+            Stop();
+            breath.CancelAll();
+        }
+
         /// <summary>
         /// A city attack: rises from the sea at the route's start, walks it at the attack speed,
         /// fires the scripted breaths, and sinks back into the sea at its end.

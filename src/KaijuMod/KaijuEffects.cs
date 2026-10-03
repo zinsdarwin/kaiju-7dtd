@@ -61,6 +61,23 @@ namespace KaijuMod
             Shockwave.Create(worldPos, radius * 1.6f, smoke);
         }
 
+        /// <summary>Removes every blast effect still in the world: mushroom clouds, shockwaves, flashes, bubbles.</summary>
+        public static void ClearAll()
+        {
+            foreach (var c in clouds)
+                if (c != null)
+                    Object.Destroy(c);
+            clouds.Clear();
+            foreach (var e in Object.FindObjectsOfType<MushroomCloud>())
+                Object.Destroy(e.gameObject);
+            foreach (var e in Object.FindObjectsOfType<Shockwave>())
+                Object.Destroy(e.gameObject);
+            foreach (var e in Object.FindObjectsOfType<Flash>())
+                Object.Destroy(e.gameObject);
+            foreach (var e in Object.FindObjectsOfType<Bubbles>())
+                Object.Destroy(e.gameObject);
+        }
+
         /// <summary>A brief bright light, e.g. the Oxygen Destroyer going off.</summary>
         public static void Flash(Vector3 worldPos, float range, float intensity, float seconds, Color color)
         {

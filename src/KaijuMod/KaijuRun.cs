@@ -391,8 +391,14 @@ namespace KaijuMod
             Save();
         }
 
+        /// <summary>
+        /// Starts The Run over: he is removed, every cloud, shockwave and haze goes, the radiation
+        /// and fog clear, and the start city attack comes again at once.
+        /// </summary>
         public void Reset()
         {
+            KaijuDirector.Instance.StopAll();
+            KaijuEffects.ClearAll();
             ClearMarkers();
             ClearFallout(GameApi.World);
             st = new State();

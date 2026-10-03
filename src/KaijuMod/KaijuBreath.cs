@@ -120,6 +120,14 @@ namespace KaijuMod
             Log.Out("[KaijuMod] Atomic breath charging at " + target);
         }
 
+        /// <summary>Stops at once and also drops queued crater and beam damage (starting over).</summary>
+        public void CancelAll()
+        {
+            Cancel();
+            craters.Clear();
+            pending.Clear();
+        }
+
         /// <summary>Stops at once and removes the effects.</summary>
         public void Cancel()
         {

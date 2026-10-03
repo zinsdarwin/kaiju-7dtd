@@ -28,8 +28,8 @@ namespace KaijuMod
         public override string getHelp()
         {
             return "Usage:\n"
-                + "  kaiju run [reset]    The Run status: day, strip, radiation front, next attack (reset starts it over)\n"
-                + "  kaiju attack <city|start|end|finale>  send him at a city now (a name from kaiju.xml, the start city, this strip's end city, or the final attack with the Oxygen Destroyer check)\n"
+                + "  kaiju run [reset]    The Run status: day, strip, radiation front, next attack (reset starts it over: clears radiation and clouds)\n"
+                + "  kaiju attack <city|start|end|finale>  send him at a city now (a name from kaiju.xml; start starts The Run over, clearing radiation and clouds; end is this strip's end city; or the final attack with the Oxygen Destroyer check)\n"
                 + "  kaiju parts          Oxygen Destroyer parts: where each crate is, which you carry, device and finale state\n"
                 + "  kaiju style <minusone|classic>  city attacks: one city-destroying blast (default), or six breaths along the streets\n"
                 + "  kaiju give <1-4|all> put Oxygen Destroyer parts in your backpack (testing)\n"
@@ -87,7 +87,7 @@ namespace KaijuMod
                     if (_params.Count > 1 && _params[1].ToLowerInvariant() == "reset")
                     {
                         KaijuRun.Instance.Reset();
-                        GameApi.ConsoleOut("The Run reset: the start city attack is pending again.");
+                        GameApi.ConsoleOut("The Run reset: radiation and clouds cleared; he comes for the start city again.");
                     }
                     GameApi.ConsoleOut(KaijuRun.Instance.Status());
                     break;
@@ -100,6 +100,13 @@ namespace KaijuMod
                     }
                     string which = _params.Count > 1 ? string.Join(" ", _params.GetRange(1, _params.Count - 1)) : "end";
                     string key = which.ToLowerInvariant();
+                    if (key == "start")
+                    {
+                        // The start city attack is the beginning of The Run: start everything over.
+                        KaijuRun.Instance.Reset();
+                        GameApi.ConsoleOut("Starting over: radiation and clouds cleared; Godzilla is coming for the start city.");
+                        break;
+                    }
                     if (KaijuRun.Instance.Attack(key == "start" || key == "end" || key == "finale" ? key : which))
                         GameApi.ConsoleOut("Godzilla is attacking " + (director.Attacking ?? which) + ".");
                     else
