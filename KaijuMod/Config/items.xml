@@ -1,0 +1,33 @@
+<configs>
+	<!-- Oxygen Destroyer parts: one in a glowing crate in each of the first four end cities.
+	     Quest-style: not sold to traders, not scrappable, one per stack. -->
+	<append xpath="/items">
+		<item name="kaijuOxygenDestroyerPart1">
+			<property name="Extends" value="resourceElectricParts"/>
+			<property name="Tags" value="kaijuPart"/>
+			<property name="CustomIcon" value="resourceElectricParts"/>
+			<property name="CustomIconTint" value="7fd4ff"/>
+			<property name="DescriptionKey" value="kaijuOxygenDestroyerPart1Desc"/>
+			<property name="Stacknumber" value="1"/>
+			<property name="EconomicValue" value="0"/>
+			<property name="SellableToTrader" value="false"/>
+			<property name="NoScrapping" value="true"/>
+			<property name="CreativeMode" value="Dev"/>
+		</item>
+		<item name="kaijuOxygenDestroyerPart2">
+			<property name="Extends" value="kaijuOxygenDestroyerPart1"/>
+			<property name="CustomIcon" value="resourceMechanicalParts"/>
+			<property name="DescriptionKey" value="kaijuOxygenDestroyerPart2Desc"/>
+		</item>
+		<item name="kaijuOxygenDestroyerPart3">
+			<property name="Extends" value="kaijuOxygenDestroyerPart1"/>
+			<property name="CustomIcon" value="resourceRadiator"/>
+			<property name="DescriptionKey" value="kaijuOxygenDestroyerPart3Desc"/>
+		</item>
+		<item name="kaijuOxygenDestroyerPart4">
+			<property name="Extends" value="kaijuOxygenDestroyerPart1"/>
+			<property name="CustomIcon" value="resourceSpring"/>
+			<property name="DescriptionKey" value="kaijuOxygenDestroyerPart4Desc"/>
+		</item>
+	</append>
+</configs>

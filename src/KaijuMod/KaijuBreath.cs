@@ -19,14 +19,16 @@ namespace KaijuMod
         public static float FadeTime = 1.2f;
         /// <summary>Longest beam, in metres from the mouth.</summary>
         public static float Range = 600f;
-        /// <summary>Beam damage radius as a fraction of his height (0.04 at 120 m = about 5 m).</summary>
-        public static float RadiusFraction = 0.04f;
+        /// <summary>Beam damage radius as a fraction of his height (0.08 at 100 m = 8 m).</summary>
+        public static float RadiusFraction = 0.08f;
         /// <summary>How fast the beam's front travels out from the mouth, m/s.</summary>
         public static float BeamSpeed = 400f;
         /// <summary>Blocks set to air per frame by the beam (on top of the footprint's budget).</summary>
         public static int ClearBudget = 300;
-        /// <summary>Candidate cells examined per frame while tracing the beam.</summary>
+        /// <summary>Candidate cells examined per frame while tracing the beam or a blast crater.</summary>
         public static int ReadBudget = 8000;
+        /// <summary>Blast crater radius as a multiple of the beam's damage radius (Minus One style detonation).</summary>
+        public static float BlastScale = 3f; // crater ~61 m radius in a city attack at 100 m tall
 
         private static readonly Color CoreColor = new Color(0.85f, 0.95f, 1f, 1f);
         private static readonly Color GlowColor = new Color(0.25f, 0.55f, 1f, 0.7f);
@@ -40,7 +42,7 @@ namespace KaijuMod
         private Vector3 target;        // aim point, world coordinates
         private Vector3 mouthWorld;    // last known mouth position, world coordinates
         private Vector3 beamEnd;       // current beam end, world coordinates
-        private float height = 120f;
+        private float height = 100f;
         private float aimWeight;
 
         // Damage along the beam: cells within radius of the traced segment, nearest the mouth first.
@@ -50,6 +52,15 @@ namespace KaijuMod
         private readonly Queue<Vector3i> pending = new Queue<Vector3i>();
         private readonly List<Vector3i> batch = new List<Vector3i>();
         private readonly HashSet<EntityPlayer> killed = new HashSet<EntityPlayer>();
+        private bool hitSomething;
+        // Blast craters being scanned, one horizontal slice at a time under ReadBudget.
+        private struct CraterJob
+        {
+            public Vector3 Center;
+            public float Radius;
+            public int Dy;
+        }
+        private readonly List<CraterJob> craters = new List<CraterJob>();
 
         // Effects
         private GameObject fx;
@@ -74,8 +85,9 @@ namespace KaijuMod
         }
 
         /// <summary>Starts a breath at a world-space target point.</summary>
-        public void Begin(Vector3 worldTarget, float kaijuHeight)
+        public void Begin(Vector3 worldTarget, float kaijuHeight, float radiusScale = 1f)
         {
+            this.radiusScale = Mathf.Max(0.1f, radiusScale);
             Cancel();
             target = worldTarget;
             height = Mathf.Max(5f, kaijuHeight);
@@ -83,8 +95,8 @@ namespace KaijuMod
             t = 0f;
             aimWeight = 0f;
             seen.Clear();
-            pending.Clear();
             killed.Clear();
+            hitSomething = false;
             BuildEffects();
             Log.Out("[KaijuMod] Atomic breath charging at " + target);
         }
@@ -104,6 +116,9 @@ namespace KaijuMod
         {
             if (leftovers != null && Time.time > leftoversUntil)
                 DropLeftovers(true);
+            // Craters and queued clears keep going after the beam has ended.
+            ProcessCraters(world);
+            ClearPending(world);
             if (phase == Phase.Idle)
                 return;
             t += dt;
@@ -117,18 +132,18 @@ namespace KaijuMod
                 case Phase.Fire:
                     aimWeight = 1f;
                     Trace(world);
-                    ClearPending(world);
                     KillPlayersInBeam(world);
                     if (t >= FireTime)
                     {
                         phase = Phase.Fade;
                         t = 0f;
+                        if (hitSomething)
+                            Detonate(world);
                         Log.Out("[KaijuMod] Atomic breath done, " + TotalCleared + " blocks destroyed by breath so far");
                     }
                     break;
                 case Phase.Fade:
                     aimWeight = 1f - Mathf.SmoothStep(0f, 1f, t / FadeTime);
-                    ClearPending(world); // finish what the beam already reached
                     if (t >= FadeTime)
                         Finish();
                     break;
@@ -153,8 +168,13 @@ namespace KaijuMod
             Vector3 toTarget = target - traceFrom;
             traceDir = toTarget.sqrMagnitude > 0.01f ? toTarget.normalized : Vector3.forward;
             // The beam stops at the first thing it hits (terrain, buildings, you) or at its range.
+            // Physics colliders only exist near the player, so a far target can be missed: fall back
+            // to marching through block data, which is loaded much further out.
             Vector3? hit = GameApi.Raycast(traceFrom, traceDir, Range);
+            if (!hit.HasValue && GameApi.World != null)
+                hit = GameApi.BlockRaycast(GameApi.World, traceFrom, traceDir, Range);
             beamEnd = hit ?? traceFrom + traceDir * Range;
+            hitSomething = hit.HasValue;
             traceLength = Vector3.Distance(traceFrom, beamEnd);
             traceFront = 0f;
             traced = 0f;
@@ -194,7 +214,10 @@ namespace KaijuMod
 
         // ---- Damage ----
 
-        private float DamageRadius { get { return Mathf.Max(2f, height * RadiusFraction); } }
+        // Damage radius multiplier for this breath (city attacks use a bigger one).
+        private float radiusScale = 1f;
+
+        private float DamageRadius { get { return Mathf.Max(2f, height * RadiusFraction * radiusScale); } }
 
         /// <summary>
         /// Advances the beam front and queues destructible blocks within the damage radius of the
@@ -222,35 +245,84 @@ namespace KaijuMod
         private int QueueSphere(World world, Vector3 c, float radius, Vector3? crater)
         {
             int ri = Mathf.CeilToInt(radius);
+            int reads = 0;
+            for (int dy = ri; dy >= -ri; dy--) // top down, like the footprint
+                reads += QueueSlice(world, c, radius, crater, dy);
+            return reads;
+        }
+
+        /// <summary>One horizontal slice (c.y + dy) of QueueSphere.</summary>
+        private int QueueSlice(World world, Vector3 c, float radius, Vector3? crater, int dy)
+        {
+            int ri = Mathf.CeilToInt(radius);
             int cx = Mathf.FloorToInt(c.x), cy = Mathf.FloorToInt(c.y), cz = Mathf.FloorToInt(c.z);
             float r2 = radius * radius;
             int reads = 0;
-            for (int dy = ri; dy >= -ri; dy--) // top down, like the footprint
+            int y = cy + dy;
+            if (y < 1 || y > 253)
+                return 1;
+            for (int dx = -ri; dx <= ri; dx++)
             {
-                int y = cy + dy;
-                if (y < 1 || y > 253)
-                    continue;
-                for (int dx = -ri; dx <= ri; dx++)
+                for (int dz = -ri; dz <= ri; dz++)
                 {
-                    for (int dz = -ri; dz <= ri; dz++)
-                    {
-                        int x = cx + dx, z = cz + dz;
-                        var p = new Vector3(x + 0.5f, y + 0.5f, z + 0.5f);
-                        float d2 = crater.HasValue ? (p - crater.Value).sqrMagnitude : DistanceToBeamSq(p);
-                        if (d2 > r2)
-                            continue;
-                        long key = Key(x, y, z);
-                        if (!seen.Add(key))
-                            continue;
-                        reads++;
-                        if (!GameApi.IsChunkLoaded(world, x, z))
-                            continue;
-                        if (GameApi.IsDestructible(world, x, y, z))
-                            pending.Enqueue(new Vector3i(x, y, z));
-                    }
+                    int x = cx + dx, z = cz + dz;
+                    var p = new Vector3(x + 0.5f, y + 0.5f, z + 0.5f);
+                    float d2 = crater.HasValue ? (p - crater.Value).sqrMagnitude : DistanceToBeamSq(p);
+                    if (d2 > r2)
+                        continue;
+                    long key = Key(x, y, z);
+                    if (!seen.Add(key))
+                        continue;
+                    reads++;
+                    if (!GameApi.IsChunkLoaded(world, x, z))
+                        continue;
+                    if (GameApi.IsDestructible(world, x, y, z))
+                        pending.Enqueue(new Vector3i(x, y, z));
                 }
             }
-            return reads;
+            return Mathf.Max(1, reads);
+        }
+
+        /// <summary>
+        /// The beam's end detonates like an atomic bomb: flash, shockwave, mushroom cloud, a crater
+        /// BlastScale times the beam's radius (blocks only; terrain stays), and anyone inside it dies.
+        /// </summary>
+        private void Detonate(World world)
+        {
+            float r = DamageRadius * BlastScale;
+            KaijuEffects.Explosion(beamEnd, height, visual.EffectMaterial("KaijuSmoke"), visual.EffectMaterial("KaijuSpark"));
+            KaijuAudio.Blast(beamEnd, r);
+            craters.Add(new CraterJob { Center = beamEnd, Radius = r, Dy = Mathf.CeilToInt(r) });
+            foreach (EntityPlayer player in GameApi.Players(world))
+            {
+                if (!GameApi.IsAlive(player))
+                    continue;
+                if ((GameApi.Position(player) - beamEnd).sqrMagnitude <= r * r)
+                {
+                    Log.Out("[KaijuMod] Atomic blast hit player at " + GameApi.Position(player));
+                    GameApi.Kill(player);
+                }
+            }
+            Log.Out("[KaijuMod] Atomic blast at " + beamEnd + ", crater radius " + Mathf.Round(r) + " m");
+        }
+
+        /// <summary>Scans queued craters one horizontal slice at a time, top down, within the read budget.</summary>
+        private void ProcessCraters(World world)
+        {
+            int reads = 0;
+            while (craters.Count > 0 && reads < ReadBudget)
+            {
+                CraterJob job = craters[0];
+                int ri = Mathf.CeilToInt(job.Radius);
+                if (job.Dy < -ri)
+                {
+                    craters.RemoveAt(0);
+                    continue;
+                }
+                reads += QueueSlice(world, job.Center, job.Radius, job.Center, job.Dy);
+                job.Dy--;
+                craters[0] = job;
+            }
         }
 
         private float DistanceToBeamSq(Vector3 p)

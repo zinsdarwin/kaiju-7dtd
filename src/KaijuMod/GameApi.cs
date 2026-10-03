@@ -89,6 +89,19 @@ namespace KaijuMod
             return world.GetTerrainHeight(x, z);
         }
 
+        /// <summary>
+        /// Ground height at a column anywhere on the map: the loaded chunk's terrain height, or the
+        /// world heightmap where the chunk is not loaded (far from the player).
+        /// </summary>
+        public static float GroundHeight(World world, int x, int z)
+        {
+            // VERIFIED (V3.3): World.GetHeightAt(x, z) reads the terrain generator's heightmap
+            // (TerrainFromRaw.GetTerrainHeightAt, world coordinates, whole map, no chunk needed).
+            if (IsChunkLoaded(world, x, z))
+                return TerrainHeight(world, x, z);
+            return world.GetHeightAt(x, z);
+        }
+
         /// <summary>True if the chunk holding this column is loaded, so its blocks can be read and changed.</summary>
         public static bool IsChunkLoaded(World world, int x, int z)
         {
@@ -111,7 +124,99 @@ namespace KaijuMod
             var block = bv.Block;
             if (block == null || block.shape == null)
                 return false;
+            // The mod's own blocks (part crates, the Oxygen Destroyer) survive him.
+            // VERIFIED (V3.3): Block.GetBlockName().
+            if (IsKaijuBlock(block))
+                return false;
             return !block.shape.IsTerrain();
+        }
+
+        /// <summary>True for blocks this mod defines (all named kaiju*): Godzilla never destroys them.</summary>
+        public static bool IsKaijuBlock(Block block)
+        {
+            string name = block.GetBlockName();
+            return name != null && name.StartsWith("kaiju", System.StringComparison.Ordinal);
+        }
+
+        /// <summary>Name of the block at a position, or null for air or an unloaded chunk.</summary>
+        public static string BlockName(World world, Vector3i pos)
+        {
+            // VERIFIED (V3.3): World.GetBlock, BlockValue.isair, Block.GetBlockName.
+            if (!IsChunkLoaded(world, pos.x, pos.z))
+                return null;
+            BlockValue bv = world.GetBlock(pos);
+            if (bv.isair || bv.Block == null)
+                return null;
+            return bv.Block.GetBlockName();
+        }
+
+        /// <summary>True if the position holds air (water counts as air: it is stored separately).</summary>
+        public static bool IsAir(World world, Vector3i pos)
+        {
+            // VERIFIED (V3.3): World.GetBlock, BlockValue.isair.
+            return world.GetBlock(pos).isair;
+        }
+
+        /// <summary>Places a block by name. Returns false if the name is unknown.</summary>
+        public static bool PlaceBlock(World world, Vector3i pos, string blockName)
+        {
+            // VERIFIED (V3.3): Block.GetBlockValue(name) and WorldBase.SetBlockRPC(BlockValueRef, BlockValue)
+            // (Vector3i converts to BlockValueRef). A CompositeTileEntity block creates its tile entity
+            // (the loot container) when added. UNVERIFIED in game: the loot list fills on first open.
+            BlockValue bv = Block.GetBlockValue(blockName);
+            if (bv.isair)
+                return false;
+            world.SetBlockRPC(pos, bv);
+            return true;
+        }
+
+        /// <summary>POIs placed in the world: name and bounding box (world coordinates, min corner).</summary>
+        public static List<PrefabInstance> Pois()
+        {
+            // VERIFIED (V3.3): GameManager.GetDynamicPrefabDecorator().allPrefabs; PrefabInstance has
+            // name, boundingBoxPosition and boundingBoxSize.
+            var decorator = GameManager.Instance.GetDynamicPrefabDecorator();
+            return decorator != null ? decorator.allPrefabs : new List<PrefabInstance>();
+        }
+
+        /// <summary>How many of an item the player carries (backpack and toolbelt).</summary>
+        public static int ItemCount(EntityPlayer player, string itemName)
+        {
+            // VERIFIED (V3.3): ItemClass.GetItem(name), Entity.bag.GetItemCount, EntityAlive.inventory.GetItemCount.
+            ItemValue item = ItemClass.GetItem(itemName);
+            if (item == null || item.IsEmpty())
+                return 0;
+            int n = 0;
+            if (player.bag != null)
+                n += player.bag.GetItemCount(item);
+            if (player.inventory != null)
+                n += player.inventory.GetItemCount(item);
+            return n;
+        }
+
+        /// <summary>Puts one of an item in the player's backpack. Returns false if it did not fit.</summary>
+        public static bool GiveItem(EntityPlayer player, string itemName)
+        {
+            // VERIFIED (V3.3): Bag.AddItem(ItemStack). UNVERIFIED in game: the backpack UI refreshes.
+            ItemValue item = ItemClass.GetItem(itemName);
+            if (item == null || item.IsEmpty() || player.bag == null)
+                return false;
+            return player.bag.AddItem(new ItemStack(item, 1));
+        }
+
+        /// <summary>A compass and map marker at a world position, using a nav_objects.xml class.</summary>
+        public static NavObject AddMarker(string navClass, Vector3 worldPos)
+        {
+            // VERIFIED (V3.3): NavObjectManager.Instance.RegisterNavObject(class, Vector3 position);
+            // the game passes world block positions (BlockUtilityNavIcon, POIWaypoint).
+            return NavObjectManager.Instance != null ? NavObjectManager.Instance.RegisterNavObject(navClass, worldPos) : null;
+        }
+
+        public static void RemoveMarker(NavObject marker)
+        {
+            // VERIFIED (V3.3): NavObjectManager.UnRegisterNavObject(NavObject).
+            if (marker != null && NavObjectManager.Instance != null)
+                NavObjectManager.Instance.UnRegisterNavObject(marker);
         }
 
         /// <summary>Sets every listed position to air in one batched change.</summary>
@@ -168,6 +273,35 @@ namespace KaijuMod
         }
 
         /// <summary>
+        /// First solid cell along a world-space ray, from block data: any non-air block, or below the
+        /// terrain surface. Works where Raycast misses: physics colliders only exist for chunks near
+        /// the player, but block data is loaded much further out. Steps of half a metre; skips
+        /// unloaded chunks. Returns null if nothing is hit within maxDistance.
+        /// </summary>
+        public static Vector3? BlockRaycast(World world, Vector3 worldOrigin, Vector3 direction, float maxDistance)
+        {
+            // VERIFIED (V3.3): World.GetBlock, World.GetTerrainHeight (see TerrainHeight), chunk check.
+            Vector3 dir = direction.normalized;
+            for (float d = 2f; d <= maxDistance; d += 0.5f)
+            {
+                Vector3 p = worldOrigin + dir * d;
+                int x = Mathf.FloorToInt(p.x), y = Mathf.FloorToInt(p.y), z = Mathf.FloorToInt(p.z);
+                if (y < 0 || y > 254)
+                    continue;
+                if (!IsChunkLoaded(world, x, z))
+                {
+                    // No block data out here: hit the ground from the world heightmap.
+                    if (p.y <= world.GetHeightAt(x, z))
+                        return p;
+                    continue;
+                }
+                if (p.y <= TerrainHeight(world, x, z) || !world.GetBlock(new Vector3i(x, y, z)).isair)
+                    return p;
+            }
+            return null;
+        }
+
+        /// <summary>
         /// Loads a prefab from a Unity asset bundle in the mod's Resources folder, or null if the
         /// file is missing. bundleFile is relative to the mod folder, e.g. "Resources/kaiju.unity3d".
         /// </summary>
@@ -187,6 +321,128 @@ namespace KaijuMod
             // VERIFIED (V3.3): DataLoader.LoadAsset<T>("#<bundle>?<asset>"); C# needs the
             // #@modfolder(ModName): form, plain @modfolder: only works in XML.
             return DataLoader.LoadAsset<T>("#@modfolder(KaijuMod):" + bundleFile + "?" + assetName);
+        }
+
+        /// <summary>Folder of the world being played (where kaiju.xml sits), or null.</summary>
+        public static string WorldFolder()
+        {
+            // VERIFIED (V3.3): the game resolves a world's folder this way itself
+            // (BiomeIntensityMap, WorldBiomeProviderFromImage, ChunkProviderDisc).
+            string name = GamePrefs.GetString(EnumGamePrefs.GameWorld);
+            if (string.IsNullOrEmpty(name))
+                return null;
+            var location = PathAbstractions.WorldsSearchPaths.GetLocation(name);
+            return location.Type == PathAbstractions.EAbstractedLocationType.None ? null : location.FullPath;
+        }
+
+        /// <summary>Folder of the current save game, for the mod's own state file.</summary>
+        public static string SaveFolder()
+        {
+            // VERIFIED (V3.3): GameIO.GetSaveGameDir() = Saves/<GameWorld>/<GameName> for the current game.
+            return GameIO.GetSaveGameDir();
+        }
+
+        /// <summary>In-game time in ticks: 1000 per hour, 24000 per day; day 1 starts at 0.</summary>
+        public static ulong WorldTime(World world)
+        {
+            // VERIFIED (V3.3): World.worldTime; GameUtils.WorldTimeToDays = time / 24000 + 1.
+            return world.worldTime;
+        }
+
+        public static int Day(ulong worldTime)
+        {
+            // VERIFIED (V3.3)
+            return GameUtils.WorldTimeToDays(worldTime);
+        }
+
+        public static int Hour(ulong worldTime)
+        {
+            // VERIFIED (V3.3)
+            return GameUtils.WorldTimeToHours(worldTime);
+        }
+
+        public static ulong DayTimeToWorldTime(int day, int hour, int minute)
+        {
+            // VERIFIED (V3.3)
+            return GameUtils.DayTimeToWorldTime(day, hour, minute);
+        }
+
+        /// <summary>Day of the next (or current) blood moon.</summary>
+        public static int BloodMoonDay()
+        {
+            // VERIFIED (V3.3): AIDirectorBloodMoonComponent reads GameStats BloodMoonDay and moves it
+            // to the next blood moon once the current one ends.
+            return GameStats.GetInt(EnumGameStats.BloodMoonDay);
+        }
+
+        /// <summary>Dusk and dawn hours (Item1, Item2) for the game's day length setting.</summary>
+        public static (int, int) DuskDawn()
+        {
+            // VERIFIED (V3.3): World.DuskDawnInit uses CalcDuskDawnHours(GameStats DayLightLength).
+            return GameUtils.CalcDuskDawnHours(GameStats.GetInt(EnumGameStats.DayLightLength));
+        }
+
+        /// <summary>True from dusk on the blood moon day until dawn the next day: the horde night.</summary>
+        public static bool IsBloodMoonNow(World world)
+        {
+            // VERIFIED (V3.3): the same test AIDirectorBloodMoonComponent and DayTimeTracker use.
+            return GameUtils.IsBloodMoonTime(world.worldTime, DuskDawn(), BloodMoonDay());
+        }
+
+        /// <summary>Shows an on-screen tooltip to the local player.</summary>
+        public static void Tooltip(EntityPlayer player, string text)
+        {
+            // VERIFIED (V3.3): GameManager.ShowTooltip(EntityPlayerLocal, string, ...) queues a popup.
+            // UNVERIFIED in game: that plain text (not a localization key) is shown as is.
+            var local = player as EntityPlayerLocal;
+            if (local != null)
+                GameManager.ShowTooltip(local, text);
+        }
+
+        /// <summary>Radiation damage from the front.</summary>
+        public static void RadiationDamage(EntityPlayer player, int amount)
+        {
+            // VERIFIED (V3.3): EnumDamageTypes.Radiation exists; same DamageEntity call as Kill.
+            // UNVERIFIED in game: how much armour or radiation resistance reduces it.
+            var source = new DamageSource(EnumDamageSource.External, EnumDamageTypes.Radiation);
+            player.DamageEntity(source, amount, false, 0f);
+        }
+
+        /// <summary>
+        /// Forces the fog colour and density (fallout haze); the game fades toward it over a few
+        /// seconds. ClearFog hands fog back to the weather.
+        /// </summary>
+        public static void SetFog(World world, Color color, float density)
+        {
+            // VERIFIED (V3.3): WorldEnvironment.SetFogOverride(Color, float); WorldEnvironment.Update
+            // uses fogColorOverride/fogDensityOverride when density >= 0 and lerps the fog toward
+            // them by 0.01 a frame. World.m_WorldEnvironment holds the instance.
+            if (world != null && world.m_WorldEnvironment != null)
+                world.m_WorldEnvironment.SetFogOverride(color, density);
+        }
+
+        public static void ClearFog(World world)
+        {
+            // VERIFIED (V3.3): density -1 turns the override off.
+            if (world != null && world.m_WorldEnvironment != null)
+                world.m_WorldEnvironment.SetFogOverride(default(Color), -1f);
+        }
+
+        /// <summary>Loads a vanilla audio clip by its sounds.xml ClipName (e.g. "@:Sounds/Explosions/explosion1.wav").</summary>
+        public static AudioClip LoadAudioClip(string clipName)
+        {
+            // VERIFIED (V3.3): Audio.Manager loads clips with DataLoader.LoadAsset<AudioClip>(ClipName),
+            // where "@:" names an Addressables asset (DataLoader.ParseDataPathIdentifier).
+            return DataLoader.LoadAsset<AudioClip>(clipName);
+        }
+
+        /// <summary>Plays a sound from sounds.xml in the player's head (e.g. "buff_geiger_counter").</summary>
+        public static void PlaySound(EntityPlayer player, string soundName)
+        {
+            // VERIFIED (V3.3): Audio.Manager.PlayInsidePlayerHead(name, entityId); buff_geiger_counter
+            // is a vanilla SoundDataNode (three geiger clips).
+            if (player != null)
+                Audio.Manager.PlayInsidePlayerHead(soundName, player.entityId);
         }
 
         /// <summary>Writes a line to the F1 console, or the log when no console is available.</summary>

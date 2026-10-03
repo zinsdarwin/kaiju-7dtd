@@ -9,7 +9,8 @@ using UnityEngine;
 /// Batch-mode builder for the Kaiju asset bundle:
 ///   Unity.exe -batchmode -projectPath . -executeMethod BuildKaiju.Build -kaijuOut <dir> -quit
 /// Makes prefab "Kaiju" from Assets/Model/godzilla.glb: feet at the origin, facing +z, 1 unit
-/// tall, Standard-shader materials, legacy Animation playing the walk on loop, and an empty
+/// tall, Standard-shader materials, legacy Animation playing the walk on loop (plus "roar", if the
+/// model has a clip named Roar, holding only the bones it moves, for the mod to layer on top), and an empty
 /// "Mouth" on the head bone (forward = where the breath goes). The dorsal plate material
 /// (name contains "Scales") has emission enabled at black so the mod can light it. Also bundles
 /// the atomic breath materials KaijuBeam, KaijuSpark and KaijuSmoke. Writes kaiju.unity3d,
@@ -44,15 +45,21 @@ public static class BuildKaiju
         var anim = inst.GetComponent<Animation>();
         if (anim == null) anim = inst.AddComponent<Animation>(); // not ??: Unity fakes null for missing components
         AnimationClip walk = null;
-        if (clips.Count > 0)
+        // The roar (optional) plays on top of the walk: only the bones it moves are kept.
+        var roarSrc = clips.FirstOrDefault(c => c.name.IndexOf("roar", StringComparison.OrdinalIgnoreCase) >= 0);
+        if (roarSrc != null)
         {
-            walk = clips.OrderByDescending(c => c.length).First();
-            if (!walk.legacy)
-            {
-                walk = UnityEngine.Object.Instantiate(walk);
-                walk.legacy = true;
-                AssetDatabase.CreateAsset(walk, GenDir + "/walk.anim");
-            }
+            var roar = Legacy(roarSrc, "roar");
+            StripStillCurves(roar);
+            roar.wrapMode = WrapMode.Once;
+            anim.AddClip(roar, "roar");
+        }
+        var walks = clips.Where(c => c != roarSrc).ToList();
+        if (walks.Count > 0)
+        {
+            walk = walks.FirstOrDefault(c => c.name.IndexOf("walk", StringComparison.OrdinalIgnoreCase) >= 0)
+                ?? walks.OrderByDescending(c => c.length).First();
+            walk = Legacy(walk, "walk");
             walk.wrapMode = WrapMode.Loop;
             anim.AddClip(walk, "walk");
             anim.clip = walk;
@@ -157,6 +164,42 @@ public static class BuildKaiju
         Debug.Log("[BuildKaiju] wrote " + Path.Combine(outDir, "kaiju.unity3d"));
     }
 
+    /// <summary>A legacy copy of an imported clip, saved under Generated (imported clips are read-only).</summary>
+    static AnimationClip Legacy(AnimationClip src, string name)
+    {
+        var c = UnityEngine.Object.Instantiate(src);
+        c.name = name;
+        c.legacy = true;
+        AssetDatabase.CreateAsset(c, GenDir + "/" + name + ".anim");
+        return c;
+    }
+
+    /// <summary>
+    /// Removes the curves of every transform property that never changes in the clip (the glTF
+    /// export samples all bones), so a clip layered over the walk only overrides what it moves.
+    /// </summary>
+    static void StripStillCurves(AnimationClip clip)
+    {
+        var bindings = AnimationUtility.GetCurveBindings(clip);
+        int kept = 0, removed = 0;
+        foreach (var group in bindings.GroupBy(b => b.path + "|" + b.propertyName.Substring(0, Math.Max(0, b.propertyName.LastIndexOf('.')))))
+        {
+            bool moves = group.Any(b =>
+            {
+                var keys = AnimationUtility.GetEditorCurve(clip, b).keys;
+                return keys.Length > 1 && keys.Max(k => k.value) - keys.Min(k => k.value) > 1e-4f;
+            });
+            foreach (var b in group)
+            {
+                if (moves) { kept++; continue; }
+                AnimationUtility.SetEditorCurve(clip, b, null);
+                removed++;
+            }
+        }
+        EditorUtility.SetDirty(clip);
+        Debug.Log("[BuildKaiju] " + clip.name + ": kept " + kept + " curves, removed " + removed + " still ones");
+    }
+
     /// <summary>
     /// Adds an empty "Mouth" at the front of the snout, parented to the bone that moves it most,
     /// facing his front. The mod fires the breath from it and turns that bone (and its parent) to aim.
@@ -211,7 +254,7 @@ public static class BuildKaiju
     }
 
     /// <summary>
-    /// The plate material also covers claws and teeth. Moves those triangles to a copy of the
+    /// The plate material may also cover claws and teeth. Moves those triangles to a copy of the
     /// material without "Scales" in its name, so only the dorsal plates glow. Classified by
     /// position in the 1-unit, +z-facing pose: feet claws are near the ground, hand claws are
     /// forward and below the head, teeth are near the snout.
@@ -222,7 +265,8 @@ public static class BuildKaiju
         {
             var mats = smr.sharedMaterials;
             int sub = Array.FindIndex(mats, m => m != null && m.name.Contains(PlateMaterialKey));
-            if (sub < 0)
+            // Models whose plates have their own material (named "...NoSplit...") need no split.
+            if (sub < 0 || mats[sub].name.Contains("NoSplit"))
                 continue;
             var baked = new Mesh();
             smr.BakeMesh(baked, true);

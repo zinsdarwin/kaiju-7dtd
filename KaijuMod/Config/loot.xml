@@ -1,0 +1,17 @@
+<configs>
+	<!-- One part per crate: count 1 from a single entry, so each crate holds exactly its part. -->
+	<append xpath="/lootcontainers">
+		<lootcontainer name="kaijuPart1" count="1" size="3,1" sound_open="UseActions/crate_wood_open" sound_close="UseActions/crate_wood_close" loot_quality_template="qualBaseTemplate">
+			<item name="kaijuOxygenDestroyerPart1" count="1"/>
+		</lootcontainer>
+		<lootcontainer name="kaijuPart2" count="1" size="3,1" sound_open="UseActions/crate_wood_open" sound_close="UseActions/crate_wood_close" loot_quality_template="qualBaseTemplate">
+			<item name="kaijuOxygenDestroyerPart2" count="1"/>
+		</lootcontainer>
+		<lootcontainer name="kaijuPart3" count="1" size="3,1" sound_open="UseActions/crate_wood_open" sound_close="UseActions/crate_wood_close" loot_quality_template="qualBaseTemplate">
+			<item name="kaijuOxygenDestroyerPart3" count="1"/>
+		</lootcontainer>
+		<lootcontainer name="kaijuPart4" count="1" size="3,1" sound_open="UseActions/crate_wood_open" sound_close="UseActions/crate_wood_close" loot_quality_template="qualBaseTemplate">
+			<item name="kaijuOxygenDestroyerPart4" count="1"/>
+		</lootcontainer>
+	</append>
+</configs>

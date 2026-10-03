@@ -21,10 +21,11 @@ namespace KaijuMod
         /// speed follows his real speed through this, so his feet don't slide. Tunable with
         /// `kaiju stride`: raise it if the walk looks too fast, lower it if too slow.
         /// </summary>
-        public static float StrideHeights = 0.6f;
+        public static float StrideHeights = 0.41f;
 
         private GameObject go;
         private Animation anim;
+        private AnimationState walkState, roarState;
         private float clipLength;
         private Vector3 lastBase;
         private bool haveLast;
@@ -77,6 +78,14 @@ namespace KaijuMod
             Object.DontDestroyOnLoad(go);
             anim = go.GetComponentInChildren<Animation>();
             clipLength = anim != null && anim.clip != null ? anim.clip.length : 0f;
+            walkState = anim != null && anim.clip != null ? anim[anim.clip.name] : null;
+            // The roar (neck, head and jaw only) plays on a layer above the walk.
+            roarState = anim != null ? anim["roar"] : null;
+            if (roarState != null)
+            {
+                roarState.layer = 1;
+                roarState.wrapMode = WrapMode.Once;
+            }
             haveLast = false;
             mouth = FindChild(go.transform, "Mouth");
             plates.Clear();
@@ -124,12 +133,25 @@ namespace KaijuMod
                 float moved = new Vector2(worldBase.x - lastBase.x, worldBase.z - lastBase.z).magnitude;
                 float metresPerLoop = Mathf.Max(0.01f, StrideHeights * height);
                 float rate = moved / dt * clipLength / metresPerLoop;
-                foreach (AnimationState state in anim)
-                    state.speed = rate;
+                if (walkState != null)
+                    walkState.speed = rate;
             }
             lastBase = worldBase;
             haveLast = true;
         }
+
+        /// <summary>Opens his mouth and throws his head back for a roar, over the walk. False if the model has no roar.</summary>
+        public bool PlayRoar()
+        {
+            if (anim == null || roarState == null)
+                return false;
+            roarState.speed = 1f;
+            anim.CrossFade(roarState.name, 0.2f, PlayMode.StopSameLayer);
+            return true;
+        }
+
+        /// <summary>Seconds into the roar animation when his mouth is fully open (the sound starts then).</summary>
+        public const float RoarOpenDelay = 0.45f;
 
         public void Hide()
         {
