@@ -36,6 +36,7 @@ namespace KaijuMod
                 + "  kaiju start          walk this session's recorded waypoints, else route.txt, else the built-in list\n"
                 + "  kaiju test [dist]    walk a straight line from dist m in front of you, through you (default 120)\n"
                 + "  kaiju stop           stop and remove him\n"
+                + "  kaiju roar           he roars (or, if he is not out, a roar 150 m in front of you)\n"
                 + "  kaiju breath [me]    atomic breath at what you're looking at (or at you); he must be out\n"
                 + "  kaiju status         position, segment, blocks cleared\n"
                 + "  kaiju speed <m/s>    set walking speed\n"
@@ -104,6 +105,18 @@ namespace KaijuMod
                         GameApi.ConsoleOut("No such city: " + which + ". Use a settlement name from kaiju.xml, start, or end.");
                     break;
                 }
+                case "roar":
+                    if (!director.Roar())
+                    {
+                        var me = LocalPlayer();
+                        if (me != null)
+                        {
+                            Ray look = GameApi.LookRay(me);
+                            KaijuAudio.Roar(look.origin + look.direction * 150f);
+                        }
+                    }
+                    GameApi.ConsoleOut("ROAAAR.");
+                    break;
                 case "parts":
                     GameApi.ConsoleOut(KaijuRun.Instance.PartsStatus());
                     break;

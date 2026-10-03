@@ -83,6 +83,111 @@ namespace KaijuMod
         }
     }
 
+    /// <summary>
+    /// Lasting fallout over a ruined city: a dark remnant cloud hanging high above it and a low
+    /// green-grey haze over the ruins. Slow, sparse particles that never stop emitting.
+    /// </summary>
+    public class FalloutCloud : WorldAnchored
+    {
+        public static FalloutCloud Create(Vector3 worldPos, float height, float cityHalfWidth, Material smoke)
+        {
+            if (smoke == null)
+                return null;
+            var go = new GameObject("KaijuFallout");
+            Object.DontDestroyOnLoad(go);
+            var f = go.AddComponent<FalloutCloud>();
+            f.worldPos = worldPos;
+            f.LateUpdate();
+            float h = Mathf.Max(10f, height);
+
+            var remnant = KaijuEffects.Particles(go.transform, "Remnant", smoke, 70, true);
+            remnant.transform.localPosition = new Vector3(0f, h * 4.2f, 0f);
+            var main = remnant.main;
+            main.startLifetime = new ParticleSystem.MinMaxCurve(80f, 120f);
+            main.startSpeed = new ParticleSystem.MinMaxCurve(0.2f, 1f);
+            main.startSize = new ParticleSystem.MinMaxCurve(h * 1.0f, h * 1.8f);
+            main.startColor = new ParticleSystem.MinMaxGradient(new Color(0.24f, 0.23f, 0.22f, 0.55f), new Color(0.32f, 0.3f, 0.27f, 0.45f));
+            var shape = remnant.shape;
+            shape.enabled = true;
+            shape.shapeType = ParticleSystemShapeType.Sphere;
+            shape.radius = h * 1.6f;
+            shape.scale = new Vector3(1.6f, 0.45f, 1.6f);
+            var col = remnant.colorOverLifetime;
+            col.enabled = true;
+            col.color = KaijuEffects.Fade(Color.white, Color.white, 0.15f, 0.8f);
+            var emission = remnant.emission;
+            emission.rateOverTime = 0.7f;
+            remnant.Play();
+            remnant.Simulate(60f, true, false); // start already formed after a load
+
+            var haze = KaijuEffects.Particles(go.transform, "Haze", smoke, 60, true);
+            haze.transform.localPosition = new Vector3(0f, h * 0.35f, 0f);
+            main = haze.main;
+            main.startLifetime = new ParticleSystem.MinMaxCurve(50f, 80f);
+            main.startSpeed = new ParticleSystem.MinMaxCurve(0.1f, 0.5f);
+            main.startSize = new ParticleSystem.MinMaxCurve(h * 0.8f, h * 1.4f);
+            main.startColor = new ParticleSystem.MinMaxGradient(new Color(0.42f, 0.47f, 0.34f, 0.35f), new Color(0.36f, 0.4f, 0.3f, 0.3f));
+            shape = haze.shape;
+            shape.enabled = true;
+            shape.shapeType = ParticleSystemShapeType.Box;
+            shape.scale = new Vector3(cityHalfWidth * 2.2f, h * 0.4f, 4f * 78f);
+            col = haze.colorOverLifetime;
+            col.enabled = true;
+            col.color = KaijuEffects.Fade(Color.white, Color.white, 0.2f, 0.75f);
+            emission = haze.emission;
+            emission.rateOverTime = 0.9f;
+            haze.Play();
+            haze.Simulate(50f, true, false);
+            return f;
+        }
+    }
+
+    /// <summary>Grey ash drifting down around the local player while they are in the radiation.</summary>
+    public class Ashfall : MonoBehaviour
+    {
+        private ParticleSystem ps;
+        private float strength;
+        public float Target;
+
+        public static Ashfall Create(Material smoke)
+        {
+            if (smoke == null)
+                return null;
+            var go = new GameObject("KaijuAshfall");
+            Object.DontDestroyOnLoad(go);
+            var a = go.AddComponent<Ashfall>();
+            a.ps = KaijuEffects.Particles(go.transform, "Ash", smoke, 400, false);
+            var main = a.ps.main;
+            main.startLifetime = new ParticleSystem.MinMaxCurve(6f, 9f);
+            main.startSpeed = 0f;
+            main.startSize = new ParticleSystem.MinMaxCurve(0.08f, 0.22f);
+            main.startColor = new ParticleSystem.MinMaxGradient(new Color(0.55f, 0.55f, 0.52f, 0.9f), new Color(0.3f, 0.3f, 0.28f, 0.8f));
+            main.gravityModifier = 0.03f;
+            var shape = a.ps.shape;
+            shape.enabled = true;
+            shape.shapeType = ParticleSystemShapeType.Box;
+            shape.scale = new Vector3(40f, 1f, 40f);
+            var noise = a.ps.noise;
+            noise.enabled = true;
+            noise.strength = 0.6f;
+            noise.frequency = 0.3f;
+            var col = a.ps.colorOverLifetime;
+            col.enabled = true;
+            col.color = KaijuEffects.Fade(Color.white, Color.white, 0.1f, 0.8f);
+            a.ps.Play();
+            return a;
+        }
+
+        /// <summary>Follows the player (scene position), fading the ash in and out toward Target (0-1).</summary>
+        public void Follow(Vector3 playerScenePos)
+        {
+            transform.position = playerScenePos + Vector3.up * 14f;
+            strength = Mathf.MoveTowards(strength, Target, Time.deltaTime * 0.25f);
+            var emission = ps.emission;
+            emission.rateOverTime = 60f * strength;
+        }
+    }
+
     /// <summary>Keeps an effect at a fixed world position while the scene origin shifts.</summary>
     public class WorldAnchored : MonoBehaviour
     {

@@ -388,6 +388,43 @@ namespace KaijuMod
             player.DamageEntity(source, amount, false, 0f);
         }
 
+        /// <summary>
+        /// Forces the fog colour and density (fallout haze); the game fades toward it over a few
+        /// seconds. ClearFog hands fog back to the weather.
+        /// </summary>
+        public static void SetFog(World world, Color color, float density)
+        {
+            // VERIFIED (V3.3): WorldEnvironment.SetFogOverride(Color, float); WorldEnvironment.Update
+            // uses fogColorOverride/fogDensityOverride when density >= 0 and lerps the fog toward
+            // them by 0.01 a frame. World.m_WorldEnvironment holds the instance.
+            if (world != null && world.m_WorldEnvironment != null)
+                world.m_WorldEnvironment.SetFogOverride(color, density);
+        }
+
+        public static void ClearFog(World world)
+        {
+            // VERIFIED (V3.3): density -1 turns the override off.
+            if (world != null && world.m_WorldEnvironment != null)
+                world.m_WorldEnvironment.SetFogOverride(default(Color), -1f);
+        }
+
+        /// <summary>Loads a vanilla audio clip by its sounds.xml ClipName (e.g. "@:Sounds/Explosions/explosion1.wav").</summary>
+        public static AudioClip LoadAudioClip(string clipName)
+        {
+            // VERIFIED (V3.3): Audio.Manager loads clips with DataLoader.LoadAsset<AudioClip>(ClipName),
+            // where "@:" names an Addressables asset (DataLoader.ParseDataPathIdentifier).
+            return DataLoader.LoadAsset<AudioClip>(clipName);
+        }
+
+        /// <summary>Plays a sound from sounds.xml in the player's head (e.g. "buff_geiger_counter").</summary>
+        public static void PlaySound(EntityPlayer player, string soundName)
+        {
+            // VERIFIED (V3.3): Audio.Manager.PlayInsidePlayerHead(name, entityId); buff_geiger_counter
+            // is a vanilla SoundDataNode (three geiger clips).
+            if (player != null)
+                Audio.Manager.PlayInsidePlayerHead(soundName, player.entityId);
+        }
+
         /// <summary>Writes a line to the F1 console, or the log when no console is available.</summary>
         public static void ConsoleOut(string line)
         {

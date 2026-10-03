@@ -31,6 +31,12 @@ namespace KaijuMod
         }
 
         public bool Breathing { get { return breath.Active; } }
+
+        /// <summary>An effect material from the model's bundle (KaijuSmoke, KaijuSpark, KaijuBeam).</summary>
+        public Material EffectMaterial(string name)
+        {
+            return visual.EffectMaterial(name);
+        }
         public long BreathCleared { get { return breath.TotalCleared; } }
 
         private List<Vector2> route = new List<Vector2>();
@@ -52,6 +58,10 @@ namespace KaijuMod
         /// <summary>Seconds the death sequence takes.</summary>
         public float DeathTime = 12f;
         public bool Dying { get { return dying; } }
+        // Roars: on rising from the sea, before the first breath of an attack, every 30-60 s while
+        // walking, and on death.
+        private bool roaredRise, roaredFirstBreath;
+        private float nextRoar;
         private Vector2 position;
         private Vector2 heading;
         private float baseY;
@@ -111,6 +121,7 @@ namespace KaijuMod
                     + (Attacking != null ? " (attack on " + Attacking + ")" : ""));
             Running = false;
             dying = false;
+            roaredRise = roaredFirstBreath = false;
             breath.Cancel();
             visual.Hide();
             events.Clear();
@@ -137,6 +148,8 @@ namespace KaijuMod
             breathScale = CityAttack.BreathScale;
             fromSea = true;
             Attacking = plan.City.Name;
+            roaredRise = roaredFirstBreath = false;
+            nextRoar = Time.time + Random.Range(30f, 60f);
             normalSpeed = Speed;
             Speed = CityAttack.Speed;
             // Offshore chunks are usually not loaded yet; start on the seabed rather than at y = 0.
@@ -172,8 +185,23 @@ namespace KaijuMod
             // He stands still while breathing.
             if (!breath.Active)
                 Advance(dt);
+            if (fromSea && !roaredRise && traveled >= EmergeDistance * 0.6f)
+            {
+                roaredRise = true;
+                Roar();
+            }
+            if (!breath.Active && Time.time >= nextRoar)
+            {
+                nextRoar = Time.time + Random.Range(30f, 60f);
+                Roar();
+            }
             if (!breath.Active && nextEvent < events.Count && traveled >= events[nextEvent].Distance)
             {
+                if (!roaredFirstBreath)
+                {
+                    roaredFirstBreath = true;
+                    Roar();
+                }
                 breath.Begin(events[nextEvent].Target, Footprint.Height, breathScale);
                 nextEvent++;
             }
@@ -213,6 +241,15 @@ namespace KaijuMod
             return true;
         }
 
+        /// <summary>He roars from his mouth (also `kaiju roar`). False if he is not out.</summary>
+        public bool Roar()
+        {
+            if (!Running)
+                return false;
+            KaijuAudio.Roar(visual.MouthWorld());
+            return true;
+        }
+
         /// <summary>
         /// The Oxygen Destroyer has gone off: he stops where he is, a flash and boiling bubbles
         /// surround him, and he sinks into the ground over DeathTime seconds, then is gone.
@@ -227,6 +264,7 @@ namespace KaijuMod
             float h = Footprint.Height;
             KaijuEffects.Flash(deviceWorldPos + Vector3.up * 3f, h * 15f, 9f, 2.5f, new Color(0.8f, 0.95f, 1f));
             KaijuEffects.Bubbles(new Vector3(position.x, baseY, position.y), h, DeathTime, visual.EffectMaterial("KaijuSpark"));
+            Roar();
             Log.Out("[KaijuMod] Oxygen Destroyer: Godzilla is dying at " + position);
         }
 

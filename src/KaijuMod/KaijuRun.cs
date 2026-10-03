@@ -57,7 +57,17 @@ namespace KaijuMod
             public Vector3i DevicePos;
             public bool FinaleActive;
             public string Outcome = "";     // "", "won" or "lost"
+            // Cities he has attacked: fallout hangs over them for the rest of the run.
+            public readonly List<string> Ruined = new List<string>();
         }
+
+        /// <summary>Fallout haze colour and fog density while you are in the radiation.</summary>
+        public static Color FalloutFog = new Color(0.47f, 0.52f, 0.4f);
+        public static float FalloutFogDensity = 0.55f;
+        private readonly Dictionary<string, FalloutCloud> fallout = new Dictionary<string, FalloutCloud>();
+        private Ashfall ash;
+        private bool fogOn;
+        private float nextGeiger;
 
         // Not saved: markers and lights are rebuilt as the player moves.
         private readonly NavObject[] markers = new NavObject[Parts];
@@ -122,6 +132,7 @@ namespace KaijuMod
             }
 
             TickFinale();
+            TickFallout(world, player, now);
             partsTimer += dt;
             if (partsTimer >= 1f)
             {
@@ -133,6 +144,7 @@ namespace KaijuMod
         private void Bind(World world)
         {
             ClearMarkers();
+            ClearFallout(world);
             boundWorld = world;
             startTimer = radTimer = partsTimer = 0f;
             st = new State();
@@ -158,6 +170,8 @@ namespace KaijuMod
                 return;
             }
             Load();
+            foreach (string name in st.Ruined)
+                AddFallout(data.Find(name));
             Log.Out("[KaijuMod] The Run: " + data.World + ", " + data.Settlements.Count + " settlements, "
                 + data.Route.Count + " route points; strip " + st.Strip + (st.StartAttacked ? "" : ", start attack pending"));
         }
@@ -207,6 +221,12 @@ namespace KaijuMod
                 return false;
             }
             Log.Out("[KaijuMod] Godzilla is attacking " + city.Name);
+            if (!st.Ruined.Contains(city.Name))
+            {
+                st.Ruined.Add(city.Name);
+                Save();
+            }
+            AddFallout(city);
             var player = GameApi.LocalPlayer(boundWorld);
             if (player != null)
                 GameApi.Tooltip(player, "Godzilla is rising off " + city.Name + "!");
@@ -340,9 +360,72 @@ namespace KaijuMod
         public void Reset()
         {
             ClearMarkers();
+            ClearFallout(GameApi.World);
             st = new State();
             startTimer = 0f;
             Save();
+        }
+
+        // ---- Fallout
+
+        private void AddFallout(Settlement city)
+        {
+            if (city == null || fallout.ContainsKey(city.Name))
+                return;
+            var f = FalloutCloud.Create(new Vector3(city.X, city.Y, city.Z), KaijuDirector.Instance.Footprint.Height,
+                city.HalfWidth, KaijuDirector.Instance.EffectMaterial("KaijuSmoke"));
+            if (f != null)
+                fallout[city.Name] = f;
+        }
+
+        private void ClearFallout(World world)
+        {
+            foreach (var f in fallout.Values)
+                if (f != null)
+                    Object.Destroy(f.gameObject);
+            fallout.Clear();
+            if (ash != null)
+                Object.Destroy(ash.gameObject);
+            ash = null;
+            if (fogOn)
+                GameApi.ClearFog(world);
+            fogOn = false;
+        }
+
+        /// <summary>
+        /// In the radiation: ash falls around you, the air turns a sickly green-grey and a geiger
+        /// counter clicks. All of it fades back out when you leave.
+        /// </summary>
+        private void TickFallout(World world, EntityPlayer player, ulong now)
+        {
+            if (player == null)
+                return;
+            Vector3 p = GameApi.Position(player);
+            float fx;
+            int strip;
+            bool hot = GameApi.IsAlive(player) && IsIrradiated(p, now, out fx, out strip);
+            if (ash == null && hot)
+                ash = Ashfall.Create(KaijuDirector.Instance.EffectMaterial("KaijuSmoke"));
+            if (ash != null)
+            {
+                ash.Target = hot ? 1f : 0f;
+                ash.Follow(GameApi.WorldToScene(p));
+            }
+            if (hot && !fogOn)
+            {
+                GameApi.SetFog(world, FalloutFog, FalloutFogDensity);
+                fogOn = true;
+            }
+            else if (!hot && fogOn)
+            {
+                GameApi.ClearFog(world);
+                fogOn = false;
+            }
+            if (hot && Time.time >= nextGeiger)
+            {
+                GameApi.PlaySound(player, "buff_geiger_counter");
+                nextGeiger = Time.time + Random.Range(0.15f, 0.7f);
+            }
         }
 
         // ---- Oxygen Destroyer: part crates
@@ -679,6 +762,12 @@ namespace KaijuMod
                 e.SetAttribute("device", st.DevicePos.x + "," + st.DevicePos.y + "," + st.DevicePos.z);
                 e.SetAttribute("finale", st.FinaleActive ? "1" : "0");
                 e.SetAttribute("outcome", st.Outcome);
+                foreach (string name in st.Ruined)
+                {
+                    var r = doc.CreateElement("ruined");
+                    r.SetAttribute("name", name);
+                    e.AppendChild(r);
+                }
                 for (int i = 0; i < Parts; i++)
                 {
                     var c = doc.CreateElement("crate");
@@ -728,6 +817,8 @@ namespace KaijuMod
                 st.DevicePos = ParseV3i(e.GetAttribute("device"));
                 st.FinaleActive = e.GetAttribute("finale") == "1";
                 st.Outcome = e.GetAttribute("outcome") ?? "";
+                foreach (XmlElement r in e.SelectNodes("ruined"))
+                    st.Ruined.Add(r.GetAttribute("name"));
                 foreach (XmlElement c in e.SelectNodes("crate"))
                 {
                     int i;

@@ -291,6 +291,7 @@ namespace KaijuMod
         {
             float r = DamageRadius * BlastScale;
             KaijuEffects.Explosion(beamEnd, height, visual.EffectMaterial("KaijuSmoke"), visual.EffectMaterial("KaijuSpark"));
+            KaijuAudio.Blast(beamEnd, r);
             craters.Add(new CraterJob { Center = beamEnd, Radius = r, Dy = Mathf.CeilToInt(r) });
             foreach (EntityPlayer player in GameApi.Players(world))
             {
