@@ -15,7 +15,8 @@ Writes a complete custom world folder (no game run needed):
   - kaiju.xml: Godzilla's route (road waypoints) and the city centres, for the mod
 
 Formats (verified against a V3.2 RWG world and the decompiled game; see README.md):
-dtm.raw is uint16 metres*256, row 0 = south (z = -3072); PNGs use the same orientation.
+dtm.raw is uint16 metres*256, row 0 = south (z = -3072). PNGs are the other way up: the game
+loads them with Unity, bottom row first, so the bottom row is south (see save_png).
 The game rebuilds dtm_processed.raw, splat*_processed.png, splat*_half.png and
 checksums.txt on first load, stamping POI footprints into the heightmap and smoothing roads.
 
@@ -120,6 +121,12 @@ def strip_dir(i):
 
 def to_px(x, z):
     return x + HALF, z + HALF
+
+
+def save_png(rgba, path):
+    """Saves an RGBA map whose row 0 is south. Unity reads PNGs bottom row first, so the
+    bottom row of the file must be the south edge: flip before writing."""
+    Image.fromarray(np.ascontiguousarray(rgba[::-1]), "RGBA").save(path)
 
 
 # ---------------------------------------------------------------- prefabs
@@ -510,8 +517,8 @@ class SnakeMap:
             i = int(np.clip((z + HALF) // STRIP_H, 0, STRIPS - 1))
             bio[r, :, :3] = BIOMES[i][2]
             bio[r, :, 3] = 255
-        Image.fromarray(bio, "RGBA").save(os.path.join(out, "biomes.png"))
-        Image.fromarray(np.zeros((N // 32, N // 32, 4), np.uint8), "RGBA").save(os.path.join(out, "radiation.png"))
+        save_png(bio, os.path.join(out, "biomes.png"))
+        save_png(np.zeros((N // 32, N // 32, 4), np.uint8), os.path.join(out, "radiation.png"))
 
         roads = Image.new("L", (N, N), 0)
         dr = ImageDraw.Draw(roads)
@@ -521,12 +528,12 @@ class SnakeMap:
         r = np.asarray(roads)
         s3 = np.zeros((N, N, 4), np.uint8)
         s3[r > 0] = (255, 0, 0, 255)
-        Image.fromarray(s3, "RGBA").save(os.path.join(out, "splat3.png"))
+        save_png(s3, os.path.join(out, "splat3.png"))
         self.road_mask = r > 0
 
         s4 = np.zeros((N, N, 4), np.uint8)
         s4[:, :, 2] = np.where((self.h < SEA - 0.2) & (self.inland < 0), SEA, 0).astype(np.uint8)
-        Image.fromarray(s4, "RGBA").save(os.path.join(out, "splat4.png"))
+        save_png(s4, os.path.join(out, "splat4.png"))
         self.water = s4[:, :, 2] > 0
 
         with open(os.path.join(out, "prefabs.xml"), "w", encoding="utf-8-sig", newline="\n") as f:

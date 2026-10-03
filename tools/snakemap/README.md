@@ -41,7 +41,11 @@ into the terrain and smooths the roads, so the first load of a new world takes a
 Verified against a V3.2 generated world and the decompiled game (`ChunkProviderGenerateWorldFromRaw`,
 `WorldGenerationEngineFinal.WorldBuilder`, `WorldDecoratorPOIFromImage`):
 
-- Row 0 of `dtm.raw` and of every PNG is the south edge (z = -3072); column 0 is x = -3072.
+- Row 0 of `dtm.raw` is the south edge (z = -3072); column 0 is x = -3072. PNGs are loaded by
+  Unity bottom row first, so their bottom row is the south edge (checked on a generated world:
+  its water only lies over below-sea-level terrain, and its roads only on graded ground, when
+  read that way; the first Kaiju Snake build had them upside down and spawned players in the
+  wasteland).
 - Prefab `position` is the bounding-box minimum corner in centred world coordinates; x/z size swap
   for rotations 1 and 3; y is ground height plus the prefab's `YOffset`.
 - Rotation is `(RotationToFaceNorth + quarter turns) & 3`, from the prefab's own XML.

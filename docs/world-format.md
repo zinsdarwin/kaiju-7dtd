@@ -20,7 +20,9 @@ The game builds `dtm_processed.raw`, `splat3_processed.png`, `splat4_processed.p
 
 ## Orientation
 
-Row 0 of `dtm.raw` and of every PNG is the south edge (z = -3072). Column 0 is x = -3072.
+Row 0 of `dtm.raw` is the south edge (z = -3072). Column 0 is x = -3072.
+
+PNGs are the other way up. The game loads them as Unity textures, which start from the image's bottom row, so a PNG's bottom row is the south edge. Checked on a generated world: read that way, all its water lies over terrain below sea level and its roads lie on graded ground. The first Kaiju Snake build wrote them top row south and spawned players in the wasteland.
 
 ## Files
 
