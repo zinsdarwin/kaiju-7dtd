@@ -26,7 +26,7 @@ namespace KaijuMod
         /// <summary>Breath damage radius multiplier for city attacks (beam ~10 m, crater ~20 m at 51 m).</summary>
         public static float BreathScale = 2.5f;
         /// <summary>Walking speed during an attack, m/s.</summary>
-        public static float Speed = 4f;
+        public static float Speed = 10f;
 
         public Settlement City;
         public readonly List<Vector2> Route = new List<Vector2>();

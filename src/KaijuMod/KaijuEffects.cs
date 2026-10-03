@@ -11,7 +11,7 @@ namespace KaijuMod
     public static class KaijuEffects
     {
         /// <summary>At most this many mushroom clouds at once; the oldest is removed first.</summary>
-        public const int MaxClouds = 3;
+        public const int MaxClouds = 6;
         private static readonly List<GameObject> clouds = new List<GameObject>();
 
         /// <summary>

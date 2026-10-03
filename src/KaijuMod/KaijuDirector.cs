@@ -13,7 +13,7 @@ namespace KaijuMod
         public static readonly KaijuDirector Instance = new KaijuDirector();
 
         /// <summary>Walking speed in metres per real second. Tunable with `kaiju speed`.</summary>
-        public float Speed = 3f;
+        public float Speed = 10f;
         /// <summary>How fast his base height follows the ground, in metres per second.</summary>
         public float ClimbRate = 6f;
 

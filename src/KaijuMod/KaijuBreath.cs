@@ -168,7 +168,11 @@ namespace KaijuMod
             Vector3 toTarget = target - traceFrom;
             traceDir = toTarget.sqrMagnitude > 0.01f ? toTarget.normalized : Vector3.forward;
             // The beam stops at the first thing it hits (terrain, buildings, you) or at its range.
+            // Physics colliders only exist near the player, so a far target can be missed: fall back
+            // to marching through block data, which is loaded much further out.
             Vector3? hit = GameApi.Raycast(traceFrom, traceDir, Range);
+            if (!hit.HasValue && GameApi.World != null)
+                hit = GameApi.BlockRaycast(GameApi.World, traceFrom, traceDir, Range);
             beamEnd = hit ?? traceFrom + traceDir * Range;
             hitSomething = hit.HasValue;
             traceLength = Vector3.Distance(traceFrom, beamEnd);

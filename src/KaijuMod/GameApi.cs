@@ -260,6 +260,28 @@ namespace KaijuMod
         }
 
         /// <summary>
+        /// First solid cell along a world-space ray, from block data: any non-air block, or below the
+        /// terrain surface. Works where Raycast misses: physics colliders only exist for chunks near
+        /// the player, but block data is loaded much further out. Steps of half a metre; skips
+        /// unloaded chunks. Returns null if nothing is hit within maxDistance.
+        /// </summary>
+        public static Vector3? BlockRaycast(World world, Vector3 worldOrigin, Vector3 direction, float maxDistance)
+        {
+            // VERIFIED (V3.3): World.GetBlock, World.GetTerrainHeight (see TerrainHeight), chunk check.
+            Vector3 dir = direction.normalized;
+            for (float d = 2f; d <= maxDistance; d += 0.5f)
+            {
+                Vector3 p = worldOrigin + dir * d;
+                int x = Mathf.FloorToInt(p.x), y = Mathf.FloorToInt(p.y), z = Mathf.FloorToInt(p.z);
+                if (y < 0 || y > 254 || !IsChunkLoaded(world, x, z))
+                    continue;
+                if (p.y <= TerrainHeight(world, x, z) || !world.GetBlock(new Vector3i(x, y, z)).isair)
+                    return p;
+            }
+            return null;
+        }
+
+        /// <summary>
         /// Loads a prefab from a Unity asset bundle in the mod's Resources folder, or null if the
         /// file is missing. bundleFile is relative to the mod folder, e.g. "Resources/kaiju.unity3d".
         /// </summary>
