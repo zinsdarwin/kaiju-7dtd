@@ -31,7 +31,7 @@ namespace KaijuMod
         /// <summary>Breath damage radius multiplier for city attacks (beam ~20 m, crater ~61 m at 100 m tall).</summary>
         public static float BreathScale = 2.5f;
         /// <summary>Walking speed during an attack, m/s.</summary>
-        public static float Speed = 15f;
+        public static float Speed = 20f;
         /// <summary>Which attack plays (`kaiju style`).</summary>
         public static AttackStyle Style = AttackStyle.MinusOne;
         /// <summary>Minus One: he stops this far outside the city's sea edge to fire, metres.</summary>
