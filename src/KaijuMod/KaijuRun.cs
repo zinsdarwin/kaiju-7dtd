@@ -32,7 +32,7 @@ namespace KaijuMod
         /// <summary>Warn players who are this close ahead of the front, metres.</summary>
         public static float WarnDistance = 150f;
         /// <summary>The Oxygen Destroyer kills him when he comes this close to it, metres.</summary>
-        public static float DestroyerRadius = 40f;
+        public static float DestroyerRadius = 100f;
         /// <summary>Oxygen Destroyer parts: one crate in the end city of each of these strips.</summary>
         public const int Parts = 4;
         public static string PartItem(int i) { return "kaijuOxygenDestroyerPart" + (i + 1); }
@@ -695,7 +695,7 @@ namespace KaijuMod
                     + (st.CratePlaced[i] ? "crate at " + st.CratePos[i] : "crate not placed yet (placed when you get near)")
                     + (has ? ", YOU HAVE IT" : "");
             }
-            s += "\nDevice: " + (st.DeviceArmed ? "armed at " + st.DevicePos + (InAshmouth(st.DevicePos) ? " (inside Ashmouth)" : " (NOT inside Ashmouth)") : "not armed")
+            s += "\nDevice: " + (st.DeviceArmed ? "armed at " + st.DevicePos + (InAshmouth(st.DevicePos) ? " (in Ashmouth or on its shore)" : " (NOT in Ashmouth or on its shore)") : "not armed")
                 + ". Finale: " + (st.Outcome == "won" ? "won" : st.Outcome == "lost" ? "lost" : st.FinaleActive ? "in progress" : "after the last blood moon") + ".";
             return s;
         }
@@ -720,7 +720,7 @@ namespace KaijuMod
             Log.Out("[KaijuMod] Oxygen Destroyer armed at " + pos);
             GameApi.Tooltip(player, InAshmouth(pos)
                 ? "Oxygen Destroyer armed. It goes off when Godzilla comes within " + Mathf.RoundToInt(DestroyerRadius) + " m."
-                : "Oxygen Destroyer armed, but it is not inside " + (FinalCity() != null ? FinalCity().Name : "the last city") + ". He attacks there.");
+                : "Oxygen Destroyer armed, but not in " + (FinalCity() != null ? FinalCity().Name : "the last city") + " or on its shore. He attacks there.");
         }
 
         public void DeviceRemoved(Vector3i pos)
@@ -736,13 +736,25 @@ namespace KaijuMod
             return data != null ? data.EndCity(data.Strips - 1) : null;
         }
 
+        /// <summary>
+        /// Where the device counts: the last city, or the beach and shallows in front of it out to
+        /// the map edge (in the Minus One attack he comes ashore there and fires from just outside
+        /// the city, so he never walks into it).
+        /// </summary>
         private bool InAshmouth(Vector3i pos)
         {
             Settlement city = FinalCity();
-            return city != null && InCity(city, new Vector3(pos.x, pos.y, pos.z), 0f);
+            if (city == null)
+                return false;
+            var p = new Vector3(pos.x, pos.y, pos.z);
+            if (InCity(city, p, 0f))
+                return true;
+            float sea = city.X < 0 ? -1f : 1f;
+            return (p.x - city.X) * sea >= city.HalfWidth
+                && Mathf.Abs(p.z - city.Z) <= 2f * CityAttack.BlockSpacing + 60f;
         }
 
-        /// <summary>During the last city's attack: armed device inside the city and he is within range: he dies.</summary>
+        /// <summary>During the last city's attack: armed device in the city or on its shore and he is within range: he dies.</summary>
         private void TickFinale()
         {
             if (!st.FinaleActive)
