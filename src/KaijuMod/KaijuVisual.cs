@@ -36,6 +36,10 @@ namespace KaijuMod
         // Atomic breath hooks from the bundle: the "Mouth" marker on the head bone and the dorsal
         // plate materials (emission enabled at black by the bundle build).
         private Transform mouth;
+        // Lower jaw (Minus One model: Bone.022_7) and where the snout tip sits on it with the mouth
+        // closed, so the middle of the open mouth can be found.
+        private Transform jaw;
+        private Vector3 jawTipLocal;
         private readonly List<Material> plates = new List<Material>();
         // Band of each plate material, tail tip = 0 (-1 for an unbanded model), and the band count.
         private readonly List<int> plateBand = new List<int>();
@@ -97,6 +101,11 @@ namespace KaijuMod
                 breathState.wrapMode = WrapMode.ClampForever;
             haveLast = false;
             mouth = FindChild(go.transform, "Mouth");
+            // The model spawns in the walk's first pose, mouth closed: the upper snout tip is also
+            // the lower jaw's tip, so remember it in the jaw's space.
+            jaw = FindChild(go.transform, "Bone.022_7");
+            if (jaw != null && mouth != null)
+                jawTipLocal = jaw.InverseTransformPoint(mouth.position);
             plates.Clear();
             plateBand.Clear();
             plateBands = 0;
@@ -228,6 +237,15 @@ namespace KaijuMod
         }
 
         /// <summary>Mouth position in world coordinates: the bundle's marker, or an estimate from his size and heading.</summary>
+        /// <summary>Middle of the open mouth (between the upper and lower snout tips), world coordinates.</summary>
+        public Vector3 MouthCentreWorld()
+        {
+            if (mouth == null || jaw == null || go == null)
+                return MouthWorld();
+            Vector3 lower = jaw.TransformPoint(jawTipLocal);
+            return GameApi.SceneToWorld((mouth.position + lower) * 0.5f);
+        }
+
         public Vector3 MouthWorld()
         {
             if (mouth != null && go != null)

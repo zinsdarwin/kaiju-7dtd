@@ -93,11 +93,11 @@ resize();
 
 // Beam: a glowing core and a soft outer cylinder from the mouth, as wide as the game's Minus One
 // beam looks (its LineRenderers are h*0.075 and h*0.225 across, but the soft texture shows about
-// half of that; h is about 6 here).
+// half of that; h is about 6 here). A cone: mouth-wide where it leaves, about 4x at the far end.
 const beam = new THREE.Group();
-const core = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.11, 1, 16, 1, true),
+const core = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.11, 1, 16, 1, true),
   new THREE.MeshBasicMaterial({ color: 0xdff0ff, transparent: true, opacity: 0.95 }));
-const outer = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.34, 1, 24, 1, true),
+const outer = new THREE.Mesh(new THREE.CylinderGeometry(1.3, 0.32, 1, 24, 1, true),
   new THREE.MeshBasicMaterial({ color: 0x4f8dff, transparent: true, opacity: 0.45, blending: THREE.AdditiveBlending, depthWrite: false }));
 beam.add(core, outer);
 beam.visible = false;

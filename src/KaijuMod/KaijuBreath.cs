@@ -32,7 +32,9 @@ namespace KaijuMod
         /// <summary>Minus One breath timing: plates light tail to neck, then one shot (matches the model's breath pose).</summary>
         public static float MegaChargeTime = 7f, MegaFireTime = 2.5f, MegaFadeTime = 1.5f;
         /// <summary>Width of the Minus One beam relative to a normal breath.</summary>
-        public static float MegaBeamWidth = 2.5f;
+        public static float MegaBeamWidth = 4f;
+        /// <summary>Minus One beam cone: width at the mouth and at the target, relative to its width.</summary>
+        public static float MegaConeStart = 0.6f, MegaConeEnd = 4f;
         /// <summary>Called with the blast point when a mega breath detonates.</summary>
         public System.Action<Vector3> Blasted;
 
@@ -188,7 +190,8 @@ namespace KaijuMod
             if (phase == Phase.Idle)
                 return;
             visual.AimHead(GameApi.WorldToScene(target), aimWeight);
-            mouthWorld = visual.MouthWorld();
+            // The Minus One beam leaves from the middle of his gaping mouth, not the snout tip.
+            mouthWorld = mega ? visual.MouthCentreWorld() : visual.MouthWorld();
             UpdateEffects();
         }
 
@@ -543,8 +546,9 @@ namespace KaijuMod
                 : traceFront < traceLength ? mouth + traceDir * traceFront
                 : GameApi.WorldToScene(beamEnd);
             float bw = mega ? MegaBeamWidth : 1f;
-            SetLine(core, mouth, end, h * 0.03f * bw * widthScale * flicker, beamOn);
-            SetLine(glow, mouth, end, h * 0.09f * bw * widthScale * (2f - flicker), beamOn);
+            float cs = mega ? MegaConeStart : 1f, ce = mega ? MegaConeEnd : 1.15f; // a cone for the Minus One beam
+            SetLine(core, mouth, end, h * 0.03f * bw * widthScale * flicker, beamOn, cs, ce);
+            SetLine(glow, mouth, end, h * 0.09f * bw * widthScale * (2f - flicker), beamOn, cs, ce);
 
             bool hitting = phase == Phase.Fire && traceFront >= traceLength - 0.5f;
             Vector3 impact = GameApi.WorldToScene(beamEnd);
@@ -595,15 +599,15 @@ namespace KaijuMod
             return 0f;
         }
 
-        private static void SetLine(LineRenderer lr, Vector3 a, Vector3 b, float width, bool on)
+        private static void SetLine(LineRenderer lr, Vector3 a, Vector3 b, float width, bool on, float startScale = 1f, float endScale = 1.15f)
         {
             if (lr == null)
                 return;
             lr.enabled = on && width > 0.01f;
             lr.SetPosition(0, a);
             lr.SetPosition(1, b);
-            lr.startWidth = width;
-            lr.endWidth = width * 1.15f;
+            lr.startWidth = width * startScale;
+            lr.endWidth = width * endScale;
         }
 
         private LineRenderer MakeLine(string name, Material mat, Color color)
