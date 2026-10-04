@@ -33,8 +33,13 @@ namespace KaijuMod
         public static float MegaChargeTime = 7f, MegaFireTime = 2.5f, MegaFadeTime = 1.5f;
         /// <summary>Width of the Minus One beam relative to a normal breath.</summary>
         public static float MegaBeamWidth = 4f;
-        /// <summary>Minus One beam cone: width at the mouth and at the target, relative to its width.</summary>
-        public static float MegaConeStart = 0.6f, MegaConeEnd = 4f;
+        /// <summary>
+        /// Minus One beam cone: width at the mouth and at the target, relative to its width. Kept
+        /// gentle: a strongly flared glow showed as a separate darker beam against the ground.
+        /// </summary>
+        public static float MegaConeStart = 0.75f, MegaConeEnd = 1.6f;
+        /// <summary>Minus One beam core width relative to a normal core (thicker, so the beam reads as one bright shaft).</summary>
+        public static float MegaCoreBoost = 1.8f;
         /// <summary>Called with the blast point when a mega breath detonates.</summary>
         public System.Action<Vector3> Blasted;
 
@@ -547,7 +552,8 @@ namespace KaijuMod
                 : GameApi.WorldToScene(beamEnd);
             float bw = mega ? MegaBeamWidth : 1f;
             float cs = mega ? MegaConeStart : 1f, ce = mega ? MegaConeEnd : 1.15f; // a cone for the Minus One beam
-            SetLine(core, mouth, end, h * 0.03f * bw * widthScale * flicker, beamOn, cs, ce);
+            float cb = mega ? MegaCoreBoost : 1f;
+            SetLine(core, mouth, end, h * 0.03f * bw * cb * widthScale * flicker, beamOn, cs, ce);
             SetLine(glow, mouth, end, h * 0.09f * bw * widthScale * (2f - flicker), beamOn, cs, ce);
 
             bool hitting = phase == Phase.Fire && traceFront >= traceLength - 0.5f;
