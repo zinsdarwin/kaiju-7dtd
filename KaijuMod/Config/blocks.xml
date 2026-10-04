@@ -1,7 +1,7 @@
 <configs>
 	<append xpath="/blocks">
-		<!-- Part crates: a hero chest whose loot list holds exactly one part. The mod places one per
-		     end city and lights it. Godzilla's footprint and breath skip every block named kaiju*. -->
+		<!-- Part crates: a hero chest whose loot list holds exactly one part. The mod places one in
+		     the military site by each end city and lights it. Godzilla's footprint and breath skip every block named kaiju*. -->
 		<block name="kaijuPartCrate1">
 			<property name="Extends" value="cntLootChestHeroInsecureT1"/>
 			<property name="CreativeMode" value="Dev"/>
@@ -39,8 +39,16 @@
 				</property>
 			</property>
 		</block>
+		<block name="kaijuPartCrate5">
+			<property name="Extends" value="kaijuPartCrate1"/>
+			<property class="CompositeFeatures">
+				<property class="TEFeatureStorage">
+					<property name="LootList" value="kaijuPart5"/>
+				</property>
+			</property>
+		</block>
 
-		<!-- The Oxygen Destroyer: crafted from the four parts, placed in Ashmouth and armed with E.
+		<!-- The Oxygen Destroyer: crafted from the five parts, placed in Ashmouth and armed with E.
 		     Class resolves to BlockKaijuOxygenDestroyer in KaijuMod.dll. -->
 		<block name="kaijuOxygenDestroyer">
 			<property name="Class" value="KaijuOxygenDestroyer, KaijuMod"/>

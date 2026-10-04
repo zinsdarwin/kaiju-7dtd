@@ -33,8 +33,8 @@ namespace KaijuMod
         public static float WarnDistance = 150f;
         /// <summary>The Oxygen Destroyer kills him when he comes this close to it, metres.</summary>
         public static float DestroyerRadius = 100f;
-        /// <summary>Oxygen Destroyer parts: one crate in the end city of each of these strips.</summary>
-        public const int Parts = 4;
+        /// <summary>Oxygen Destroyer parts: one crate in a military site by the end city of each strip.</summary>
+        public const int Parts = 5;
         public static string PartItem(int i) { return "kaijuOxygenDestroyerPart" + (i + 1); }
         public static string CrateBlock(int i) { return "kaijuPartCrate" + (i + 1); }
 
@@ -543,7 +543,7 @@ namespace KaijuMod
                 if (!st.CratePlaced[i])
                 {
                     Vector3i spot;
-                    if (FindCrateSpot(world, city, out spot) && GameApi.PlaceBlock(world, spot, CrateBlock(i)))
+                    if (FindCrateSpot(world, city, data.SiteFor(i + 1), out spot) && GameApi.PlaceBlock(world, spot, CrateBlock(i)))
                     {
                         st.CratePlaced[i] = true;
                         st.CratePos[i] = spot;
@@ -566,8 +566,10 @@ namespace KaijuMod
                     Object.Destroy(crateLights[i].gameObject);
                     crateLights[i] = null;
                 }
-                // Compass marker: once inside the city, until you carry the part.
-                bool inCity = InCity(city, p, 40f);
+                // Compass marker: once at the city or its military site, until you carry the part.
+                var site = data.SiteFor(i + 1);
+                bool inCity = InCity(city, p, 40f)
+                    || (site != null && (new Vector2(p.x, p.z) - site.Centre).magnitude < Mathf.Max(site.W, site.D) + 100f);
                 if (inCity && !hasPart && markers[i] == null)
                     markers[i] = GameApi.AddMarker("kaiju_part", crate);
                 else if ((!inCity || hasPart) && markers[i] != null)
@@ -586,12 +588,14 @@ namespace KaijuMod
             }
         }
 
-        private bool FindCrateSpot(World world, Settlement city, out Vector3i spot)
+        private bool FindCrateSpot(World world, Settlement city, PartSite site, out Vector3i spot)
         {
             spot = default(Vector3i);
+            if (site != null)
+                return FindSiteSpot(world, site, out spot);
             if (!GameApi.IsChunkLoaded(world, Mathf.RoundToInt(city.X), Mathf.RoundToInt(city.Z)))
                 return false;
-            // The POI nearest the city centre (not a trader), else the centre itself.
+            // Older worlds: the POI nearest the city centre (not a trader), else the centre itself.
             PrefabInstance best = null;
             float bestD = float.MaxValue;
             foreach (var poi in GameApi.Pois())
@@ -653,6 +657,45 @@ namespace KaijuMod
             return false;
         }
 
+        /// <summary>
+        /// A free cell inside the part's military POI, as near its middle as possible, at or just
+        /// above its ground level (camps and checkpoints are mostly one storey; the bunker's
+        /// surface buildings sit on the ground too).
+        /// </summary>
+        private bool FindSiteSpot(World world, PartSite site, out Vector3i spot)
+        {
+            spot = default(Vector3i);
+            int x0 = Mathf.RoundToInt(site.Centre.x), z0 = Mathf.RoundToInt(site.Centre.y);
+            if (!GameApi.IsChunkLoaded(world, x0, z0))
+                return false;
+            int rx = Mathf.Max(2, Mathf.RoundToInt(site.W / 2f) - 3), rz = Mathf.Max(2, Mathf.RoundToInt(site.D / 2f) - 3);
+            int ground = Mathf.RoundToInt(site.Y);
+            for (int r = 0; r <= Mathf.Max(rx, rz); r++)
+            {
+                for (int dx = -r; dx <= r; dx++)
+                {
+                    for (int dz = -r; dz <= r; dz++)
+                    {
+                        if (Mathf.Max(Mathf.Abs(dx), Mathf.Abs(dz)) != r || Mathf.Abs(dx) > rx || Mathf.Abs(dz) > rz)
+                            continue;
+                        int x = x0 + dx, z = z0 + dz;
+                        if (!GameApi.IsChunkLoaded(world, x, z))
+                            continue;
+                        for (int y = ground - 1; y <= ground + 4; y++)
+                        {
+                            var c = new Vector3i(x, y, z);
+                            if (GameApi.IsAir(world, c) && GameApi.IsAir(world, new Vector3i(x, y + 1, z)) && !GameApi.IsAir(world, new Vector3i(x, y - 1, z)))
+                            {
+                                spot = c;
+                                return true;
+                            }
+                        }
+                    }
+                }
+            }
+            return false;
+        }
+
         private static bool InCity(Settlement city, Vector3 p, float margin)
         {
             return Mathf.Abs(p.x - city.X) <= city.HalfWidth + margin
@@ -691,7 +734,9 @@ namespace KaijuMod
             {
                 Settlement city = data.EndCity(i);
                 bool has = player != null && GameApi.ItemCount(player, PartItem(i)) > 0;
-                s += "\n  " + (i + 1) + ". " + (city != null ? city.Name : "?") + ": "
+                var site = data.SiteFor(i + 1);
+                s += "\n  " + (i + 1) + ". " + (city != null ? city.Name : "?")
+                    + (site != null ? " (" + site.Name + ", tier " + site.Tier + ", at " + Mathf.RoundToInt(site.Centre.x) + " " + Mathf.RoundToInt(site.Centre.y) + ")" : "") + ": "
                     + (st.CratePlaced[i] ? "crate at " + st.CratePos[i] : "crate not placed yet (placed when you get near)")
                     + (has ? ", YOU HAVE IT" : "");
             }

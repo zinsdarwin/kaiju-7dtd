@@ -20,6 +20,16 @@ namespace KaijuMod
     /// The map data tools/snakemap writes next to a Kaiju world (kaiju.xml): its settlements and
     /// Godzilla's road route. A world without the file is not a Kaiju world and The Run stays off.
     /// </summary>
+    /// <summary>The military POI (from tools/snakemap) that holds one Oxygen Destroyer part crate.</summary>
+    public class PartSite
+    {
+        public int Part, Strip, Tier;
+        public string City, Name;
+        public float X, Y, Z, W, D;   // min corner (x, z), ground height, footprint
+
+        public Vector2 Centre { get { return new Vector2(X + W / 2f, Z + D / 2f); } }
+    }
+
     public class KaijuWorldData
     {
         public const string FileName = "kaiju.xml";
@@ -30,6 +40,13 @@ namespace KaijuMod
         public int Strips = 1;
         public readonly List<Settlement> Settlements = new List<Settlement>();
         public readonly List<Vector2> Route = new List<Vector2>();
+        public readonly List<PartSite> PartSites = new List<PartSite>();
+
+        /// <summary>The site for a part (1-based), or null (older worlds: the crate goes in the city).</summary>
+        public PartSite SiteFor(int part)
+        {
+            return PartSites.Find(s => s.Part == part);
+        }
 
         public float StripHeight { get { return Size / (float)Strips; } }
 
@@ -92,6 +109,22 @@ namespace KaijuMod
                     Y = Float(e, "y"),
                     Z = Float(e, "z"),
                     HalfWidth = Float(e, "halfwidth"),
+                });
+            }
+            foreach (XmlElement e in root.SelectNodes("partsites/site"))
+            {
+                data.PartSites.Add(new PartSite
+                {
+                    Part = Int(e, "part", 0),
+                    Strip = Int(e, "strip", 0),
+                    Tier = Int(e, "tier", 0),
+                    City = e.GetAttribute("city"),
+                    Name = e.GetAttribute("name"),
+                    X = Float(e, "x"),
+                    Y = Float(e, "y"),
+                    Z = Float(e, "z"),
+                    W = Float(e, "w"),
+                    D = Float(e, "d"),
                 });
             }
             foreach (XmlElement e in root.SelectNodes("route/p"))

@@ -13,5 +13,8 @@
 		<lootcontainer name="kaijuPart4" count="1" size="3,1" sound_open="UseActions/crate_wood_open" sound_close="UseActions/crate_wood_close" loot_quality_template="qualBaseTemplate">
 			<item name="kaijuOxygenDestroyerPart4" count="1"/>
 		</lootcontainer>
+		<lootcontainer name="kaijuPart5" count="1" size="3,1" sound_open="UseActions/crate_wood_open" sound_close="UseActions/crate_wood_close" loot_quality_template="qualBaseTemplate">
+			<item name="kaijuOxygenDestroyerPart5" count="1"/>
+		</lootcontainer>
 	</append>
 </configs>

@@ -1,5 +1,5 @@
 <configs>
-	<!-- Compass and map marker for an Oxygen Destroyer part crate, shown once you reach its city. -->
+	<!-- Compass and map marker for an Oxygen Destroyer part crate, shown once you reach its city or military site. -->
 	<append xpath="/nav_object_classes">
 		<nav_object_class name="kaiju_part">
 			<map_settings>

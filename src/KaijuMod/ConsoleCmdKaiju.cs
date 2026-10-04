@@ -33,7 +33,7 @@ namespace KaijuMod
                 + "  kaiju attack <city|start|end|finale>  send him at a city now (a name from kaiju.xml; start starts The Run over, clearing radiation and clouds; end is this strip's end city; or the final attack with the Oxygen Destroyer check)\n"
                 + "  kaiju parts          Oxygen Destroyer parts: where each crate is, which you carry, device and finale state\n"
                 + "  kaiju style <minusone|classic>  city attacks: one city-destroying blast (default), or six breaths along the streets\n"
-                + "  kaiju give <1-4|all> put Oxygen Destroyer parts in your backpack (testing)\n"
+                + "  kaiju give <1-5|all> put Oxygen Destroyer parts in your backpack (testing)\n"
                 + "  kaiju radiation <on|off>  turn the radiation chase on or off\n"
                 + "  kaiju start          walk this session's recorded waypoints, else route.txt, else the built-in list\n"
                 + "  kaiju test [dist]    walk a straight line from dist m in front of you, through you (default 120)\n"

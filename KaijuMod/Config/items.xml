@@ -1,5 +1,5 @@
 <configs>
-	<!-- Oxygen Destroyer parts: one in a glowing crate in each of the first four end cities.
+	<!-- Oxygen Destroyer parts: one in a glowing crate in a military site by each end city.
 	     Quest-style: not sold to traders, not scrappable, one per stack. -->
 	<append xpath="/items">
 		<item name="kaijuOxygenDestroyerPart1">
@@ -28,6 +28,11 @@
 			<property name="Extends" value="kaijuOxygenDestroyerPart1"/>
 			<property name="CustomIcon" value="resourceSpring"/>
 			<property name="DescriptionKey" value="kaijuOxygenDestroyerPart4Desc"/>
+		</item>
+		<item name="kaijuOxygenDestroyerPart5">
+			<property name="Extends" value="kaijuOxygenDestroyerPart1"/>
+			<property name="CustomIcon" value="resourceAcid"/>
+			<property name="DescriptionKey" value="kaijuOxygenDestroyerPart5Desc"/>
 		</item>
 	</append>
 </configs>

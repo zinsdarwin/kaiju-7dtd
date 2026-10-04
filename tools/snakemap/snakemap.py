@@ -144,9 +144,10 @@ def snap_ground(h):
 
 
 class Poi:
-    def __init__(self, name, sx, sz, yoff, rot_north, townships, tags, zoning):
+    def __init__(self, name, sx, sz, yoff, rot_north, townships, tags, zoning, tier=0):
         self.name, self.sx, self.sz, self.yoff = name, sx, sz, yoff
         self.rot_north, self.townships, self.tags, self.zoning = rot_north, townships, tags, zoning
+        self.tier = tier
 
     def footprint(self, b):
         return (self.sz, self.sx) if b % 2 else (self.sx, self.sz)
@@ -171,7 +172,8 @@ def load_pois(game):
         p = Poi(name, sx, sz, int(prop("YOffset", "0")), int(prop("RotationToFaceNorth", "0")),
                 {s.strip().lower() for s in prop("AllowedTownships", "").split(",") if s.strip()},
                 {s.strip().lower() for s in prop("Tags", "").split(",") if s.strip()},
-                {s.strip().lower() for s in prop("Zoning", "").split(",") if s.strip()})
+                {s.strip().lower() for s in prop("Zoning", "").split(",") if s.strip()},
+                int(prop("DifficultyTier", "0") or 0))
         pois.append(p)
     return pois
 
@@ -532,6 +534,52 @@ class SnakeMap:
                 placed.append((x, z, max(w, dpt) / 2 + 60))
                 count += 1
 
+    # ---- Oxygen Destroyer part sites
+
+    # Tier of each strip's military site: pine, burnt, desert, snow, wasteland (vanilla has no
+    # tier 1-2 military POIs, so the first strips get tier 3).
+    PART_TIERS = (3, 3, 3, 4, 5)
+    MILITARY = re.compile(r"(army_camp|roadside_checkpoint|base_military|bunker)_\d+$")
+
+    def build_part_sites(self):
+        """A military POI on the outskirts of each strip's end city, just south of it (the pass
+        north is beside the city) and facing it, on flattened ground. The mod puts that strip's
+        Oxygen Destroyer part crate inside it. Sets self.part_sites."""
+        mil = [p for p in self.pois if self.MILITARY.match(p.name)]
+        self.part_sites = []
+        for i, tier in enumerate(self.PART_TIERS):
+            city = next(s for s in self.settlements if s["role"] == "end" and s["strip"] == i)
+            pool = [p for p in mil if p.tier == tier] or [p for p in mil if abs(p.tier - tier) <= 1]
+            p = self.rand.choice(pool)
+            x0, x1, z0, z1, zc = self.settlement_rect(city)
+            lo = strip_center(i) - STRIP_H / 2 + (RIM_W if i == 0 else RIDGE_W) + 20
+            hi = strip_center(i) + STRIP_H / 2 - (RIM_W if i == STRIPS - 1 else RIDGE_W) - 20
+            b = p.rot_north & 3                       # entrance to the north, toward the city
+            w, dpt = p.footprint(b)
+            zmin = int(z0 - 15 - dpt)
+            if zmin < lo:                             # no room south: north of the city instead
+                b = (p.rot_north + 2) & 3
+                w, dpt = p.footprint(b)
+                zmin = int(z1 + 15)
+                if zmin + dpt > hi:
+                    zmin = int(hi - dpt)
+            xmin = int(round(city["x"] - w / 2))
+            c0, r0 = xmin + HALF, zmin + HALF
+            foot = self.h[r0:r0 + dpt, c0:c0 + w]
+            gh = snap_ground(float(np.median(foot)))
+            m, bl = 6, 25
+            rr0, rr1 = r0 - m - bl, r0 + dpt + m + bl
+            cc0, cc1 = c0 - m - bl, c0 + w + m + bl
+            yy, xx = np.mgrid[rr0:rr1, cc0:cc1]
+            dx = np.maximum(np.maximum(c0 - m - xx, xx - (c0 + w + m)), 0)
+            dz = np.maximum(np.maximum(r0 - m - yy, yy - (r0 + dpt + m)), 0)
+            wgt = 1 - smoothstep(np.hypot(dx, dz) / float(bl))
+            self.h[rr0:rr1, cc0:cc1] = self.h[rr0:rr1, cc0:cc1] * (1 - wgt) + gh * wgt
+            self.prefabs.append((p.name, xmin, prefab_y(gh) + p.yoff, zmin, b))
+            self.part_sites.append(dict(part=i + 1, strip=i, city=city["name"], name=p.name, tier=p.tier,
+                                        x=xmin, z=zmin, w=w, d=dpt, y=prefab_y(gh)))
+            print("part %d site: %s (tier %d) at x %d z %d by %s" % (i + 1, p.name, p.tier, xmin, zmin, city["name"]))
+
     # ---- lookout: where you start
 
     def make_lookout(self, rise=55.0, radius=12, blend=20):
@@ -635,7 +683,11 @@ class SnakeMap:
             for s in self.settlements:
                 f.write('    <settlement name="%s" kind="%s" role="%s" strip="%d" biome="%s" x="%d" y="%d" z="%d" halfwidth="%d" />\n'
                         % (s["name"], s["kind"], s["role"], s["strip"], s["biome"], s["x"], round(s["pad"]), round(s["z"]), s["half"]))
-            f.write('  </settlements>\n  <route>\n')
+            f.write('  </settlements>\n  <partsites>\n')
+            for ps in self.part_sites:
+                f.write('    <site part="%d" strip="%d" city="%s" name="%s" tier="%d" x="%d" y="%d" z="%d" w="%d" d="%d" />\n'
+                        % (ps["part"], ps["strip"], ps["city"], ps["name"], ps["tier"], ps["x"], ps["y"], ps["z"], ps["w"], ps["d"]))
+            f.write('  </partsites>\n  <route>\n')
             last = None
             for x, z in self.route:
                 if last is None or math.hypot(x - last[0], z - last[1]) >= 25:
@@ -697,6 +749,7 @@ def main():
     m.shape()
     print("roads and pads done")
     m.build_settlements()
+    m.build_part_sites()
     m.build_wilderness()
     m.make_lookout()
     print("prefabs:", len(m.prefabs))
