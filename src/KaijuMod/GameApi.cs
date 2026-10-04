@@ -382,6 +382,13 @@ namespace KaijuMod
             return GameUtils.CalcDuskDawnHours(GameStats.GetInt(EnumGameStats.DayLightLength));
         }
 
+        /// <summary>Days between blood moons (game option).</summary>
+        public static int BloodMoonFrequency()
+        {
+            // VERIFIED (V3.3): EnumGamePrefs.BloodMoonFrequency, read by the blood moon SetDay ("freq 7").
+            return GamePrefs.GetInt(EnumGamePrefs.BloodMoonFrequency);
+        }
+
         /// <summary>True from dusk on the blood moon day until dawn the next day: the horde night.</summary>
         public static bool IsBloodMoonNow(World world)
         {

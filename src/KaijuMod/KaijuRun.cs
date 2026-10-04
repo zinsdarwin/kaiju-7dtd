@@ -48,6 +48,8 @@ namespace KaijuMod
             public ulong SweepStart;        // world time of the last end-city attack (previous strip's sweep)
             public int BloodMoonActive;     // blood moon day seen in progress, 0 if none
             public int LastAttackedBloodMoon;
+            public int LastSeenBloodMoonDay;    // the game's next blood moon day, as last seen
+            public int PendingBloodMoon;        // a blood moon that went by unseen (skipped, slept, clock set): attack at its dawn
             public bool RadiationOn = true;
             public bool Complete;
             // Oxygen Destroyer
@@ -116,6 +118,7 @@ namespace KaijuMod
                     AttackStartCity(now);
             }
 
+            TrackBloodMoonDay(now);
             if (GameApi.IsBloodMoonNow(world))
             {
                 int bm = GameApi.BloodMoonDay();
@@ -127,7 +130,12 @@ namespace KaijuMod
             }
             else if (st.BloodMoonActive > 0 && st.LastAttackedBloodMoon != st.BloodMoonActive)
             {
-                OnHordeEnded(now);
+                OnHordeEnded(now, st.BloodMoonActive);
+            }
+            else if (st.PendingBloodMoon > 0 && st.PendingBloodMoon != st.LastAttackedBloodMoon
+                && now >= DawnAfter(st.PendingBloodMoon))
+            {
+                OnHordeEnded(now, st.PendingBloodMoon);
             }
 
             radTimer += dt;
@@ -194,10 +202,45 @@ namespace KaijuMod
             Attack(data.StartCity);
         }
 
-        private void OnHordeEnded(ulong now)
+        /// <summary>
+        /// The game moves its next blood moon day on once one has passed, also when the night was
+        /// never seen in progress (time set past it, slept through it). When it moves past a blood
+        /// moon he has not attacked for, that attack is due at the dawn after it.
+        /// </summary>
+        private void TrackBloodMoonDay(ulong now)
         {
-            st.LastAttackedBloodMoon = st.BloodMoonActive;
+            int bm = GameApi.BloodMoonDay();
+            if (bm <= 0 || bm == st.LastSeenBloodMoonDay)
+                return;
+            int passed = st.LastSeenBloodMoonDay;
+            if (passed == 0 && st.StartAttacked)
+            {
+                // First look in a run already going (an older save): the blood moon before this one.
+                // VERIFIED (V3.3): GamePrefs BloodMoonFrequency is the days between blood moons.
+                passed = bm - GameApi.BloodMoonFrequency();
+                if (passed < 1 || GameApi.Day(now) <= passed)
+                    passed = 0;
+            }
+            if (passed > 0 && bm > passed && passed > st.LastAttackedBloodMoon && st.BloodMoonActive != passed)
+            {
+                st.PendingBloodMoon = passed;
+                Log.Out("[KaijuMod] Blood moon of day " + passed + " went by unseen; the attack comes at its dawn");
+            }
+            st.LastSeenBloodMoonDay = bm;
+            Save();
+        }
+
+        /// <summary>World time of dawn on the morning after a blood moon day: when its horde ends.</summary>
+        private static ulong DawnAfter(int bloodMoonDay)
+        {
+            return GameApi.DayTimeToWorldTime(bloodMoonDay + 1, GameApi.DuskDawn().Item2, 0);
+        }
+
+        private void OnHordeEnded(ulong now, int bloodMoonDay)
+        {
+            st.LastAttackedBloodMoon = bloodMoonDay;
             st.BloodMoonActive = 0;
+            st.PendingBloodMoon = 0;
             if (st.Strip < 0 || st.Complete)
             {
                 Save();
@@ -866,6 +909,8 @@ namespace KaijuMod
                 e.SetAttribute("sweepStart", st.SweepStart.ToString(CultureInfo.InvariantCulture));
                 e.SetAttribute("bloodMoonActive", st.BloodMoonActive.ToString(CultureInfo.InvariantCulture));
                 e.SetAttribute("lastAttackedBloodMoon", st.LastAttackedBloodMoon.ToString(CultureInfo.InvariantCulture));
+                e.SetAttribute("lastSeenBloodMoonDay", st.LastSeenBloodMoonDay.ToString(CultureInfo.InvariantCulture));
+                e.SetAttribute("pendingBloodMoon", st.PendingBloodMoon.ToString(CultureInfo.InvariantCulture));
                 e.SetAttribute("radiation", st.RadiationOn ? "1" : "0");
                 e.SetAttribute("complete", st.Complete ? "1" : "0");
                 e.SetAttribute("deviceArmed", st.DeviceArmed ? "1" : "0");
@@ -927,6 +972,8 @@ namespace KaijuMod
                 st.SweepStart = ulong.Parse(e.GetAttribute("sweepStart"), CultureInfo.InvariantCulture);
                 st.BloodMoonActive = int.Parse(e.GetAttribute("bloodMoonActive"), CultureInfo.InvariantCulture);
                 st.LastAttackedBloodMoon = int.Parse(e.GetAttribute("lastAttackedBloodMoon"), CultureInfo.InvariantCulture);
+                int.TryParse(e.GetAttribute("lastSeenBloodMoonDay"), NumberStyles.Integer, CultureInfo.InvariantCulture, out st.LastSeenBloodMoonDay);
+                int.TryParse(e.GetAttribute("pendingBloodMoon"), NumberStyles.Integer, CultureInfo.InvariantCulture, out st.PendingBloodMoon);
                 st.RadiationOn = e.GetAttribute("radiation") != "0";
                 st.Complete = e.GetAttribute("complete") == "1";
                 st.DeviceArmed = e.GetAttribute("deviceArmed") == "1";
