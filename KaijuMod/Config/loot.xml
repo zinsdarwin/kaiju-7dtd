@@ -1,20 +1,43 @@
 <configs>
-	<!-- One part per crate: count 1 from a single entry, so each crate holds exactly its part. -->
+	<!-- Each crate holds its part and a field note pointing to the next one: the container picks
+	     its single entry, a group that gives everything in it. -->
+	<append xpath="/lootcontainers">
+		<lootgroup name="kaijuPartGroup1" count="all">
+			<item name="kaijuOxygenDestroyerPart1" count="1"/>
+			<item name="kaijuPartNote1" count="1"/>
+		</lootgroup>
+		<lootgroup name="kaijuPartGroup2" count="all">
+			<item name="kaijuOxygenDestroyerPart2" count="1"/>
+			<item name="kaijuPartNote2" count="1"/>
+		</lootgroup>
+		<lootgroup name="kaijuPartGroup3" count="all">
+			<item name="kaijuOxygenDestroyerPart3" count="1"/>
+			<item name="kaijuPartNote3" count="1"/>
+		</lootgroup>
+		<lootgroup name="kaijuPartGroup4" count="all">
+			<item name="kaijuOxygenDestroyerPart4" count="1"/>
+			<item name="kaijuPartNote4" count="1"/>
+		</lootgroup>
+		<lootgroup name="kaijuPartGroup5" count="all">
+			<item name="kaijuOxygenDestroyerPart5" count="1"/>
+			<item name="kaijuPartNote5" count="1"/>
+		</lootgroup>
+	</append>
 	<append xpath="/lootcontainers">
 		<lootcontainer name="kaijuPart1" count="1" size="3,1" sound_open="UseActions/crate_wood_open" sound_close="UseActions/crate_wood_close" loot_quality_template="qualBaseTemplate">
-			<item name="kaijuOxygenDestroyerPart1" count="1"/>
+			<item group="kaijuPartGroup1" count="1"/>
 		</lootcontainer>
 		<lootcontainer name="kaijuPart2" count="1" size="3,1" sound_open="UseActions/crate_wood_open" sound_close="UseActions/crate_wood_close" loot_quality_template="qualBaseTemplate">
-			<item name="kaijuOxygenDestroyerPart2" count="1"/>
+			<item group="kaijuPartGroup2" count="1"/>
 		</lootcontainer>
 		<lootcontainer name="kaijuPart3" count="1" size="3,1" sound_open="UseActions/crate_wood_open" sound_close="UseActions/crate_wood_close" loot_quality_template="qualBaseTemplate">
-			<item name="kaijuOxygenDestroyerPart3" count="1"/>
+			<item group="kaijuPartGroup3" count="1"/>
 		</lootcontainer>
 		<lootcontainer name="kaijuPart4" count="1" size="3,1" sound_open="UseActions/crate_wood_open" sound_close="UseActions/crate_wood_close" loot_quality_template="qualBaseTemplate">
-			<item name="kaijuOxygenDestroyerPart4" count="1"/>
+			<item group="kaijuPartGroup4" count="1"/>
 		</lootcontainer>
 		<lootcontainer name="kaijuPart5" count="1" size="3,1" sound_open="UseActions/crate_wood_open" sound_close="UseActions/crate_wood_close" loot_quality_template="qualBaseTemplate">
-			<item name="kaijuOxygenDestroyerPart5" count="1"/>
+			<item group="kaijuPartGroup5" count="1"/>
 		</lootcontainer>
 	</append>
 </configs>

@@ -29,6 +29,42 @@
 			<property name="CustomIcon" value="resourceSpring"/>
 			<property name="DescriptionKey" value="kaijuOxygenDestroyerPart4Desc"/>
 		</item>
+		<!-- Field notes found with each part: where the next part is (Localization kaijuPartNoteNDesc). -->
+		<item name="kaijuPartNote1">
+			<property name="Extends" value="blankNoteMaster"/>
+			<property name="CreativeMode" value="Dev"/>
+			<property name="DescriptionKey" value="readTheNote"/>
+			<property name="CustomIcon" value="challengeQuestMaster"/>
+			<property name="CustomIconTint" value="7fd4ff"/>
+			<property name="NoScrapping" value="true"/>
+			<property name="SellableToTrader" value="false"/>
+			<property name="SoundPickup" value="map_grab"/>
+			<property name="SoundPlace" value="map_place"/>
+			<property class="Action0">
+				<property name="Class" value="Eat"/>
+				<property name="Delay" value="1.0"/>
+				<property name="Sound_start" value="read_mod"/>
+				<property name="Sound_in_head" value="true"/>
+				<property name="PromptTitle" value="kaijuPartNote"/>
+				<property name="PromptDescription" value="kaijuPartNote1Desc"/>
+			</property>
+		</item>
+		<item name="kaijuPartNote2">
+			<property name="Extends" value="kaijuPartNote1"/>
+			<property class="Action0"><property name="PromptDescription" value="kaijuPartNote2Desc"/></property>
+		</item>
+		<item name="kaijuPartNote3">
+			<property name="Extends" value="kaijuPartNote1"/>
+			<property class="Action0"><property name="PromptDescription" value="kaijuPartNote3Desc"/></property>
+		</item>
+		<item name="kaijuPartNote4">
+			<property name="Extends" value="kaijuPartNote1"/>
+			<property class="Action0"><property name="PromptDescription" value="kaijuPartNote4Desc"/></property>
+		</item>
+		<item name="kaijuPartNote5">
+			<property name="Extends" value="kaijuPartNote1"/>
+			<property class="Action0"><property name="PromptDescription" value="kaijuPartNote5Desc"/></property>
+		</item>
 		<item name="kaijuOxygenDestroyerPart5">
 			<property name="Extends" value="kaijuOxygenDestroyerPart1"/>
 			<property name="CustomIcon" value="resourceAcid"/>

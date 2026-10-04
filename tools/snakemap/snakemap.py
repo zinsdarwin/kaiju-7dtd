@@ -178,6 +178,18 @@ def load_pois(game):
     return pois
 
 
+def load_part(game, name):
+    """A prefab from Data/Prefabs/Parts (the game finds prefabs in any folder under Prefabs)."""
+    t = open(os.path.join(game, "Data", "Prefabs", "Parts", name + ".xml"), encoding="utf-8-sig", errors="ignore").read()
+
+    def prop(n, default=None):
+        m = re.search(r'name="%s" value="([^"]*)"' % n, t)
+        return m.group(1) if m else default
+
+    sx, _, sz = [int(v) for v in prop("PrefabSize").split(",")]
+    return Poi(name, sx, sz, int(prop("YOffset", "0")), int(prop("RotationToFaceNorth", "0")), set(), set(), set())
+
+
 def usable(p, biome):
     if p.tags & EXCLUDE_TAGS or p.zoning & EXCLUDE_ZONING or p.name.startswith(EXCLUDE_PREFIX):
         return False
@@ -582,10 +594,11 @@ class SnakeMap:
 
     # ---- lookout: where you start
 
-    def make_lookout(self, rise=55.0, radius=12, blend=20):
-        """A flat ledge cut into the mountainside south of the start city, rise metres above it:
-        you start there and watch him come out of the sea and fire on the city, well outside the
-        blast. Sets self.lookout = (x, z, ground height)."""
+    def make_lookout(self, rise=55.0, radius=22, blend=20):
+        """A flat ledge cut into the mountainside south of the start city, rise metres above it,
+        with a campsite on it: you were out camping in the mountains and wake up to watch him come
+        out of the sea and fire on the city, well outside the blast. Sets self.lookout = (x, z,
+        ground height); you start at its north edge, the campsite is behind you."""
         s = next(s for s in self.settlements if s["role"] == "start")
         x = int(s["x"] - 80)
         z = int(s["z"] - 300)
@@ -599,7 +612,12 @@ class SnakeMap:
         d = np.hypot(xx - (x + HALF), yy - (z + HALF))
         w = 1 - smoothstep((d - radius) / float(blend))
         self.h[r0:r1, c0:c1] = self.h[r0:r1, c0:c1] * (1 - w) + gh * w
-        self.lookout = (x, z, gh)
+        # Campsite (campfire, chairs; one lumberjack zombie asleep) and a tent, uphill of the spawn.
+        for name, dx, dz in (("part_campsite_01", -11, -16), ("part_wilderness_filler_02_tent_01", 3, -17)):
+            p = load_part(self.game, name)
+            b = p.rot_north & 3
+            self.prefabs.append((p.name, x + dx, prefab_y(gh) + p.yoff, z + dz, b))
+        self.lookout = (x, z + 8, gh)
         print("lookout at x %d z %d, ground %.1f (city %.1f), %.0f m from the city centre"
               % (x, z, gh, s["pad"], math.hypot(x - s["x"], z - s["z"])))
 
