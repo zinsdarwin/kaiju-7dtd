@@ -22,5 +22,8 @@ Godzilla world-event mod for 7 Days to Die V3.2, single player only. Read `docs/
 ## Open questions
 - Does Godzilla roam between attacks, or stay offshore until the next end city? (Default: offshore.)
 
+## Versioning
+- The version lives only in `KaijuMod/ModInfo.xml` (the game shows it; the mod logs it and `kaiju version` prints it). Bump it with every change that gets installed: patch (0.2.x) for tweaks and fixes, minor (0.x.0) for new features. Install ModInfo.xml with the DLL.
+
 ## Commits
 End commit messages with the co-author line Claude Code adds by default. Author: Darwin.

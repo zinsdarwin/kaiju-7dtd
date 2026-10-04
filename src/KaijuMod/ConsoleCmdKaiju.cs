@@ -27,7 +27,8 @@ namespace KaijuMod
 
         public override string getHelp()
         {
-            return "Usage:\n"
+            return "Kaiju mod v" + KaijuModApi.Version + ". Usage:\n"
+                + "  kaiju version        the mod's version (from ModInfo.xml)\n"
                 + "  kaiju run [reset]    The Run status: day, strip, radiation front, next attack (reset starts it over: clears radiation and clouds)\n"
                 + "  kaiju attack <city|start|end|finale>  send him at a city now (a name from kaiju.xml; start starts The Run over, clearing radiation and clouds; end is this strip's end city; or the final attack with the Oxygen Destroyer check)\n"
                 + "  kaiju parts          Oxygen Destroyer parts: where each crate is, which you carry, device and finale state\n"
@@ -127,6 +128,9 @@ namespace KaijuMod
                     break;
                 case "parts":
                     GameApi.ConsoleOut(KaijuRun.Instance.PartsStatus());
+                    break;
+                case "version":
+                    GameApi.ConsoleOut("Kaiju mod v" + KaijuModApi.Version);
                     break;
                 case "style":
                 {
