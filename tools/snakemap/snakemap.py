@@ -144,10 +144,11 @@ def snap_ground(h):
 
 
 class Poi:
-    def __init__(self, name, sx, sz, yoff, rot_north, townships, tags, zoning, tier=0):
+    def __init__(self, name, sx, sz, yoff, rot_north, townships, tags, zoning, tier=0, quest_broken=False):
         self.name, self.sx, self.sz, self.yoff = name, sx, sz, yoff
         self.rot_north, self.townships, self.tags, self.zoning = rot_north, townships, tags, zoning
         self.tier = tier
+        self.quest_broken = quest_broken   # quest tags but no Rally block: quests there never start
 
     def footprint(self, b):
         return (self.sz, self.sx) if b % 2 else (self.sx, self.sz)
@@ -173,7 +174,8 @@ def load_pois(game):
                 {s.strip().lower() for s in prop("AllowedTownships", "").split(",") if s.strip()},
                 {s.strip().lower() for s in prop("Tags", "").split(",") if s.strip()},
                 {s.strip().lower() for s in prop("Zoning", "").split(",") if s.strip()},
-                int(prop("DifficultyTier", "0") or 0))
+                int(prop("DifficultyTier", "0") or 0),
+                'name="QuestTags"' in t and 'class="Rally"' not in t and not name.startswith("trader_"))
         pois.append(p)
     return pois
 
@@ -191,6 +193,11 @@ def load_part(game, name):
 
 
 def usable(p, biome):
+    # The game's world generator places only tagged POIs. Untagged ones are editor/test variants
+    # (house_old_cottage_01_sleeper and _detail have no Rally block, so their quests never start).
+    # A quest POI without a Rally block (house_old_gambrel_04) gets no quest start marker either.
+    if not p.tags or p.quest_broken:
+        return False
     if p.tags & EXCLUDE_TAGS or p.zoning & EXCLUDE_ZONING or p.name.startswith(EXCLUDE_PREFIX):
         return False
     if "oldwest" in p.tags and biome != "desert":
