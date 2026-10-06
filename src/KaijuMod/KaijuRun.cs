@@ -75,6 +75,7 @@ namespace KaijuMod
         private FrontCloud frontCloud;
         private KaijuHorizonWall horizonWall;
         private bool prewarmFront;   // the first cloud after a load starts fully formed
+        private bool journalChecked; // trader quests in the journal pointed along the run, once per load
         /// <summary>Size of the dark cloud bank over the radiation front, metres.</summary>
         public static float FrontCloudWidth = 900f, FrontCloudDepth = 700f;
         private float nextGeiger;
@@ -112,6 +113,13 @@ namespace KaijuMod
 
             ulong now = GameApi.WorldTime(world);
             EntityPlayer player = GameApi.LocalPlayer(world);
+
+            if (!journalChecked && player != null && player.QuestJournal != null)
+            {
+                journalChecked = true;
+                try { KaijuStarterTrader.RepairJournal(player); }
+                catch (System.Exception e) { Log.Warning("[KaijuMod] Quest journal check failed: " + e.Message); }
+            }
 
             if (!st.StartAttacked && player != null && GameApi.IsAlive(player))
             {
@@ -157,6 +165,7 @@ namespace KaijuMod
             ClearFallout(world);
             boundWorld = world;
             prewarmFront = true;
+            journalChecked = false;
             startTimer = radTimer = partsTimer = 0f;
             st = new State();
             string folder = GameApi.WorldFolder();
