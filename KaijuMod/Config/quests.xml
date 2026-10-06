@@ -9,6 +9,8 @@
 			<property name="subtitle_key" value="kaijuPartQuest_subtitle"/>
 			<property name="description_key" value="kaijuPartQuest1Desc"/>
 			<property name="offer_key" value="kaijuPartQuest1Offer"/>
+			<property name="statement_key" value="kaijuPartQuest_statement"/>
+			<property name="response_key" value="kaijuPartQuest1Response"/>
 			<property name="icon" value="ui_game_symbol_airdrop"/>
 			<property name="category_key" value="quest"/>
 			<property name="difficulty_tier" value="1"/>
@@ -40,6 +42,8 @@
 			<property name="subtitle_key" value="kaijuPartQuest_subtitle"/>
 			<property name="description_key" value="kaijuPartQuest2Desc"/>
 			<property name="offer_key" value="kaijuPartQuest2Offer"/>
+			<property name="statement_key" value="kaijuPartQuest_statement"/>
+			<property name="response_key" value="kaijuPartQuest2Response"/>
 			<property name="icon" value="ui_game_symbol_airdrop"/>
 			<property name="category_key" value="quest"/>
 			<property name="difficulty_tier" value="1"/>
@@ -71,6 +75,8 @@
 			<property name="subtitle_key" value="kaijuPartQuest_subtitle"/>
 			<property name="description_key" value="kaijuPartQuest3Desc"/>
 			<property name="offer_key" value="kaijuPartQuest3Offer"/>
+			<property name="statement_key" value="kaijuPartQuest_statement"/>
+			<property name="response_key" value="kaijuPartQuest3Response"/>
 			<property name="icon" value="ui_game_symbol_airdrop"/>
 			<property name="category_key" value="quest"/>
 			<property name="difficulty_tier" value="1"/>
@@ -102,6 +108,8 @@
 			<property name="subtitle_key" value="kaijuPartQuest_subtitle"/>
 			<property name="description_key" value="kaijuPartQuest4Desc"/>
 			<property name="offer_key" value="kaijuPartQuest4Offer"/>
+			<property name="statement_key" value="kaijuPartQuest_statement"/>
+			<property name="response_key" value="kaijuPartQuest4Response"/>
 			<property name="icon" value="ui_game_symbol_airdrop"/>
 			<property name="category_key" value="quest"/>
 			<property name="difficulty_tier" value="1"/>
@@ -133,6 +141,8 @@
 			<property name="subtitle_key" value="kaijuPartQuest_subtitle"/>
 			<property name="description_key" value="kaijuPartQuest5Desc"/>
 			<property name="offer_key" value="kaijuPartQuest5Offer"/>
+			<property name="statement_key" value="kaijuPartQuest_statement"/>
+			<property name="response_key" value="kaijuPartQuest5Response"/>
 			<property name="icon" value="ui_game_symbol_airdrop"/>
 			<property name="category_key" value="quest"/>
 			<property name="difficulty_tier" value="1"/>
