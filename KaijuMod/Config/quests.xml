@@ -1,6 +1,8 @@
 <configs>
 	<!-- Oxygen Destroyer part quests, offered by the trader in each part city (KaijuPartQuests.cs
-	     puts them at the top of the job list and presets the Goto destination: the part site). -->
+	     puts them at the top of the job list and presets the Goto destination: the part site).
+	     Tier 1 so they show whatever the player's trader tier (the job list hides higher tiers);
+	     the rewards still scale with the site's tier. -->
 	<append xpath="/quests">
 		<quest id="kaijuPart1">
 			<property name="name_key" value="kaijuPartQuest1"/>
@@ -9,7 +11,7 @@
 			<property name="offer_key" value="kaijuPartQuest1Offer"/>
 			<property name="icon" value="ui_game_symbol_airdrop"/>
 			<property name="category_key" value="quest"/>
-			<property name="difficulty_tier" value="3"/>
+			<property name="difficulty_tier" value="1"/>
 			<property name="shareable" value="false"/>
 			<property name="completiontype" value="TurnIn"/>
 			<property name="completion_key" value="kaijuPartQuest_completion"/>
@@ -40,7 +42,7 @@
 			<property name="offer_key" value="kaijuPartQuest2Offer"/>
 			<property name="icon" value="ui_game_symbol_airdrop"/>
 			<property name="category_key" value="quest"/>
-			<property name="difficulty_tier" value="3"/>
+			<property name="difficulty_tier" value="1"/>
 			<property name="shareable" value="false"/>
 			<property name="completiontype" value="TurnIn"/>
 			<property name="completion_key" value="kaijuPartQuest_completion"/>
@@ -71,7 +73,7 @@
 			<property name="offer_key" value="kaijuPartQuest3Offer"/>
 			<property name="icon" value="ui_game_symbol_airdrop"/>
 			<property name="category_key" value="quest"/>
-			<property name="difficulty_tier" value="3"/>
+			<property name="difficulty_tier" value="1"/>
 			<property name="shareable" value="false"/>
 			<property name="completiontype" value="TurnIn"/>
 			<property name="completion_key" value="kaijuPartQuest_completion"/>
@@ -102,7 +104,7 @@
 			<property name="offer_key" value="kaijuPartQuest4Offer"/>
 			<property name="icon" value="ui_game_symbol_airdrop"/>
 			<property name="category_key" value="quest"/>
-			<property name="difficulty_tier" value="4"/>
+			<property name="difficulty_tier" value="1"/>
 			<property name="shareable" value="false"/>
 			<property name="completiontype" value="TurnIn"/>
 			<property name="completion_key" value="kaijuPartQuest_completion"/>
@@ -133,7 +135,7 @@
 			<property name="offer_key" value="kaijuPartQuest5Offer"/>
 			<property name="icon" value="ui_game_symbol_airdrop"/>
 			<property name="category_key" value="quest"/>
-			<property name="difficulty_tier" value="5"/>
+			<property name="difficulty_tier" value="1"/>
 			<property name="shareable" value="false"/>
 			<property name="completiontype" value="TurnIn"/>
 			<property name="completion_key" value="kaijuPartQuest_completion"/>

@@ -176,13 +176,29 @@ namespace KaijuMod
         /// </summary>
         public static bool HasRallyBlock(PrefabInstance poi)
         {
-            // VERIFIED (V3.3): Prefab.indexedBlockOffsets is filled from the prefab xml's
-            // IndexedBlockOffsets classes on load; ObjectiveRallyPoint.GetRallyPosition looks for
-            // chunk.IndexedBlocks["Rally"] inside the POI and gives up (no marker) if there is none.
-            if (poi == null || poi.prefab == null)
+            // VERIFIED (V3.3): ObjectiveRallyPoint.GetRallyPosition looks for chunk.IndexedBlocks["Rally"]
+            // inside the POI and gives up (no marker) if there is none. The prefab xml lists it under
+            // IndexedBlockOffsets. Read the xml itself: Prefab.indexedBlockOffsets is empty at runtime
+            // for world-placed prefabs (cleared once their blocks are copied into the chunks; checked
+            // in game, 0.5.0 wrongly skipped prefabs that have a Rally block).
+            // VERIFIED (V3.3): PrefabInstance.location / Prefab.location is the prefab's .tts
+            // AbstractedLocation; FullPathNoExtension + ".xml" is its xml.
+            if (poi == null)
                 return true;
-            List<Vector3i> rally;
-            return poi.prefab.indexedBlockOffsets.TryGetValue("Rally", out rally) && rally != null && rally.Count > 0;
+            var loc = poi.location;
+            string path = loc.FullPathNoExtension;
+            if (string.IsNullOrEmpty(path) && poi.prefab != null)
+                path = poi.prefab.location.FullPathNoExtension;
+            if (string.IsNullOrEmpty(path) || !System.IO.File.Exists(path + ".xml"))
+                return true; // can't tell: assume it works
+            try
+            {
+                return System.IO.File.ReadAllText(path + ".xml").Contains("class=\"Rally\"");
+            }
+            catch (System.Exception)
+            {
+                return true;
+            }
         }
 
         /// <summary>POIs placed in the world: name and bounding box (world coordinates, min corner).</summary>

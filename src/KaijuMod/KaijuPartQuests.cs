@@ -43,21 +43,28 @@ namespace KaijuMod
         [HarmonyPatch(typeof(EntityTrader), nameof(EntityTrader.PopulateActiveQuests))]
         private static class OfferPatch
         {
-            private static void Postfix(EntityTrader __instance, EntityPlayer player, ref List<Quest> __result)
+            private static void Postfix(EntityTrader __instance, EntityPlayer player, List<Quest> __result)
             {
-                if (__instance == null || player == null)
+                // Never let this cost the trader its vanilla quests: only add to a list that exists,
+                // and swallow any failure.
+                if (__instance == null || player == null || __result == null)
                     return;
-                Vector3 sitePos, siteSize;
-                int part = KaijuRun.Instance.PartQuestFor(__instance, player, out sitePos, out siteSize);
-                if (part < 0)
-                    return;
-                Quest q = Create(__instance, part, sitePos, siteSize);
-                if (q == null)
-                    return;
-                if (__result == null)
-                    __result = new List<Quest>();
-                __result.Insert(0, q);
-                Log.Out("[KaijuMod] " + __instance.EntityName + " offers the Oxygen Destroyer part " + (part + 1) + " quest");
+                try
+                {
+                    Vector3 sitePos, siteSize;
+                    int part = KaijuRun.Instance.PartQuestFor(__instance, player, out sitePos, out siteSize);
+                    if (part < 0)
+                        return;
+                    Quest q = Create(__instance, part, sitePos, siteSize);
+                    if (q == null)
+                        return;
+                    __result.Insert(0, q);
+                    Log.Out("[KaijuMod] " + __instance.EntityName + " offers the Oxygen Destroyer part " + (part + 1) + " quest");
+                }
+                catch (System.Exception e)
+                {
+                    Log.Warning("[KaijuMod] Part quest not offered: " + e.Message);
+                }
             }
         }
     }
