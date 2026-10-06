@@ -201,6 +201,27 @@ namespace KaijuMod
             }
         }
 
+        /// <summary>
+        /// True if the loot container at pos has been opened and no longer holds the item. False if
+        /// it is untouched, still holds it, or is not a loot container (unknown).
+        /// </summary>
+        public static bool LootTakenFrom(World world, Vector3i pos, string itemName)
+        {
+            // VERIFIED (V3.3): World.GetTileEntity(Vector3i); loot chests are TileEntityComposite with a
+            // TEFeatureStorage (GetFeature<T>); its itemGrid.Touched is set once opened (loot rolled),
+            // and HasItem(ItemValue) checks the grid by item type.
+            var te = world.GetTileEntity(pos) as TileEntityComposite;
+            if (te == null)
+                return false;
+            var storage = te.GetFeature<TEFeatureStorage>();
+            if (storage == null || storage.itemGrid == null || !storage.itemGrid.Touched)
+                return false;
+            ItemValue item = ItemClass.GetItem(itemName);
+            if (item == null || item.IsEmpty())
+                return false;
+            return !storage.HasItem(item);
+        }
+
         /// <summary>POIs placed in the world: name and bounding box (world coordinates, min corner).</summary>
         public static List<PrefabInstance> Pois()
         {

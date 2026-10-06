@@ -53,6 +53,9 @@ namespace KaijuMod
             // Oxygen Destroyer
             public readonly bool[] CratePlaced = new bool[Parts];
             public readonly Vector3i[] CratePos = new Vector3i[Parts];
+            // Part taken from its crate (held once, or the crate opened and emptied of it, or the
+            // crate gone): its marker, light and trader quest never come back.
+            public readonly bool[] PartTaken = new bool[Parts];
             public bool DeviceArmed;
             public Vector3i DevicePos;
             public bool FinaleActive;
@@ -591,7 +594,16 @@ namespace KaijuMod
                 Vector3 crate = new Vector3(st.CratePos[i].x + 0.5f, st.CratePos[i].y + 0.5f, st.CratePos[i].z + 0.5f);
                 bool near = (crate - p).sqrMagnitude < 350f * 350f;
                 bool hasPart = GameApi.ItemCount(player, PartItem(i)) > 0;
-                bool crateThere = GameApi.BlockName(world, st.CratePos[i]) == CrateBlock(i) || !GameApi.IsChunkLoaded(world, st.CratePos[i].x, st.CratePos[i].z);
+                bool loaded = GameApi.IsChunkLoaded(world, st.CratePos[i].x, st.CratePos[i].z);
+                bool crateThere = !loaded || GameApi.BlockName(world, st.CratePos[i]) == CrateBlock(i);
+                if (!st.PartTaken[i] && (hasPart || !crateThere || (loaded && GameApi.LootTakenFrom(world, st.CratePos[i], PartItem(i)))))
+                {
+                    st.PartTaken[i] = true;
+                    Save();
+                    Log.Out("[KaijuMod] Oxygen Destroyer part " + (i + 1) + " taken from its crate");
+                }
+                // Once taken it stays taken: stashing or crafting the part must not bring the marker back.
+                hasPart = hasPart || st.PartTaken[i];
                 // Light: while nearby and the part is still out there.
                 if (near && !hasPart && crateThere && crateLights[i] == null)
                     crateLights[i] = Beacon.Create(crate + Vector3.up, new Color(0.5f, 0.85f, 1f), 14f, 4f);
@@ -771,7 +783,7 @@ namespace KaijuMod
                 var site = data.SiteFor(i + 1);
                 s += "\n  " + (i + 1) + ". " + (city != null ? city.Name : "?")
                     + (site != null ? " (" + site.Name + ", tier " + site.Tier + ", at " + Mathf.RoundToInt(site.Centre.x) + " " + Mathf.RoundToInt(site.Centre.y) + ")" : "") + ": "
-                    + (st.CratePlaced[i] ? "crate at " + st.CratePos[i] : "crate not placed yet (placed when you get near)")
+                    + (st.PartTaken[i] ? "taken" : st.CratePlaced[i] ? "crate at " + st.CratePos[i] : "crate not placed yet (placed when you get near)")
                     + (has ? ", YOU HAVE IT" : "");
             }
             s += "\nDevice: " + (st.DeviceArmed ? "armed at " + st.DevicePos + (InAshmouth(st.DevicePos) ? " (in Ashmouth or on its shore)" : " (NOT in Ashmouth or on its shore)") : "not armed")
@@ -797,7 +809,7 @@ namespace KaijuMod
                 Settlement city = data.EndCity(i);
                 if (city == null || !InCity(city, tp, 30f))
                     continue;
-                if (GameApi.ItemCount(player, PartItem(i)) > 0 || GameApi.ItemCount(player, "kaijuOxygenDestroyer") > 0 || st.DeviceArmed)
+                if (st.PartTaken[i] || GameApi.ItemCount(player, PartItem(i)) > 0 || GameApi.ItemCount(player, "kaijuOxygenDestroyer") > 0 || st.DeviceArmed)
                     return -1;
                 // VERIFIED (V3.3): QuestJournal.FindActiveOrCompleteQuest(name, faction = -1).
                 if (player.QuestJournal != null && player.QuestJournal.FindActiveOrCompleteQuest(KaijuPartQuests.QuestId(i)) != null)
@@ -1016,6 +1028,7 @@ namespace KaijuMod
                     var c = doc.CreateElement("crate");
                     c.SetAttribute("part", (i + 1).ToString(CultureInfo.InvariantCulture));
                     c.SetAttribute("placed", st.CratePlaced[i] ? "1" : "0");
+                    c.SetAttribute("taken", st.PartTaken[i] ? "1" : "0");
                     c.SetAttribute("pos", st.CratePos[i].x + "," + st.CratePos[i].y + "," + st.CratePos[i].z);
                     e.AppendChild(c);
                 }
@@ -1070,6 +1083,7 @@ namespace KaijuMod
                     if (!int.TryParse(c.GetAttribute("part"), NumberStyles.Integer, CultureInfo.InvariantCulture, out i) || i < 1 || i > Parts)
                         continue;
                     st.CratePlaced[i - 1] = c.GetAttribute("placed") == "1";
+                    st.PartTaken[i - 1] = c.GetAttribute("taken") == "1";
                     st.CratePos[i - 1] = ParseV3i(c.GetAttribute("pos"));
                 }
             }
