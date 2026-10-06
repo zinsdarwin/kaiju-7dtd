@@ -70,6 +70,7 @@ namespace KaijuMod
         private Ashfall ash;
         private bool fogOn;
         private FrontCloud frontCloud;
+        private KaijuHorizonWall horizonWall;
         private bool prewarmFront;   // the first cloud after a load starts fully formed
         /// <summary>Size of the dark cloud bank over the radiation front, metres.</summary>
         public static float FrontCloudWidth = 900f, FrontCloudDepth = 700f;
@@ -419,6 +420,10 @@ namespace KaijuMod
                 Save();
             }
             Log.Out("[KaijuMod] " + cityName + " is irradiated");
+            if (horizonWall == null)
+                horizonWall = KaijuHorizonWall.Create(KaijuDirector.Instance.EffectMaterial("KaijuSmoke"));
+            if (horizonWall != null)
+                horizonWall.Flare();
             var player = GameApi.LocalPlayer(boundWorld);
             if (player != null && GameApi.IsAlive(player))
                 GameApi.Tooltip(player, cityName + " is gone. The whole city is irradiated.");
@@ -438,6 +443,31 @@ namespace KaijuMod
         }
 
         // ---- Fallout
+
+        /// <summary>
+        /// The smoke wall on the horizon toward the radiation: shown once a city has been hit (the
+        /// Minus One blast, or a classic attack once he has gone) while the front is active, at the
+        /// player's distance from the front.
+        /// </summary>
+        private void TickHorizonWall(EntityPlayer player, ulong now)
+        {
+            float fx;
+            int strip;
+            bool front = CurrentFront(now, out fx, out strip);
+            bool hit = st.Blasted.Count > 0 || (st.Ruined.Count > 0 && !KaijuDirector.Instance.Running);
+            bool on = front && hit;
+            if (!on && horizonWall == null)
+                return;
+            if (horizonWall == null)
+                horizonWall = KaijuHorizonWall.Create(KaijuDirector.Instance.EffectMaterial("KaijuSmoke"));
+            if (horizonWall == null)
+                return;
+            Vector3 p = GameApi.Position(player);
+            int d = front ? data.Direction(strip) : 1;
+            // The radiation is behind the front: the side the front comes from.
+            horizonWall.Set(on, GameApi.WorldToScene(p), new Vector2(-d, 0f), front ? (p.x - fx) * d : KaijuHorizonWall.MaxDistance,
+                GameApi.WorldToScene(new Vector3(p.x, p.y - 40f, p.z)).y);
+        }
 
         /// <summary>Keeps the dark cloud bank hanging over the irradiated side of the front.</summary>
         private void TickFrontCloud(ulong now)
@@ -484,6 +514,9 @@ namespace KaijuMod
             if (frontCloud != null)
                 Object.Destroy(frontCloud.gameObject);
             frontCloud = null;
+            if (horizonWall != null)
+                Object.Destroy(horizonWall.gameObject);
+            horizonWall = null;
             if (fogOn)
                 GameApi.ClearFog(world);
             fogOn = false;
@@ -498,6 +531,7 @@ namespace KaijuMod
             TickFrontCloud(now);
             if (player == null)
                 return;
+            TickHorizonWall(player, now);
             Vector3 p = GameApi.Position(player);
             float fx;
             int strip;
