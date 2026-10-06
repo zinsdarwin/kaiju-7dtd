@@ -779,6 +779,54 @@ namespace KaijuMod
             return s;
         }
 
+        // ---- Oxygen Destroyer: part quests from the part cities' traders
+
+        /// <summary>
+        /// The part (0-based) whose quest this trader should offer, or -1: the trader must be in a
+        /// part's city, and the player must not have the part, the device, the quest (active or
+        /// done), and the part must still be in its crate. sitePos/siteSize: where the quest leads.
+        /// </summary>
+        public int PartQuestFor(EntityTrader trader, EntityPlayer player, out Vector3 sitePos, out Vector3 siteSize)
+        {
+            sitePos = siteSize = Vector3.zero;
+            if (data == null || trader == null || player == null)
+                return -1;
+            Vector3 tp = trader.traderArea != null ? (Vector3)trader.traderArea.Position : trader.position;
+            for (int i = 0; i < Parts; i++)
+            {
+                Settlement city = data.EndCity(i);
+                if (city == null || !InCity(city, tp, 30f))
+                    continue;
+                if (GameApi.ItemCount(player, PartItem(i)) > 0 || GameApi.ItemCount(player, "kaijuOxygenDestroyer") > 0 || st.DeviceArmed)
+                    return -1;
+                // VERIFIED (V3.3): QuestJournal.FindActiveOrCompleteQuest(name, faction = -1).
+                if (player.QuestJournal != null && player.QuestJournal.FindActiveOrCompleteQuest(KaijuPartQuests.QuestId(i)) != null)
+                    return -1;
+                World world = GameApi.World;
+                if (st.CratePlaced[i] && world != null && GameApi.IsChunkLoaded(world, st.CratePos[i].x, st.CratePos[i].z)
+                    && GameApi.BlockName(world, st.CratePos[i]) != CrateBlock(i))
+                    return -1; // crate already emptied and gone
+                var site = data.SiteFor(i + 1);
+                if (site != null)
+                {
+                    sitePos = new Vector3(site.X, site.Y, site.Z);
+                    siteSize = new Vector3(site.W, 20f, site.D);
+                }
+                else if (st.CratePlaced[i])
+                {
+                    sitePos = new Vector3(st.CratePos[i].x - 15, st.CratePos[i].y, st.CratePos[i].z - 15);
+                    siteSize = new Vector3(30f, 20f, 30f);
+                }
+                else
+                {
+                    sitePos = new Vector3(city.X - 50f, city.Y, city.Z - 50f);
+                    siteSize = new Vector3(100f, 20f, 100f);
+                }
+                return i;
+            }
+            return -1;
+        }
+
         // ---- Oxygen Destroyer: the device and the finale
 
         public bool IsArmed(Vector3i pos)

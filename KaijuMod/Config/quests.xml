@@ -1,0 +1,161 @@
+<configs>
+	<!-- Oxygen Destroyer part quests, offered by the trader in each part city (KaijuPartQuests.cs
+	     puts them at the top of the job list and presets the Goto destination: the part site). -->
+	<append xpath="/quests">
+		<quest id="kaijuPart1">
+			<property name="name_key" value="kaijuPartQuest1"/>
+			<property name="subtitle_key" value="kaijuPartQuest_subtitle"/>
+			<property name="description_key" value="kaijuPartQuest1Desc"/>
+			<property name="offer_key" value="kaijuPartQuest1Offer"/>
+			<property name="icon" value="ui_game_symbol_airdrop"/>
+			<property name="category_key" value="quest"/>
+			<property name="difficulty_tier" value="3"/>
+			<property name="shareable" value="false"/>
+			<property name="completiontype" value="TurnIn"/>
+			<property name="completion_key" value="kaijuPartQuest_completion"/>
+
+			<objective type="Goto" id="kaijupart" value="40" phase="1">
+				<property name="nav_object" value="quest"/>
+			</objective>
+
+			<objective type="FetchKeep" id="kaijuOxygenDestroyerPart1" value="1" phase="2"/>
+
+			<objective type="ReturnToNPC">
+				<property name="phase" value="3"/>
+				<property name="nav_object" value="return_to_trader"/>
+			</objective>
+
+			<objective type="InteractWithNPC">
+				<property name="phase" value="3"/>
+				<property name="nav_object" value="return_to_trader"/>
+			</objective>
+
+			<reward type="Exp" value="4500"/>
+			<reward type="Item" id="casinoCoin" value="450"/>
+		</quest>
+		<quest id="kaijuPart2">
+			<property name="name_key" value="kaijuPartQuest2"/>
+			<property name="subtitle_key" value="kaijuPartQuest_subtitle"/>
+			<property name="description_key" value="kaijuPartQuest2Desc"/>
+			<property name="offer_key" value="kaijuPartQuest2Offer"/>
+			<property name="icon" value="ui_game_symbol_airdrop"/>
+			<property name="category_key" value="quest"/>
+			<property name="difficulty_tier" value="3"/>
+			<property name="shareable" value="false"/>
+			<property name="completiontype" value="TurnIn"/>
+			<property name="completion_key" value="kaijuPartQuest_completion"/>
+
+			<objective type="Goto" id="kaijupart" value="40" phase="1">
+				<property name="nav_object" value="quest"/>
+			</objective>
+
+			<objective type="FetchKeep" id="kaijuOxygenDestroyerPart2" value="1" phase="2"/>
+
+			<objective type="ReturnToNPC">
+				<property name="phase" value="3"/>
+				<property name="nav_object" value="return_to_trader"/>
+			</objective>
+
+			<objective type="InteractWithNPC">
+				<property name="phase" value="3"/>
+				<property name="nav_object" value="return_to_trader"/>
+			</objective>
+
+			<reward type="Exp" value="4500"/>
+			<reward type="Item" id="casinoCoin" value="450"/>
+		</quest>
+		<quest id="kaijuPart3">
+			<property name="name_key" value="kaijuPartQuest3"/>
+			<property name="subtitle_key" value="kaijuPartQuest_subtitle"/>
+			<property name="description_key" value="kaijuPartQuest3Desc"/>
+			<property name="offer_key" value="kaijuPartQuest3Offer"/>
+			<property name="icon" value="ui_game_symbol_airdrop"/>
+			<property name="category_key" value="quest"/>
+			<property name="difficulty_tier" value="3"/>
+			<property name="shareable" value="false"/>
+			<property name="completiontype" value="TurnIn"/>
+			<property name="completion_key" value="kaijuPartQuest_completion"/>
+
+			<objective type="Goto" id="kaijupart" value="40" phase="1">
+				<property name="nav_object" value="quest"/>
+			</objective>
+
+			<objective type="FetchKeep" id="kaijuOxygenDestroyerPart3" value="1" phase="2"/>
+
+			<objective type="ReturnToNPC">
+				<property name="phase" value="3"/>
+				<property name="nav_object" value="return_to_trader"/>
+			</objective>
+
+			<objective type="InteractWithNPC">
+				<property name="phase" value="3"/>
+				<property name="nav_object" value="return_to_trader"/>
+			</objective>
+
+			<reward type="Exp" value="4500"/>
+			<reward type="Item" id="casinoCoin" value="450"/>
+		</quest>
+		<quest id="kaijuPart4">
+			<property name="name_key" value="kaijuPartQuest4"/>
+			<property name="subtitle_key" value="kaijuPartQuest_subtitle"/>
+			<property name="description_key" value="kaijuPartQuest4Desc"/>
+			<property name="offer_key" value="kaijuPartQuest4Offer"/>
+			<property name="icon" value="ui_game_symbol_airdrop"/>
+			<property name="category_key" value="quest"/>
+			<property name="difficulty_tier" value="4"/>
+			<property name="shareable" value="false"/>
+			<property name="completiontype" value="TurnIn"/>
+			<property name="completion_key" value="kaijuPartQuest_completion"/>
+
+			<objective type="Goto" id="kaijupart" value="40" phase="1">
+				<property name="nav_object" value="quest"/>
+			</objective>
+
+			<objective type="FetchKeep" id="kaijuOxygenDestroyerPart4" value="1" phase="2"/>
+
+			<objective type="ReturnToNPC">
+				<property name="phase" value="3"/>
+				<property name="nav_object" value="return_to_trader"/>
+			</objective>
+
+			<objective type="InteractWithNPC">
+				<property name="phase" value="3"/>
+				<property name="nav_object" value="return_to_trader"/>
+			</objective>
+
+			<reward type="Exp" value="6000"/>
+			<reward type="Item" id="casinoCoin" value="600"/>
+		</quest>
+		<quest id="kaijuPart5">
+			<property name="name_key" value="kaijuPartQuest5"/>
+			<property name="subtitle_key" value="kaijuPartQuest_subtitle"/>
+			<property name="description_key" value="kaijuPartQuest5Desc"/>
+			<property name="offer_key" value="kaijuPartQuest5Offer"/>
+			<property name="icon" value="ui_game_symbol_airdrop"/>
+			<property name="category_key" value="quest"/>
+			<property name="difficulty_tier" value="5"/>
+			<property name="shareable" value="false"/>
+			<property name="completiontype" value="TurnIn"/>
+			<property name="completion_key" value="kaijuPartQuest_completion"/>
+
+			<objective type="Goto" id="kaijupart" value="40" phase="1">
+				<property name="nav_object" value="quest"/>
+			</objective>
+
+			<objective type="FetchKeep" id="kaijuOxygenDestroyerPart5" value="1" phase="2"/>
+
+			<objective type="ReturnToNPC">
+				<property name="phase" value="3"/>
+				<property name="nav_object" value="return_to_trader"/>
+			</objective>
+
+			<objective type="InteractWithNPC">
+				<property name="phase" value="3"/>
+				<property name="nav_object" value="return_to_trader"/>
+			</objective>
+
+			<reward type="Exp" value="7500"/>
+			<reward type="Item" id="casinoCoin" value="750"/>
+		</quest>
+	</append>
+</configs>
