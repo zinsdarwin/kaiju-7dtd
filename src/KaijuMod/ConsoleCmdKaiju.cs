@@ -96,7 +96,7 @@ namespace KaijuMod
                 {
                     if (!KaijuRun.Instance.Active)
                     {
-                        GameApi.ConsoleOut("No attack: this world has no kaiju.xml (load the Kaiju Snake world).");
+                        GameApi.ConsoleOut("No attack: this world has no kaiju.xml (load a Kaiju Snake world).");
                         break;
                     }
                     string which = _params.Count > 1 ? string.Join(" ", _params.GetRange(1, _params.Count - 1)) : "end";

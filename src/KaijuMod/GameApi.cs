@@ -170,6 +170,21 @@ namespace KaijuMod
             return true;
         }
 
+        /// <summary>
+        /// True if a placed POI has a "Rally" block, the quest start marker. Without one a quest
+        /// there never shows its start marker (e.g. house_old_cottage_01_sleeper).
+        /// </summary>
+        public static bool HasRallyBlock(PrefabInstance poi)
+        {
+            // VERIFIED (V3.3): Prefab.indexedBlockOffsets is filled from the prefab xml's
+            // IndexedBlockOffsets classes on load; ObjectiveRallyPoint.GetRallyPosition looks for
+            // chunk.IndexedBlocks["Rally"] inside the POI and gives up (no marker) if there is none.
+            if (poi == null || poi.prefab == null)
+                return true;
+            List<Vector3i> rally;
+            return poi.prefab.indexedBlockOffsets.TryGetValue("Rally", out rally) && rally != null && rally.Count > 0;
+        }
+
         /// <summary>POIs placed in the world: name and bounding box (world coordinates, min corner).</summary>
         public static List<PrefabInstance> Pois()
         {
