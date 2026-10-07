@@ -601,8 +601,23 @@ class SnakeMap:
             self.prefabs.append((p.name, xmin, prefab_y(gh) + p.yoff, zmin, b))
             self.part_sites.append(dict(part=i + 1, strip=i, city=city["name"], name=p.name, tier=p.tier,
                                         x=xmin, z=zmin, w=w, d=dpt, y=prefab_y(gh)))
-            # A trail up from the city's north edge to the site's gate.
+            # A trail up from the city's north edge to the site's gate, graded into a straight ramp
+            # (cut and fill, 8 m wide with 3 m shoulders); left on the raw slope it crossed cliffs
+            # where the shelf meets the hillside. About 15% on these ranges.
             cx = xmin + w // 2
+            za, zb = int(z1), int(zmin) + 2
+            ha, hb = self.height(cx, za), gh
+            half, sh = 4, 3
+            c0r, c1r = cx - half - sh + HALF, cx + half + sh + HALF + 1
+            off = np.abs(np.arange(c0r, c1r) - (cx + HALF))
+            wgt_x = 1 - smoothstep((off - half) / float(sh))
+            for zz in range(za, zb + 1):
+                hz = ha + (hb - ha) * (zz - za) / float(max(1, zb - za))
+                row = self.h[zz + HALF, c0r:c1r]
+                self.h[zz + HALF, c0r:c1r] = row * (1 - wgt_x) + hz * wgt_x
+            grade = abs(hb - ha) / max(1, zb - za)
+            if grade > 0.16:
+                print("warning: trail to the part %d site is %.0f%%: steeper than a walkable 15%%" % (i + 1, grade * 100))
             self.roads.append(([(cx, z1), (cx, zmin)], 3, True))
             print("part %d site: %s (tier %d) at x %d z %d by %s, %.0f m up, %.0f m from the city centre"
                   % (i + 1, p.name, p.tier, xmin, zmin, city["name"], gh - city["pad"],
