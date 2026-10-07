@@ -441,6 +441,17 @@ namespace KaijuMod
                 GameApi.Tooltip(player, cityName + " is gone. The whole city is irradiated.");
         }
 
+        /// <summary>True if a position is at one of the part sites (the mountain posts above the cities).</summary>
+        public bool AtPartSite(Vector3 p)
+        {
+            if (data == null)
+                return false;
+            foreach (var s in data.PartSites)
+                if (p.x >= s.X - 20f && p.x <= s.X + s.W + 20f && p.z >= s.Z - 20f && p.z <= s.Z + s.D + 20f)
+                    return true;
+            return false;
+        }
+
         /// <summary>The blasted city a position is in (with a margin), or null.</summary>
         private Settlement BlastedCityAt(Vector3 p)
         {

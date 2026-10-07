@@ -371,6 +371,9 @@ namespace KaijuMod
                 if (!GameApi.IsAlive(player))
                     continue;
                 Vector3 p = GameApi.Position(player);
+                // The mountain posts above the cities are where you watch from: never fatal there.
+                if (KaijuRun.Instance.AtPartSite(p))
+                    continue;
                 if (new Vector2(p.x - beamEnd.x, p.z - beamEnd.z).sqrMagnitude <= r * r)
                 {
                     Log.Out("[KaijuMod] Mega blast hit player at " + p);

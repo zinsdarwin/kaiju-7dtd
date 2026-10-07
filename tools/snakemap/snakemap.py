@@ -560,10 +560,15 @@ class SnakeMap:
     PART_TIERS = (3, 3, 3, 4, 5)
     MILITARY = re.compile(r"(army_camp|roadside_checkpoint|base_military|bunker)_\d+$")
 
+    SITE_RISE = 45.0      # how far above the city the part site's shelf sits, metres
+    SITE_MIN_DZ = 260     # its near edge at least this far north of the city centre (blast kills within 250)
+
     def build_part_sites(self):
-        """A military POI on the outskirts of each strip's end city, just south of it (the pass
-        north is beside the city) and facing it, on flattened ground. The mod puts that strip's
-        Oxygen Destroyer part crate inside it. Sets self.part_sites."""
+        """A military POI on a shelf up the mountains north of each strip's end city, beside the
+        pass into the next strip, facing the city: you hole up there for the blood moon, watch him
+        come in from the sea and fire on the city at dawn (out of his path and blast), then take
+        the pass north ahead of the radiation. A trail leads up from the city. The mod puts that
+        strip's Oxygen Destroyer part crate inside it. Sets self.part_sites."""
         mil = [p for p in self.pois if self.MILITARY.match(p.name)]
         self.part_sites = []
         for i, tier in enumerate(self.PART_TIERS):
@@ -571,19 +576,18 @@ class SnakeMap:
             pool = [p for p in mil if p.tier == tier] or [p for p in mil if abs(p.tier - tier) <= 1]
             p = self.rand.choice(pool)
             x0, x1, z0, z1, zc = self.settlement_rect(city)
-            lo = strip_center(i) - STRIP_H / 2 + (RIM_W if i == 0 else RIDGE_W) + 20
-            hi = strip_center(i) + STRIP_H / 2 - (RIM_W if i == STRIPS - 1 else RIDGE_W) - 20
-            b = p.rot_north & 3                       # entrance to the north, toward the city
+            b = (p.rot_north + 2) & 3                 # entrance to the south, toward the city
             w, dpt = p.footprint(b)
-            zmin = int(z0 - 15 - dpt)
-            if zmin < lo:                             # no room south: north of the city instead
-                b = (p.rot_north + 2) & 3
-                w, dpt = p.footprint(b)
-                zmin = int(z1 + 15)
-                if zmin + dpt > hi:
-                    zmin = int(hi - dpt)
             xmin = int(round(city["x"] - w / 2))
-            c0, r0 = xmin + HALF, zmin + HALF
+            c0 = xmin + HALF
+            # Climb north from the city until the ground under the site is SITE_RISE above it, up to
+            # just below the crest (or short of the map's north edge on the last strip).
+            zmax = int(min(strip_center(i) + STRIP_H / 2 - 20, HALF - 120) - dpt)
+            zmin = int(max(z1 + 60, zc + self.SITE_MIN_DZ))
+            target = city["pad"] + self.SITE_RISE
+            while zmin < zmax and float(np.median(self.h[zmin + HALF:zmin + HALF + dpt, c0:c0 + w])) < target:
+                zmin += 4
+            r0 = zmin + HALF
             foot = self.h[r0:r0 + dpt, c0:c0 + w]
             gh = snap_ground(float(np.median(foot)))
             m, bl = 6, 25
@@ -597,7 +601,12 @@ class SnakeMap:
             self.prefabs.append((p.name, xmin, prefab_y(gh) + p.yoff, zmin, b))
             self.part_sites.append(dict(part=i + 1, strip=i, city=city["name"], name=p.name, tier=p.tier,
                                         x=xmin, z=zmin, w=w, d=dpt, y=prefab_y(gh)))
-            print("part %d site: %s (tier %d) at x %d z %d by %s" % (i + 1, p.name, p.tier, xmin, zmin, city["name"]))
+            # A trail up from the city's north edge to the site's gate.
+            cx = xmin + w // 2
+            self.roads.append(([(cx, z1), (cx, zmin)], 3, True))
+            print("part %d site: %s (tier %d) at x %d z %d by %s, %.0f m up, %.0f m from the city centre"
+                  % (i + 1, p.name, p.tier, xmin, zmin, city["name"], gh - city["pad"],
+                     math.hypot(cx - city["x"], zmin + dpt / 2 - zc)))
 
     # ---- lookout: where you start
 
