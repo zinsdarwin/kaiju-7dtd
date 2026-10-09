@@ -143,6 +143,25 @@ def snap_ground(h):
     return math.floor(h) + 0.17
 
 
+def grade_apron(h, cx, za, zb, ha, hb, top_hw, bottom_hw=None, blend=80):
+    """Reshapes the mountainside between a city's north edge (za, height ha) and a part site's
+    shelf (zb, height hb) into a broad smooth slope, top_hw wide either side of x cx at the top
+    and widening to bottom_hw at the city, blended into the ridge either side over blend metres:
+    a hillside zombies can walk up anywhere and a road climbs naturally, not a cut ramp between
+    walls. Edits h (a full N x N height map) in place; returns the (x0, z0, x1, z1) world
+    rectangle it touched."""
+    bottom_hw = bottom_hw if bottom_hw is not None else top_hw + 60
+    x0, x1 = int(cx - bottom_hw - blend), int(cx + bottom_hw + blend) + 1
+    zz, xx = np.mgrid[za:zb + 1, x0:x1].astype(np.float32)
+    t = (zz - za) / float(max(1, zb - za))
+    plane = ha + (hb - ha) * t
+    hw = bottom_hw + (top_hw - bottom_hw) * t
+    wgt = 1 - smoothstep((np.abs(xx - cx) - hw) / float(blend))
+    sub = h[za + HALF:zb + HALF + 1, x0 + HALF:x1 + HALF]
+    h[za + HALF:zb + HALF + 1, x0 + HALF:x1 + HALF] = sub * (1 - wgt) + plane * wgt
+    return x0, za, x1, zb + 1
+
+
 class Poi:
     def __init__(self, name, sx, sz, yoff, rot_north, townships, tags, zoning, tier=0, quest_broken=False):
         self.name, self.sx, self.sz, self.yoff = name, sx, sz, yoff
@@ -601,23 +620,16 @@ class SnakeMap:
             self.prefabs.append((p.name, xmin, prefab_y(gh) + p.yoff, zmin, b))
             self.part_sites.append(dict(part=i + 1, strip=i, city=city["name"], name=p.name, tier=p.tier,
                                         x=xmin, z=zmin, w=w, d=dpt, y=prefab_y(gh)))
-            # A trail up from the city's north edge to the site's gate, graded into a straight ramp
-            # (cut and fill, 8 m wide with 3 m shoulders); left on the raw slope it crossed cliffs
-            # where the shelf meets the hillside. About 15% on these ranges.
+            # The mountainside below the site graded into a broad smooth slope down to the city's
+            # north edge (left raw it had crags and cliffs horde zombies could not climb), with a
+            # trail straight up it. About 15% on these ranges.
             cx = xmin + w // 2
             za, zb = int(z1), int(zmin) + 2
-            ha, hb = self.height(cx, za), gh
-            half, sh = 4, 3
-            c0r, c1r = cx - half - sh + HALF, cx + half + sh + HALF + 1
-            off = np.abs(np.arange(c0r, c1r) - (cx + HALF))
-            wgt_x = 1 - smoothstep((off - half) / float(sh))
-            for zz in range(za, zb + 1):
-                hz = ha + (hb - ha) * (zz - za) / float(max(1, zb - za))
-                row = self.h[zz + HALF, c0r:c1r]
-                self.h[zz + HALF, c0r:c1r] = row * (1 - wgt_x) + hz * wgt_x
-            grade = abs(hb - ha) / max(1, zb - za)
-            if grade > 0.16:
-                print("warning: trail to the part %d site is %.0f%%: steeper than a walkable 15%%" % (i + 1, grade * 100))
+            ha = self.height(cx, za)
+            grade_apron(self.h, cx, za, zb, ha, gh, w / 2 + 15)
+            grade = abs(gh - ha) / max(1, zb - za)
+            if grade > 0.2:
+                print("warning: the slope up to the part %d site is %.0f%%" % (i + 1, grade * 100))
             self.roads.append(([(cx, z1), (cx, zmin)], 3, True))
             print("part %d site: %s (tier %d) at x %d z %d by %s, %.0f m up, %.0f m from the city centre"
                   % (i + 1, p.name, p.tier, xmin, zmin, city["name"], gh - city["pad"],

@@ -1,6 +1,7 @@
 """Move the Oxygen Destroyer part sites of an existing Kaiju Snake world up the mountains north of
-their end cities (as snakemap 0.7 places them), with graded trails, without regenerating the
-world: for saves already in progress.
+their end cities (as snakemap places them) and grade the hillside below them, without
+regenerating the world: for saves already in progress. A site already up there (moved by an
+earlier run) stays where it is and only gets the hillside regraded.
 
   python tools/snakemap/patch_posts.py --world <GeneratedWorlds/...> --save <Saves/<world>/<game>>
       [--parts 2,3,4,5] [--out <dir>]
@@ -10,7 +11,7 @@ Only the listed parts' sites are moved; pick parts whose areas the save has neve
 It edits, in place or into --out:
 - prefabs.xml: the part site's decoration line, same POI and line order (instance ids stay),
   new position and rotation;
-- dtm.raw: the shelf and the ramp, same maths as snakemap.build_part_sites;
+- dtm.raw: the shelf and the hillside below it, same maths as snakemap.build_part_sites;
 - splat3.png: the trail;
 - kaiju.xml: the site entries;
 - the save's decoration.7dt: trees and rocks on the reshaped ground are dropped (they were
@@ -32,7 +33,7 @@ from PIL import Image, ImageDraw
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import snakemap as sm  # noqa: E402
 
-RISE, MIN_DZ, HALF_W, SHOULDER, BLEND, MARGIN = 45.0, 260, 4, 3, 25, 6
+RISE, MIN_DZ, BLEND, MARGIN = 45.0, 260, 25, 6
 GAME = r"C:\Program Files (x86)\Steam\steamapps\common\7 Days To Die"
 
 
@@ -82,15 +83,21 @@ def main():
         w, d = (sz, sx) if b % 2 else (sx, sz)
         zc = city["z"]
         z1 = zc + 2 * sm.BLOCK_S + 10
-        xmin = int(round(city["x"] - w / 2))
-        c0 = xmin + H
-        zmax = int(min(sm.strip_center(strip) + sm.STRIP_H / 2 - 20, H - 120) - d)
-        zmin = int(max(z1 + 60, zc + MIN_DZ))
         pad = float(h[zc + H, city["x"] + H])
-        while zmin < zmax and float(np.median(h[zmin + H:zmin + H + d, c0:c0 + w])) < pad + RISE:
-            zmin += 4
+        moved = oz >= zc + MIN_DZ
+        if moved:
+            xmin, zmin = ox, oz
+        else:
+            xmin = int(round(city["x"] - w / 2))
+            zmax = int(min(sm.strip_center(strip) + sm.STRIP_H / 2 - 20, H - 120) - d)
+            zmin = int(max(z1 + 60, zc + MIN_DZ))
+            while zmin < zmax and float(np.median(h[zmin + H:zmin + H + d, xmin + H:xmin + H + w])) < pad + RISE:
+                zmin += 4
+        c0 = xmin + H
+        cx = xmin + w // 2
+        apron_hw = w / 2 + 15 + 60 + 80        # grade_apron's widest reach: bottom half width + blend
         # Refuse anything the save has already generated (its chunks are saved; edits would not show).
-        x_lo, x_hi = xmin - MARGIN - BLEND, xmin + w + MARGIN + BLEND
+        x_lo, x_hi = int(min(xmin - MARGIN - BLEND, cx - apron_hw)), int(max(xmin + w + MARGIN + BLEND, cx + apron_hw))
         z_lo, z_hi = z1, zmin + d + MARGIN + BLEND
         touched = {(rx, rz) for rx in range(x_lo // 512, x_hi // 512 + 1) for rz in range(z_lo // 512, z_hi // 512 + 1)} & regions
         if touched:
@@ -106,16 +113,10 @@ def main():
         wgt = 1 - sm.smoothstep(np.hypot(dx, dz) / float(BLEND))
         h[rr0:rr1, cc0:cc1] = h[rr0:rr1, cc0:cc1] * (1 - wgt) + gh * wgt
         cleared.append((cc0 - H, rr0 - H, cc1 - H, rr1 - H))
-        # Ramp.
-        cx = xmin + w // 2
+        # Hillside.
         za, zb = z1, zmin + 2
         ha, hb = float(h[za + H, cx + H]), gh
-        c0r, c1r = cx - HALF_W - SHOULDER + H, cx + HALF_W + SHOULDER + H + 1
-        wx = 1 - sm.smoothstep((np.abs(np.arange(c0r, c1r) - (cx + H)) - HALF_W) / float(SHOULDER))
-        for zz in range(za, zb + 1):
-            hz = ha + (hb - ha) * (zz - za) / float(max(1, zb - za))
-            h[zz + H, c0r:c1r] = h[zz + H, c0r:c1r] * (1 - wx) + hz * wx
-        cleared.append((c0r - H, za, c1r - H, zb + 1))
+        cleared.append(sm.grade_apron(h, cx, za, zb, ha, hb, w / 2 + 15))
         trails.append(((cx, z1), (cx, zmin)))
         # prefabs.xml: same line, new place.
         y = sm.prefab_y(gh) + yoff
@@ -123,8 +124,9 @@ def main():
         px = px.replace(old.group(0), '  <decoration type="model" name="%s" position="%d,%d,%d" rotation="%d" />' % (poi, xmin, y, zmin, b))
         kx = kx.replace(m.group(0), '<site part="%d" strip="%d" city="%s" name="%s" tier="%s" x="%d" y="%d" z="%d" w="%d" d="%d" />'
                         % (part, strip, cname, poi, tier, xmin, sm.prefab_y(gh), zmin, w, d))
-        print("part %d: %s by %s moved from z %d to x %d z %d, %.0f m up, trail %.0f%%"
-              % (part, poi, cname, oz, xmin, zmin, gh - pad, 100 * abs(hb - ha) / max(1, zb - za)))
+        print("part %d: %s by %s %s x %d z %d, %.0f m up, hillside %.0f%%"
+              % (part, poi, cname, "regraded at" if moved else "moved from z %d to" % oz, xmin, zmin, gh - pad,
+                 100 * abs(hb - ha) / max(1, zb - za)))
     if not trails:
         print("nothing to change")
         return
