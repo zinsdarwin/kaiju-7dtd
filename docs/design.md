@@ -45,10 +45,10 @@ His breath ends in an atomic blast, as in Minus One: flash, shockwave, a crater 
 ### The finale: the Oxygen Destroyer
 Part of The Run. Decided by Darwin 2026-10-03.
 
-- Four pieces of the Oxygen Destroyer, one in each of Cedar Harbor, Cinder Bay, Dune Point and Frostport. Port Hemlock falls on day 1, too soon to loot, so it has none.
-- Each piece is in a glowing crate somewhere in its city. A compass marker shows it once you reach the city. Grab it before Godzilla destroys the city after the blood moon. The crate survives his attack, so a missed piece can still be dug out of the ruins during the grace hours, ahead of the radiation.
-- In Ashmouth, the wasteland's end city, craft the Oxygen Destroyer at a workbench from the four pieces, place it inside the city and arm it.
-- When the final blood moon horde ends, Godzilla attacks Ashmouth. If he walks into the armed device's radius: death sequence, run won. Otherwise he levels Ashmouth and the run is lost.
+- Five parts of the Oxygen Destroyer, one in a glowing crate in the army post up the mountains north of each end city (Cedar Harbor, Cinder Bay, Dune Point, Frostport, Ashmouth). You hole up there for the blood moon and watch him hit the city at dawn. Each crate holds a field note pointing to the next post; each part city's trader offers the part as a quest.
+- The army post above Cinder Bay (end of the burnt forest) has a missile battery: its launch control, next to the part crate, fires a salvo of missiles at him while he attacks. They don't stop him; he roars and stops for a moment. One salvo every 30 s. (Decided by Darwin 2026-10-10.)
+- The Frostport crate also holds a gyrocopter chassis and accessories: assemble a gyrocopter at a workbench before the last blood moon.
+- Craft the Oxygen Destroyer at a workbench from the five parts. When the final blood moon horde ends, Godzilla attacks Ashmouth, walking slower than in the other attacks. Fly the gyrocopter over him with the device aboard and drop it on him (right mouse button): it falls, its fins steer it onto him, and he dies (death sequence, run won). A miss doesn't go off and the device comes back to you to try again. If the attack ends without a hit, Ashmouth falls and the run is lost. (Decided by Darwin 2026-10-10; replaces placing and arming the device in the city.)
 
 ## Architecture
 
@@ -64,7 +64,7 @@ Godzilla is **not** a zombie entity and uses no zombie AI or pathfinding.
 | Kill zone | Server (C#) | Players inside the footprint radius die |
 | Devastation pass | Server (C#, Harmony on chunk load) | Applies ruin to areas he crossed while nobody was nearby |
 | Visual | Same process | Visual-only model (not an Entity) so it renders at long distance; the director moves it directly |
-| Oxygen Destroyer | XML (quests, items, recipes, blocks) + C# trigger | Assembly and the win condition |
+| Oxygen Destroyer | XML (quests, items, recipes, blocks, loot) + C# (crates, missile battery, gyrocopter drop) | Assembly and the win condition |
 
 ## First milestone
 

@@ -72,6 +72,10 @@ namespace KaijuMod
         // walking, and on death.
         private bool roaredRise, roaredFirstBreath;
         private float nextRoar;
+        // Hit by missiles: he roars and stands his ground for a moment.
+        private float flinchUntil;
+        /// <summary>Seconds he stops when missiles hit him.</summary>
+        public float FlinchTime = 2.5f;
         private Vector2 position;
         private Vector2 heading;
         private float baseY;
@@ -141,6 +145,7 @@ namespace KaijuMod
             roarAt.Clear();
             nextRoarAt = 0;
             fromSea = false;
+            flinchUntil = 0f;
             Attacking = null;
             if (normalSpeed > 0f)
                 Speed = normalSpeed;
@@ -176,7 +181,7 @@ namespace KaijuMod
             roaredRise = roaredFirstBreath = false;
             nextRoar = Time.time + Random.Range(30f, 60f);
             normalSpeed = Speed;
-            Speed = CityAttack.Speed;
+            Speed = plan.WalkSpeed;
             // Offshore chunks are usually not loaded yet; start on the seabed rather than at y = 0.
             baseY = seaLevel - 15f;
             haveBaseY = true;
@@ -207,8 +212,8 @@ namespace KaijuMod
                 return;
             }
 
-            // He stands still while breathing.
-            if (!breath.Active)
+            // He stands still while breathing, and for a moment when missiles hit him.
+            if (!breath.Active && Time.time >= flinchUntil)
                 Advance(dt);
             if (fromSea && !roaredRise && traveled >= EmergeDistance * 0.6f)
             {
@@ -281,6 +286,18 @@ namespace KaijuMod
             float delay = visual.PlayRoar() ? KaijuVisual.RoarOpenDelay : 0f;
             KaijuAudio.Roar(visual.MouthWorld(), delay);
             return true;
+        }
+
+        /// <summary>
+        /// Missiles hit him: he roars and stops for FlinchTime seconds (not while he is breathing or
+        /// already flinching). They don't hurt him.
+        /// </summary>
+        public void Flinch()
+        {
+            if (!Running || dying || breath.Active || Time.time < flinchUntil)
+                return;
+            flinchUntil = Time.time + FlinchTime;
+            Roar();
         }
 
         /// <summary>

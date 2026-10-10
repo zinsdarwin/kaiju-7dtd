@@ -17,6 +17,9 @@
 		<lootgroup name="kaijuPartGroup4" count="all">
 			<item name="kaijuOxygenDestroyerPart4" count="1"/>
 			<item name="kaijuPartNote4" count="1"/>
+			<!-- The last leg is by air: the parts for a gyrocopter (no perk needed to assemble it). -->
+			<item name="vehicleGyroCopterChassis" count="1"/>
+			<item name="vehicleGyroCopterAccessories" count="1"/>
 		</lootgroup>
 		<lootgroup name="kaijuPartGroup5" count="all">
 			<item name="kaijuOxygenDestroyerPart5" count="1"/>
@@ -33,7 +36,7 @@
 		<lootcontainer name="kaijuPart3" count="1" size="3,1" sound_open="UseActions/crate_wood_open" sound_close="UseActions/crate_wood_close" loot_quality_template="qualBaseTemplate">
 			<item group="kaijuPartGroup3" count="1"/>
 		</lootcontainer>
-		<lootcontainer name="kaijuPart4" count="1" size="3,1" sound_open="UseActions/crate_wood_open" sound_close="UseActions/crate_wood_close" loot_quality_template="qualBaseTemplate">
+		<lootcontainer name="kaijuPart4" count="1" size="4,1" sound_open="UseActions/crate_wood_open" sound_close="UseActions/crate_wood_close" loot_quality_template="qualBaseTemplate">
 			<item group="kaijuPartGroup4" count="1"/>
 		</lootcontainer>
 		<lootcontainer name="kaijuPart5" count="1" size="3,1" sound_open="UseActions/crate_wood_open" sound_close="UseActions/crate_wood_close" loot_quality_template="qualBaseTemplate">

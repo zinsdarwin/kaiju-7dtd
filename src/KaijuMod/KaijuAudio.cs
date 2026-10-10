@@ -52,6 +52,18 @@ namespace KaijuMod
             }
         }
 
+        /// <summary>A missile leaving its launcher.</summary>
+        public static void Launch(Vector3 worldPos)
+        {
+            Play(worldPos, Clip(SmallBlasts[0]), Random.Range(1.3f, 1.6f), 0.7f, 800f, 0f);
+        }
+
+        /// <summary>A missile hitting him: a sharp explosion heard a long way off.</summary>
+        public static void MissileHit(Vector3 worldPos)
+        {
+            Play(worldPos, Clip(SmallBlasts[Random.Range(0, SmallBlasts.Length)]), Random.Range(0.9f, 1.1f), 1f, 2000f, 0f);
+        }
+
         /// <summary>His roar from a point (his mouth): two creature calls, pitched down, layered.</summary>
         public static void Roar(Vector3 worldPos, float delay = 0f)
         {

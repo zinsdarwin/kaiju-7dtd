@@ -31,8 +31,16 @@ namespace KaijuMod
         public static int RadiationDamage = 4;
         /// <summary>Warn players who are this close ahead of the front, metres.</summary>
         public static float WarnDistance = 150f;
-        /// <summary>The Oxygen Destroyer kills him when he comes this close to it, metres.</summary>
-        public static float DestroyerRadius = 100f;
+        /// <summary>The Oxygen Destroyer, crafted from the parts and dropped on him from a gyrocopter.</summary>
+        public const string DeviceItem = "kaijuOxygenDestroyer";
+        /// <summary>You can drop it when he is within this distance across the ground, metres (its fins steer it onto him).</summary>
+        public static float DropRange = 150f;
+        /// <summary>The missile battery: at the army post of this part (0-based: 1 = Cinder Bay).</summary>
+        public const int MissilePart = 1;
+        public const string MissileBlock = "kaijuMissileControl";
+        public static int MissileSalvo = 8;
+        /// <summary>Seconds between salvos, and how far the missiles reach, metres.</summary>
+        public static float MissileReload = 30f, MissileRange = 2500f;
         /// <summary>Oxygen Destroyer parts: one crate in a military site by the end city of each strip.</summary>
         public const int Parts = 5;
         public static string PartItem(int i) { return "kaijuOxygenDestroyerPart" + (i + 1); }
@@ -56,8 +64,8 @@ namespace KaijuMod
             // Part taken from its crate (held once, or the crate opened and emptied of it, or the
             // crate gone): its marker, light and trader quest never come back.
             public readonly bool[] PartTaken = new bool[Parts];
-            public bool DeviceArmed;
-            public Vector3i DevicePos;
+            public bool LauncherPlaced;
+            public Vector3i LauncherPos;
             public bool FinaleActive;
             public string Outcome = "";     // "", "won" or "lost"
             // Cities he has attacked: fallout hangs over them for the rest of the run.
@@ -82,8 +90,9 @@ namespace KaijuMod
         // Not saved: markers and lights are rebuilt as the player moves.
         private readonly NavObject[] markers = new NavObject[Parts];
         private readonly Beacon[] crateLights = new Beacon[Parts];
-        private Beacon deviceLight;
         private float partsTimer;
+        private float missilesReady;   // Time.time the battery can fire again
+        private bool gyroHinted;       // told you how to drop it since you got in
 
         private World boundWorld;
         private KaijuWorldData data;
@@ -149,6 +158,7 @@ namespace KaijuMod
             }
 
             TickFinale();
+            TickGyro(player);
             TickFallout(world, player, now);
             partsTimer += dt;
             if (partsTimer >= 1f)
@@ -575,6 +585,17 @@ namespace KaijuMod
                     }
                     continue;
                 }
+                if (i == MissilePart && !st.LauncherPlaced && data.SiteFor(i + 1) != null)
+                {
+                    Vector3i spot;
+                    if (FindSiteSpot(world, data.SiteFor(i + 1), out spot) && GameApi.PlaceBlock(world, spot, MissileBlock))
+                    {
+                        st.LauncherPlaced = true;
+                        st.LauncherPos = spot;
+                        Save();
+                        Log.Out("[KaijuMod] Missile battery placed by " + city.Name + " at " + spot);
+                    }
+                }
                 if (player == null)
                     continue;
                 Vector3 crate = new Vector3(st.CratePos[i].x + 0.5f, st.CratePos[i].y + 0.5f, st.CratePos[i].z + 0.5f);
@@ -609,14 +630,6 @@ namespace KaijuMod
                     GameApi.RemoveMarker(markers[i]);
                     markers[i] = null;
                 }
-            }
-            // The armed device glows red.
-            if (st.DeviceArmed && deviceLight == null)
-                deviceLight = Beacon.Create(new Vector3(st.DevicePos.x + 0.5f, st.DevicePos.y + 2f, st.DevicePos.z + 0.5f), new Color(1f, 0.25f, 0.2f), 10f, 3f);
-            else if (!st.DeviceArmed && deviceLight != null)
-            {
-                Object.Destroy(deviceLight.gameObject);
-                deviceLight = null;
             }
         }
 
@@ -744,9 +757,6 @@ namespace KaijuMod
                     Object.Destroy(crateLights[i].gameObject);
                 crateLights[i] = null;
             }
-            if (deviceLight != null)
-                Object.Destroy(deviceLight.gameObject);
-            deviceLight = null;
         }
 
         /// <summary>Gives the local player a part (1-4) for testing.</summary>
@@ -772,7 +782,8 @@ namespace KaijuMod
                     + (st.PartTaken[i] ? "taken" : st.CratePlaced[i] ? "crate at " + st.CratePos[i] : "crate not placed yet (placed when you get near)")
                     + (has ? ", YOU HAVE IT" : "");
             }
-            s += "\nDevice: " + (st.DeviceArmed ? "armed at " + st.DevicePos + (InAshmouth(st.DevicePos) ? " (in Ashmouth or on its shore)" : " (NOT in Ashmouth or on its shore)") : "not armed")
+            s += "\nMissile battery: " + (st.LauncherPlaced ? "at " + st.LauncherPos : "not placed yet (placed when you get near)")
+                + ". Device: " + (player != null && GameApi.ItemCount(player, DeviceItem) > 0 ? "YOU HAVE IT" : "not carried")
                 + ". Finale: " + (st.Outcome == "won" ? "won" : st.Outcome == "lost" ? "lost" : st.FinaleActive ? "in progress" : "after the last blood moon") + ".";
             return s;
         }
@@ -795,7 +806,7 @@ namespace KaijuMod
                 Settlement city = data.EndCity(i);
                 if (city == null || !InCity(city, tp, 30f))
                     continue;
-                if (st.PartTaken[i] || GameApi.ItemCount(player, PartItem(i)) > 0 || GameApi.ItemCount(player, "kaijuOxygenDestroyer") > 0 || st.DeviceArmed)
+                if (st.PartTaken[i] || GameApi.ItemCount(player, PartItem(i)) > 0 || GameApi.ItemCount(player, DeviceItem) > 0)
                     return -1;
                 // VERIFIED (V3.3): QuestJournal.FindActiveOrCompleteQuest(name, faction = -1).
                 if (player.QuestJournal != null && player.QuestJournal.FindActiveOrCompleteQuest(KaijuPartQuests.QuestId(i)) != null)
@@ -825,35 +836,101 @@ namespace KaijuMod
             return -1;
         }
 
-        // ---- Oxygen Destroyer: the device and the finale
+        // ---- the missile battery
 
-        public bool IsArmed(Vector3i pos)
+        public string MissileStatus(Vector3i pos)
         {
-            return st.DeviceArmed && st.DevicePos == pos;
+            if (Time.time < missilesReady)
+                return "reloading, " + Mathf.CeilToInt(missilesReady - Time.time) + " s";
+            return InMissileRange(pos) ? "ready, target in range" : "ready, no target";
         }
 
-        public void SetArmed(Vector3i pos, bool armed, EntityPlayer player)
+        private static bool InMissileRange(Vector3i pos)
         {
-            st.DeviceArmed = armed;
-            st.DevicePos = pos;
-            Save();
-            if (!armed)
+            var d = KaijuDirector.Instance;
+            return d.Running && !d.Dying && (d.Position - new Vector2(pos.x, pos.z)).sqrMagnitude <= MissileRange * MissileRange;
+        }
+
+        /// <summary>The launch button: a salvo at him if he is out and in range. It won't stop him.</summary>
+        public void FireMissiles(Vector3i pos, EntityPlayer player)
+        {
+            if (Time.time < missilesReady)
             {
-                GameApi.Tooltip(player, "Oxygen Destroyer disarmed.");
+                GameApi.Tooltip(player, "Reloading: " + Mathf.CeilToInt(missilesReady - Time.time) + " s.");
                 return;
             }
-            Log.Out("[KaijuMod] Oxygen Destroyer armed at " + pos);
-            GameApi.Tooltip(player, InAshmouth(pos)
-                ? "Oxygen Destroyer armed. It goes off when Godzilla comes within " + Mathf.RoundToInt(DestroyerRadius) + " m."
-                : "Oxygen Destroyer armed, but not in " + (FinalCity() != null ? FinalCity().Name : "the last city") + " or on its shore. He attacks there.");
+            if (!InMissileRange(pos))
+            {
+                GameApi.Tooltip(player, "No target.");
+                return;
+            }
+            missilesReady = Time.time + MissileReload;
+            Missile.Salvo(new Vector3(pos.x + 0.5f, pos.y + 2f, pos.z + 0.5f), MissileSalvo);
+            GameApi.Tooltip(player, "Missiles away!");
+            Log.Out("[KaijuMod] Missile salvo from " + pos);
         }
 
-        public void DeviceRemoved(Vector3i pos)
+        // ---- Oxygen Destroyer: the drop and the finale
+
+        /// <summary>In a gyrocopter with the device: right-click drops it on him.</summary>
+        private void TickGyro(EntityPlayer player)
         {
-            if (st.DevicePos != pos || !st.DeviceArmed)
+            var gyro = player != null ? player.AttachedToEntity as EntityVehicle : null;
+            if (!(gyro is EntityVGyroCopter || gyro is EntityVHelicopter) || GameApi.ItemCount(player, DeviceItem) <= 0)
+            {
+                gyroHinted = false;
                 return;
-            st.DeviceArmed = false;
+            }
+            if (!gyroHinted)
+            {
+                gyroHinted = true;
+                GameApi.Tooltip(player, "The Oxygen Destroyer is aboard. Fly over Godzilla and right-click to drop it on him.");
+            }
+            // VERIFIED (V3.3): the game reads input through InControl on Unity's legacy Input (no
+            // Input System package); vehicles leave the right mouse button unbound
+            // (PlayerActionsVehicle). GameManager.isAnyCursorWindowOpen: a menu is open.
+            if (!Input.GetMouseButtonDown(1) || GameManager.Instance.isAnyCursorWindowOpen(null) || KaijuBomb.Falling != null)
+                return;
+            var d = KaijuDirector.Instance;
+            if (!d.Running || d.Dying)
+            {
+                GameApi.Tooltip(player, "Hold on to it until he comes.");
+                return;
+            }
+            Vector3 p = GameApi.Position(player);
+            float dist = (d.Position - new Vector2(p.x, p.z)).magnitude;
+            if (dist > DropRange)
+            {
+                GameApi.Tooltip(player, "Too far: get over him (" + Mathf.RoundToInt(dist) + " m).");
+                return;
+            }
+            if (!GameApi.TakeItem(player, DeviceItem))
+                return;
+            KaijuBomb.Drop(p + Vector3.down * 4f, gyro.GetVelocityPerSecond());
+            GameApi.Tooltip(player, "Oxygen Destroyer away!");
+            Log.Out("[KaijuMod] Oxygen Destroyer dropped at " + p + ", " + Mathf.RoundToInt(dist) + " m from him");
+        }
+
+        /// <summary>It fell into him: he dies, the run is won.</summary>
+        public void OnBombHit(Vector3 pos)
+        {
+            KaijuDirector.Instance.Die(pos);
+            st.Outcome = "won";
+            st.FinaleActive = false;
+            st.Complete = true;
             Save();
+            TellPlayer("Godzilla is dead. You won the run.");
+        }
+
+        /// <summary>It missed him: it only goes off against him, so you get it back to try again.</summary>
+        public void OnBombMissed(Vector3 pos)
+        {
+            KaijuEffects.Burst(pos, KaijuDirector.Instance.EffectMaterial("KaijuSpark"), KaijuDirector.Instance.EffectMaterial("KaijuSmoke"));
+            var player = boundWorld != null ? GameApi.LocalPlayer(boundWorld) : null;
+            if (player != null && GameApi.GiveItem(player, DeviceItem))
+                TellPlayer("Missed him. It only goes off against him, and it's back in your pack: come around again.");
+            else
+                TellPlayer("Missed him. It only goes off against him.");
         }
 
         private Settlement FinalCity()
@@ -861,51 +938,16 @@ namespace KaijuMod
             return data != null ? data.EndCity(data.Strips - 1) : null;
         }
 
-        /// <summary>
-        /// Where the device counts: the last city, or the beach and shallows in front of it out to
-        /// the map edge (in the Minus One attack he comes ashore there and fires from just outside
-        /// the city, so he never walks into it).
-        /// </summary>
-        private bool InAshmouth(Vector3i pos)
-        {
-            Settlement city = FinalCity();
-            if (city == null)
-                return false;
-            var p = new Vector3(pos.x, pos.y, pos.z);
-            if (InCity(city, p, 0f))
-                return true;
-            float sea = city.X < 0 ? -1f : 1f;
-            return (p.x - city.X) * sea >= city.HalfWidth
-                && Mathf.Abs(p.z - city.Z) <= 2f * CityAttack.BlockSpacing + 60f;
-        }
-
-        /// <summary>During the last city's attack: armed device in the city or on its shore and he is within range: he dies.</summary>
+        /// <summary>The last city's attack is over and the Oxygen Destroyer never hit him: the run is lost.</summary>
         private void TickFinale()
         {
-            if (!st.FinaleActive)
+            if (!st.FinaleActive || KaijuDirector.Instance.Running)
                 return;
-            var director = KaijuDirector.Instance;
-            Settlement city = FinalCity();
-            if (director.Running)
-            {
-                if (director.Dying || city == null || director.Attacking != city.Name)
-                    return;
-                if (st.DeviceArmed && InAshmouth(st.DevicePos)
-                    && (director.Position - new Vector2(st.DevicePos.x, st.DevicePos.z)).sqrMagnitude <= DestroyerRadius * DestroyerRadius)
-                {
-                    director.Die(new Vector3(st.DevicePos.x + 0.5f, st.DevicePos.y, st.DevicePos.z + 0.5f));
-                    st.Outcome = "won";
-                    st.DeviceArmed = false;
-                    Save();
-                    TellPlayer("Godzilla is dead. You won the run.");
-                }
-                return;
-            }
-            // The attack is over.
             st.FinaleActive = false;
             if (st.Outcome != "won")
             {
                 st.Outcome = "lost";
+                Settlement city = FinalCity();
                 TellPlayer((city != null ? city.Name : "The last city") + " has fallen. Godzilla survived: the run is lost.");
             }
             Save();
@@ -952,7 +994,7 @@ namespace KaijuMod
             for (int i = 0; i < Parts; i++)
                 if (me != null && GameApi.ItemCount(me, PartItem(i)) > 0)
                     have++;
-            s += " Oxygen Destroyer: " + have + "/" + Parts + " parts carried, device " + (st.DeviceArmed ? "ARMED" : "not armed")
+            s += " Oxygen Destroyer: " + have + "/" + Parts + " parts carried, device " + (me != null && GameApi.ItemCount(me, DeviceItem) > 0 ? "carried" : "not carried")
                 + (st.Outcome != "" ? ", run " + st.Outcome.ToUpperInvariant() : st.FinaleActive ? ", finale in progress" : "") + ".";
             var player = GameApi.LocalPlayer(world);
             if (player != null)
@@ -993,8 +1035,8 @@ namespace KaijuMod
                 e.SetAttribute("lastAttackedBloodMoon", st.LastAttackedBloodMoon.ToString(CultureInfo.InvariantCulture));
                 e.SetAttribute("radiation", st.RadiationOn ? "1" : "0");
                 e.SetAttribute("complete", st.Complete ? "1" : "0");
-                e.SetAttribute("deviceArmed", st.DeviceArmed ? "1" : "0");
-                e.SetAttribute("device", st.DevicePos.x + "," + st.DevicePos.y + "," + st.DevicePos.z);
+                e.SetAttribute("launcherPlaced", st.LauncherPlaced ? "1" : "0");
+                e.SetAttribute("launcher", st.LauncherPos.x + "," + st.LauncherPos.y + "," + st.LauncherPos.z);
                 e.SetAttribute("finale", st.FinaleActive ? "1" : "0");
                 e.SetAttribute("outcome", st.Outcome);
                 foreach (string name in st.Ruined)
@@ -1055,8 +1097,8 @@ namespace KaijuMod
                 st.LastAttackedBloodMoon = int.Parse(e.GetAttribute("lastAttackedBloodMoon"), CultureInfo.InvariantCulture);
                 st.RadiationOn = e.GetAttribute("radiation") != "0";
                 st.Complete = e.GetAttribute("complete") == "1";
-                st.DeviceArmed = e.GetAttribute("deviceArmed") == "1";
-                st.DevicePos = ParseV3i(e.GetAttribute("device"));
+                st.LauncherPlaced = e.GetAttribute("launcherPlaced") == "1";
+                st.LauncherPos = ParseV3i(e.GetAttribute("launcher"));
                 st.FinaleActive = e.GetAttribute("finale") == "1";
                 st.Outcome = e.GetAttribute("outcome") ?? "";
                 foreach (XmlElement r in e.SelectNodes("ruined"))

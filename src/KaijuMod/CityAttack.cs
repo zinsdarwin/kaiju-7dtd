@@ -32,6 +32,8 @@ namespace KaijuMod
         public static float BreathScale = 2.5f;
         /// <summary>Walking speed during an attack, m/s.</summary>
         public static float Speed = 20f;
+        /// <summary>Walking speed in the last city's attack, m/s: slower, to give you time to fly the Oxygen Destroyer over him.</summary>
+        public static float FinaleSpeed = 8f;
         /// <summary>Which attack plays (`kaiju style`).</summary>
         public static AttackStyle Style = AttackStyle.MinusOne;
         /// <summary>Minus One: he stops this far outside the city's sea edge to fire, metres.</summary>
@@ -43,6 +45,8 @@ namespace KaijuMod
         public bool Mega;
         /// <summary>Mega blast: players within this many metres of it die.</summary>
         public float BlastKillRadius;
+        /// <summary>His walking speed in this attack, m/s.</summary>
+        public float WalkSpeed = Speed;
         /// <summary>Distances walked at which he roars.</summary>
         public readonly List<float> Roars = new List<float>();
 
@@ -52,8 +56,14 @@ namespace KaijuMod
 
         public static CityAttack Plan(KaijuWorldData data, Settlement city)
         {
-            if (Style == AttackStyle.MinusOne)
-                return PlanMinusOne(data, city);
+            var a = Style == AttackStyle.MinusOne ? PlanMinusOne(data, city) : PlanClassic(data, city);
+            if (city == data.EndCity(data.Strips - 1))
+                a.WalkSpeed = FinaleSpeed;
+            return a;
+        }
+
+        private static CityAttack PlanClassic(KaijuWorldData data, Settlement city)
+        {
             var a = new CityAttack { City = city };
             float s = city.X < 0 ? -1f : 1f;           // sea side
             float c = city.X;

@@ -96,6 +96,14 @@ namespace KaijuMod
             go.AddComponent<Bubbles>().Init(worldPos, height, seconds, spark);
         }
 
+        /// <summary>A missile or bomb hit: a short burst of fire and a puff of smoke.</summary>
+        public static void Burst(Vector3 worldPos, Material spark, Material smoke)
+        {
+            var go = new GameObject("KaijuBurst");
+            Object.DontDestroyOnLoad(go);
+            go.AddComponent<Burst>().Init(worldPos, spark, smoke);
+        }
+
         internal static ParticleSystem Particles(Transform parent, string name, Material mat, int max, bool local)
         {
             var go = new GameObject(name);
@@ -445,6 +453,51 @@ namespace KaijuMod
             light.intensity = intensity * (1f - k) * (1f - k);
             if (k >= 1f)
                 Destroy(gameObject);
+        }
+    }
+
+    public class Burst : WorldAnchored
+    {
+        public void Init(Vector3 pos, Material spark, Material smoke)
+        {
+            worldPos = pos;
+            LateUpdate();
+            if (spark != null)
+            {
+                var ps = KaijuEffects.Particles(transform, "Fire", spark, 120, true);
+                var main = ps.main;
+                main.loop = false;
+                main.startLifetime = new ParticleSystem.MinMaxCurve(0.3f, 0.8f);
+                main.startSpeed = new ParticleSystem.MinMaxCurve(8f, 30f);
+                main.startSize = new ParticleSystem.MinMaxCurve(2f, 6f);
+                main.startColor = new ParticleSystem.MinMaxGradient(new Color(1f, 0.9f, 0.5f), new Color(1f, 0.4f, 0.1f));
+                var shape = ps.shape;
+                shape.enabled = true;
+                shape.shapeType = ParticleSystemShapeType.Sphere;
+                shape.radius = 1.5f;
+                ps.Play();
+                ps.Emit(120);
+            }
+            if (smoke != null)
+            {
+                var ps = KaijuEffects.Particles(transform, "Smoke", smoke, 40, true);
+                var main = ps.main;
+                main.loop = false;
+                main.startLifetime = new ParticleSystem.MinMaxCurve(2.5f, 4f);
+                main.startSpeed = new ParticleSystem.MinMaxCurve(2f, 6f);
+                main.startSize = new ParticleSystem.MinMaxCurve(6f, 12f);
+                main.startColor = new ParticleSystem.MinMaxGradient(new Color(0.3f, 0.28f, 0.26f, 0.8f), new Color(0.5f, 0.48f, 0.45f, 0.7f));
+                var col = ps.colorOverLifetime;
+                col.enabled = true;
+                col.color = KaijuEffects.Fade(Color.white, Color.white, 0.05f, 0.5f);
+                var shape = ps.shape;
+                shape.enabled = true;
+                shape.shapeType = ParticleSystemShapeType.Sphere;
+                shape.radius = 2f;
+                ps.Play();
+                ps.Emit(40);
+            }
+            Destroy(gameObject, 5f);
         }
     }
 

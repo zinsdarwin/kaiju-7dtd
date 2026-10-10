@@ -48,10 +48,9 @@
 			</property>
 		</block>
 
-		<!-- The Oxygen Destroyer: crafted from the five parts, placed in Ashmouth and armed with E.
-		     Class resolves to BlockKaijuOxygenDestroyer in KaijuMod.dll. -->
+		<!-- The Oxygen Destroyer: crafted from the five parts and dropped on him from a gyrocopter
+		     (the mod handles the drop). A block so it keeps its model; placed, it can be picked up again. -->
 		<block name="kaijuOxygenDestroyer">
-			<property name="Class" value="KaijuOxygenDestroyer, KaijuMod"/>
 			<property name="CustomIcon" value="tankPropaneWhite"/>
 			<property name="CustomIconTint" value="7fd4ff"/>
 			<property name="TintColor" value="7fd4ff"/>
@@ -70,6 +69,19 @@
 			<property name="CreativeMode" value="Player"/>
 			<property name="FilterTags" value="MC_building,SC_decor"/>
 			<property name="SortOrder1" value="B672"/>
+			<drop event="Destroy" count="0"/>
+		</block>
+
+		<!-- The missile battery's launch control: the mod places it in the army post above Cinder Bay.
+		     Class resolves to BlockKaijuMissileControl in KaijuMod.dll. -->
+		<block name="kaijuMissileControl">
+			<property name="Extends" value="radioHam"/>
+			<property name="Class" value="KaijuMissileControl, KaijuMod"/>
+			<property name="CustomIcon" value="radioHam"/>
+			<property name="DescriptionKey" value="kaijuMissileControlDesc"/>
+			<property name="CreativeMode" value="Dev"/>
+			<property name="MaxDamage" value="100000"/>
+			<property name="CanPickup" value="false"/>
 			<drop event="Destroy" count="0"/>
 		</block>
 	</append>
