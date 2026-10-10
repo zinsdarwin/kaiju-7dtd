@@ -12,6 +12,8 @@ namespace KaijuMod
         public string Name, Kind, Role, Biome;
         public int Strip;
         public float X, Y, Z, HalfWidth;
+        /// <summary>From the main road to the far street, either way, metres (older worlds: 2 rows of 78 m blocks).</summary>
+        public float HalfDepth = 166f;
 
         public bool IsCity { get { return Kind == "city"; } }
     }
@@ -109,6 +111,7 @@ namespace KaijuMod
                     Y = Float(e, "y"),
                     Z = Float(e, "z"),
                     HalfWidth = Float(e, "halfwidth"),
+                    HalfDepth = e.HasAttribute("halfdepth") ? Float(e, "halfdepth") : 166f,
                 });
             }
             foreach (XmlElement e in root.SelectNodes("partsites/site"))

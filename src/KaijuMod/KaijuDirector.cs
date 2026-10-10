@@ -74,6 +74,11 @@ namespace KaijuMod
         private float nextRoar;
         // Hit by missiles: he roars and stands his ground for a moment.
         private float flinchUntil;
+        // A breath at whatever hurt him: pending, then the time the beam reaches it.
+        private bool retaliating;
+        private Vector3 retaliateAt;
+        private float retaliateRange, retaliateHitTime = -1f;
+        private System.Action retaliateHit;
         /// <summary>Seconds he stops when missiles hit him.</summary>
         public float FlinchTime = 2.5f;
         private Vector2 position;
@@ -146,6 +151,9 @@ namespace KaijuMod
             nextRoarAt = 0;
             fromSea = false;
             flinchUntil = 0f;
+            retaliating = false;
+            retaliateHitTime = -1f;
+            retaliateHit = null;
             Attacking = null;
             if (normalSpeed > 0f)
                 Speed = normalSpeed;
@@ -230,6 +238,20 @@ namespace KaijuMod
                 nextRoar = Time.time + Random.Range(30f, 60f);
                 Roar();
             }
+            if (retaliating && !breath.Active)
+            {
+                retaliating = false;
+                breath.Begin(retaliateAt, Footprint.Height, 1.5f, false, 0f, retaliateRange);
+                float dist = Vector3.Distance(new Vector3(position.x, baseY + Footprint.Height, position.y), retaliateAt);
+                retaliateHitTime = Time.time + KaijuBreath.ChargeTime + dist / KaijuBreath.BeamSpeed;
+            }
+            if (retaliateHitTime > 0f && Time.time >= retaliateHitTime)
+            {
+                retaliateHitTime = -1f;
+                if (retaliateHit != null)
+                    retaliateHit();
+                retaliateHit = null;
+            }
             if (!breath.Active && nextEvent < events.Count && traveled >= events[nextEvent].Distance)
             {
                 // Classic: a roar before the first breath. Minus One: he charges in silence.
@@ -289,15 +311,28 @@ namespace KaijuMod
         }
 
         /// <summary>
-        /// Missiles hit him: he roars and stops for FlinchTime seconds (not while he is breathing or
-        /// already flinching). They don't hurt him.
+        /// Missiles, bombs or the maser hit him: he roars and stops for a few seconds (FlinchTime by
+        /// default; not while he is breathing or already flinching). Nothing hurts him.
         /// </summary>
-        public void Flinch()
+        public void Flinch(float seconds = -1f)
         {
             if (!Running || dying || breath.Active || Time.time < flinchUntil)
                 return;
-            flinchUntil = Time.time + FlinchTime;
+            flinchUntil = Time.time + (seconds > 0f ? seconds : FlinchTime);
             Roar();
+        }
+
+        /// <summary>
+        /// He turns his breath on something that hurt him (the maser cannon) as soon as he is not
+        /// breathing already: a normal breath at a world point, reaching up to range metres.
+        /// onHit is called as the beam gets there.
+        /// </summary>
+        public void Retaliate(Vector3 worldTarget, float range, System.Action onHit)
+        {
+            retaliateAt = worldTarget;
+            retaliateRange = range;
+            retaliateHit = onHit;
+            retaliating = true;
         }
 
         /// <summary>

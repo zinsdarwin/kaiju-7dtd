@@ -70,6 +70,14 @@ CITY_NAMES = {
     "snow": ["Frostport"],
     "wasteland": ["Ashmouth"],
 }
+# End cities that differ from the default (2 rows of 78 m blocks, any tier): Dune Point fills its
+# lots with tier 3+ POIs first; Frostport has deeper blocks (118 m) for the 100 x 100 m tier 4-5
+# POIs (factories, hospital, stadium...) and fills its lots with tier 4+ first.
+CITY_STYLE = {
+    "desert": dict(min_tier=3),
+    "snow": dict(block=118, min_tier=4),
+}
+
 TOWN_NAMES = {
     "pine": ["Fernvale", "Mossbridge", "Elk Hollow"],
     "burnt": ["Charwood", "Emberton", "Soot Creek"],
@@ -314,7 +322,7 @@ class SnakeMap:
                 self.settlements.append(dict(kind="town", role="town", strip=i, biome=key, x=x,
                                              name=names[n], half=150, rows=1))
             self.settlements.append(dict(kind="city", role="end", strip=i, biome=key, x=end_x,
-                                         name=CITY_NAMES[key][0], half=250, rows=2))
+                                         name=CITY_NAMES[key][0], half=250, rows=2, **CITY_STYLE.get(key, {})))
 
         # Main road per strip: meanders between settlements, straight through them.
         self.strip_roads = []
@@ -363,7 +371,7 @@ class SnakeMap:
 
     def settlement_rect(self, s):
         zc = self.road_z(s["strip"], s["x"])
-        depth = s["rows"] * BLOCK_S + 10
+        depth = s["rows"] * s.get("block", BLOCK_S) + 10
         return s["x"] - s["half"] - 10, s["x"] + s["half"] + 10, zc - depth, zc + depth, zc
 
     def road_z(self, strip, x):
@@ -454,7 +462,8 @@ class SnakeMap:
         for s in self.settlements:
             x0, x1, z0, z1, zc = self.settlement_rect(s)
             n = s["rows"]
-            street_z = [zc + j * BLOCK_S for j in range(-n, n + 1)]
+            block = s.get("block", BLOCK_S)
+            street_z = [zc + j * block for j in range(-n, n + 1)]
             step = 112 if s["kind"] == "city" else 100
             m = int((s["half"]) // step)
             cross_x = [s["x"] + k * step for k in range(-m, m + 1)]
@@ -467,6 +476,8 @@ class SnakeMap:
                 self.roads.append(([(x, street_z[0]), (x, street_z[-1])], STREET_HW, True))
             pool = [p for p in self.pois if usable(p, s["biome"]) and
                     (("city" in p.townships) if s["kind"] == "city" else ("town" in p.townships or "city" in p.townships))]
+            # Higher-tier cities: those POIs first, the rest only to fill gaps they don't fit.
+            high = [p for p in pool if p.tier >= s.get("min_tier", 0)]
             trader_done = False
             for j in range(len(street_z) - 1):
                 za, zb = street_z[j], street_z[j + 1]
@@ -474,7 +485,7 @@ class SnakeMap:
                 # Lots face the street nearer the main road.
                 face_z = za if north_of_main else zb
                 hw_face = HIGHWAY_HW if abs(face_z - zc) < 1 else STREET_HW
-                depth = BLOCK_S - hw_face - STREET_HW - 6
+                depth = block - hw_face - STREET_HW - 6
                 for c in range(len(cross_x) - 1):
                     bx0 = cross_x[c] + STREET_HW + 2
                     bx1 = cross_x[c + 1] - STREET_HW - 2
@@ -485,8 +496,10 @@ class SnakeMap:
                         # spot it fits.
                         want_trader = (not trader_done and try_trader and abs(face_z - zc) < 1
                                        and c >= len(cross_x) // 2 - 1)
-                        cand = (self.first_traders if s is first_pine else self.traders) if want_trader else pool
+                        cand = (self.first_traders if s is first_pine else self.traders) if want_trader else high
                         placed = self.place_lot(cand, s, x, bx1, face_z, hw_face, depth, north_of_main)
+                        if placed is None and not want_trader and high is not pool:
+                            placed = self.place_lot(pool, s, x, bx1, face_z, hw_face, depth, north_of_main)
                         if placed is None:
                             if want_trader:
                                 try_trader = False  # not in this block; the next block tries again
@@ -742,8 +755,9 @@ class SnakeMap:
             f.write('<kaiju world="%s" seed="%d" size="%d" sealevel="%d">\n' % (name, self.seed, N, SEA))
             f.write('  <settlements>\n')
             for s in self.settlements:
-                f.write('    <settlement name="%s" kind="%s" role="%s" strip="%d" biome="%s" x="%d" y="%d" z="%d" halfwidth="%d" />\n'
-                        % (s["name"], s["kind"], s["role"], s["strip"], s["biome"], s["x"], round(s["pad"]), round(s["z"]), s["half"]))
+                f.write('    <settlement name="%s" kind="%s" role="%s" strip="%d" biome="%s" x="%d" y="%d" z="%d" halfwidth="%d" halfdepth="%d" />\n'
+                        % (s["name"], s["kind"], s["role"], s["strip"], s["biome"], s["x"], round(s["pad"]), round(s["z"]), s["half"],
+                           s["rows"] * s.get("block", BLOCK_S) + 10))
             f.write('  </settlements>\n  <partsites>\n')
             for ps in self.part_sites:
                 f.write('    <site part="%d" strip="%d" city="%s" name="%s" tier="%d" x="%d" y="%d" z="%d" w="%d" d="%d" />\n'

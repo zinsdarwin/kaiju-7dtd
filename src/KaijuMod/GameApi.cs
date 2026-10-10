@@ -256,16 +256,19 @@ namespace KaijuMod
             return player.bag.AddItem(new ItemStack(item, 1));
         }
 
-        /// <summary>Takes one of an item from the player (backpack first, then toolbelt). False if they have none.</summary>
-        public static bool TakeItem(EntityPlayer player, string itemName)
+        /// <summary>Takes count of an item from the player (backpack first, then toolbelt). False, taking nothing, if they have fewer.</summary>
+        public static bool TakeItem(EntityPlayer player, string itemName, int count = 1)
         {
             // VERIFIED (V3.3): Bag.DecItem and Inventory.DecItem(ItemValue, count, ...) return the number removed.
             ItemValue item = ItemClass.GetItem(itemName);
-            if (item == null || item.IsEmpty())
+            if (item == null || item.IsEmpty() || ItemCount(player, itemName) < count)
                 return false;
-            if (player.bag != null && player.bag.DecItem(item, 1) > 0)
-                return true;
-            return player.inventory != null && player.inventory.DecItem(item, 1) > 0;
+            int left = count;
+            if (player.bag != null)
+                left -= player.bag.DecItem(item, left);
+            if (left > 0 && player.inventory != null)
+                left -= player.inventory.DecItem(item, left);
+            return left <= 0;
         }
 
         /// <summary>A compass and map marker at a world position, using a nav_objects.xml class.</summary>

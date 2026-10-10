@@ -61,6 +61,7 @@ namespace KaijuMod
         private float chargeTime = 3f, fireTime = 4f, fadeTime = 1.2f;
         private bool mega;
         private float killRadius;
+        private float beamRange = 600f;
 
         // Damage along the beam: cells within radius of the traced segment, nearest the mouth first.
         private Vector3 traceFrom, traceDir;
@@ -106,8 +107,9 @@ namespace KaijuMod
         /// in the breath pose and one nuclear blast at the target that kills anyone within
         /// killRadius, leaving blocks standing.
         /// </summary>
-        public void Begin(Vector3 worldTarget, float kaijuHeight, float radiusScale = 1f, bool mega = false, float killRadius = 0f)
+        public void Begin(Vector3 worldTarget, float kaijuHeight, float radiusScale = 1f, bool mega = false, float killRadius = 0f, float range = 0f)
         {
+            beamRange = range > 0f ? range : Range;
             this.radiusScale = Mathf.Max(0.1f, radiusScale);
             Cancel();
             this.mega = mega;
@@ -211,10 +213,10 @@ namespace KaijuMod
             // Physics colliders only exist near the player, so a far target can be missed: fall back
             // to marching through block data, which is loaded much further out.
             // A mega breath goes all the way to its target (the city centre), through anything.
-            Vector3? hit = mega ? target : GameApi.Raycast(traceFrom, traceDir, Range);
+            Vector3? hit = mega ? target : GameApi.Raycast(traceFrom, traceDir, beamRange);
             if (!hit.HasValue && GameApi.World != null)
-                hit = GameApi.BlockRaycast(GameApi.World, traceFrom, traceDir, Range);
-            beamEnd = hit ?? traceFrom + traceDir * Range;
+                hit = GameApi.BlockRaycast(GameApi.World, traceFrom, traceDir, beamRange);
+            beamEnd = hit ?? traceFrom + traceDir * beamRange;
             hitSomething = hit.HasValue;
             traceLength = Vector3.Distance(traceFrom, beamEnd);
             traceFront = 0f;

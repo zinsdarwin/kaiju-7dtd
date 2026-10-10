@@ -68,9 +68,9 @@ def main():
     regions = {tuple(int(v) for v in m) for m in
                (re.match(r"r\.(-?\d+)\.(-?\d+)\.7rg", f).groups() for f in os.listdir(os.path.join(a.save, "Region"))
                 if re.match(r"r\.(-?\d+)\.(-?\d+)\.7rg", f))}
-    cities = {m[2]: dict(name=m[0], x=int(m[3]), y=int(m[4]), z=int(m[5]), half=int(m[6]))
+    cities = {m[2]: dict(name=m[0], x=int(m[3]), y=int(m[4]), z=int(m[5]), half=int(m[6]), depth=int(m[7] or 2 * sm.BLOCK_S + 10))
               for m in re.findall(r'<settlement name="([^"]+)" kind="(city)" role="end" strip="(\d)" biome="\w+" '
-                                  r'x="(-?\d+)" y="(-?\d+)" z="(-?\d+)" halfwidth="(\d+)"', kx)}
+                                  r'x="(-?\d+)" y="(-?\d+)" z="(-?\d+)" halfwidth="(\d+)"(?: halfdepth="(\d+)")?', kx)}
     cleared = []        # (x0, z0, x1, z1) world rectangles whose trees and rocks go
     trails = []
     for part in parts:
@@ -82,7 +82,7 @@ def main():
         b = (rotn + 2) & 3
         w, d = (sz, sx) if b % 2 else (sx, sz)
         zc = city["z"]
-        z1 = zc + 2 * sm.BLOCK_S + 10
+        z1 = zc + city["depth"]
         pad = float(h[zc + H, city["x"] + H])
         moved = oz >= zc + MIN_DZ
         if moved:

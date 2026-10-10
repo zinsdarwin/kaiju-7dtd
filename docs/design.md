@@ -47,6 +47,10 @@ Part of The Run. Decided by Darwin 2026-10-03.
 
 - Five parts of the Oxygen Destroyer, one in a glowing crate in the army post up the mountains north of each end city (Cedar Harbor, Cinder Bay, Dune Point, Frostport, Ashmouth). You hole up there for the blood moon and watch him hit the city at dawn. Each crate holds a field note pointing to the next post; each part city's trader offers the part as a quest.
 - The army post above Cinder Bay (end of the burnt forest) has a missile battery: its launch control, next to the part crate, fires a salvo of missiles at him while he attacks. They don't stop him; he roars and stops for a moment. One salvo every 30 s. (Decided by Darwin 2026-10-10.)
+- Bigger weapons further along (decided by Darwin 2026-10-10). None of them stops the attack:
+  - The post above Dune Point (desert) has a radio. Calling in an airstrike sends three jets in from the sea. They carpet-bomb a line of explosions across him, turn and make a second pass, and he staggers. Once per attack.
+  - The post above Frostport (snow) has an experimental maser cannon with three generators. Fuel each with 25 gas to charge it. Its one shot is a crackling beam for 6 s while he staggers. Then he turns his breath on the cannon and destroys it, so get clear.
+- Dune Point is filled with tier 3-4 POIs, and Frostport has deeper blocks filled with tier 4-5 POIs (factories, hospital, stadium...).
 - The Frostport crate also holds a gyrocopter chassis and accessories: assemble a gyrocopter at a workbench before the last blood moon.
 - Craft the Oxygen Destroyer at a workbench from the five parts. When the final blood moon horde ends, Godzilla attacks Ashmouth, walking slower than in the other attacks. Fly the gyrocopter over him with the device aboard and drop it on him (right mouse button): it falls, its fins steer it onto him, and he dies (death sequence, run won). A miss doesn't go off and the device comes back to you to try again. If the attack ends without a hit, Ashmouth falls and the run is lost. (Decided by Darwin 2026-10-10; replaces placing and arming the device in the city.)
 

@@ -17,6 +17,9 @@ namespace KaijuMod
             "@:Sounds/Explosions/explosion_charge1.wav", "@:Sounds/Explosions/explosion_charge2.wav",
             "@:Sounds/Explosions/explosion1.wav", "@:Sounds/Explosions/explosion3.wav",
         };
+        /// <summary>The supply plane's drone, pitched up for the jets.</summary>
+        public const string JetClip = "@:Sounds/SupplyDrops/Supply_Crate_Plane_lp.wav";
+        private const string ArcClip = "@:Sounds/Electricity/ElectricFence/electric_arc_lp.wav";
         private static readonly string[] Roars = { "@:Sounds/Animals/Bear/bearalert.wav", "@:Sounds/Animals/Wolf/wolfdirealert1.wav" };
 
         /// <summary>Roar pitch: about an octave below the bear.</summary>
@@ -62,6 +65,36 @@ namespace KaijuMod
         public static void MissileHit(Vector3 worldPos)
         {
             Play(worldPos, Clip(SmallBlasts[Random.Range(0, SmallBlasts.Length)]), Random.Range(0.9f, 1.1f), 1f, 2000f, 0f);
+        }
+
+        /// <summary>A looping sound that follows a moving object (a jet) until it is destroyed.</summary>
+        public static void Loop(GameObject go, string clipPath, float pitch, float volume, float range)
+        {
+            var clip = Clip(clipPath);
+            if (clip == null)
+                return;
+            var src = go.AddComponent<AudioSource>();
+            src.clip = clip;
+            src.loop = true;
+            src.pitch = pitch;
+            src.volume = volume;
+            src.spatialBlend = 1f;
+            src.rolloffMode = AudioRolloffMode.Linear;
+            src.minDistance = range * 0.1f;
+            src.maxDistance = range;
+            src.dopplerLevel = 1f;
+            src.Play();
+        }
+
+        /// <summary>The maser firing: a deep crackling arc for the length of the shot, and a bang as it starts.</summary>
+        public static void MaserZap(Vector3 worldPos)
+        {
+            Play(worldPos, Clip(SmallBlasts[1]), 1.4f, 1f, 1500f, 0f);
+            var go = new GameObject("KaijuMaserSound");
+            Object.DontDestroyOnLoad(go);
+            go.AddComponent<SoundAnchor>().Init(worldPos);
+            Loop(go, ArcClip, 0.6f, 1f, 1500f);
+            Object.Destroy(go, KaijuMaser.Duration);
         }
 
         /// <summary>His roar from a point (his mouth): two creature calls, pitched down, layered.</summary>

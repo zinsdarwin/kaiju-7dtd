@@ -72,16 +72,72 @@
 			<drop event="Destroy" count="0"/>
 		</block>
 
-		<!-- The missile battery's launch control: the mod places it in the army post above Cinder Bay.
-		     Class resolves to BlockKaijuMissileControl in KaijuMod.dll. -->
+		<!-- Weapons the mod places in the army posts (KaijuRun): the missile battery's launch control
+		     above Cinder Bay, the airstrike radio above Dune Point, the maser cannon and its three
+		     generators above Frostport. Class resolves to BlockKaijuWeapon in KaijuMod.dll; named
+		     kaiju* so his footprint and breath never destroy them. -->
 		<block name="kaijuMissileControl">
-			<property name="Extends" value="radioHam"/>
-			<property name="Class" value="KaijuMissileControl, KaijuMod"/>
-			<property name="CustomIcon" value="radioHam"/>
+			<property name="Class" value="KaijuWeapon, KaijuMod"/>
 			<property name="DescriptionKey" value="kaijuMissileControlDesc"/>
-			<property name="CreativeMode" value="Dev"/>
+			<property name="Material" value="Mmetal"/>
+			<property name="Shape" value="ModelEntity"/>
+			<property name="Model" value="@:Entities/Industrial/controlPanelBase_01Prefab.prefab"/>
+			<property name="CustomIcon" value="controlPanelBase01"/>
+			<property name="Collide" value="sight,movement,melee,bullet,arrow,rocket"/>
+			<property name="Path" value="solid"/>
+			<property name="StabilitySupport" value="false"/>
 			<property name="MaxDamage" value="100000"/>
 			<property name="CanPickup" value="false"/>
+			<property name="CreativeMode" value="Dev"/>
+			<drop event="Destroy" count="0"/>
+		</block>
+		<block name="kaijuAirstrikeRadio">
+			<property name="Class" value="KaijuWeapon, KaijuMod"/>
+			<property name="DescriptionKey" value="kaijuAirstrikeRadioDesc"/>
+			<property name="Material" value="Mmetal"/>
+			<property name="Shape" value="ModelEntity"/>
+			<property name="Model" value="@:Entities/Electrical/radioHamPrefab.prefab"/>
+			<property name="CustomIcon" value="radioHam"/>
+			<property name="Collide" value="sight,movement,melee,bullet,arrow,rocket"/>
+			<property name="Path" value="solid"/>
+			<property name="StabilitySupport" value="false"/>
+			<property name="MaxDamage" value="100000"/>
+			<property name="CanPickup" value="false"/>
+			<property name="CreativeMode" value="Dev"/>
+			<drop event="Destroy" count="0"/>
+		</block>
+		<block name="kaijuMaserCannon">
+			<property name="Class" value="KaijuWeapon, KaijuMod"/>
+			<property name="DescriptionKey" value="kaijuMaserCannonDesc"/>
+			<property name="Material" value="Mmetal"/>
+			<property name="Shape" value="ModelEntity"/>
+			<property name="Model" value="@:Entities/Electrical/satelliteUnit3X3LargePrefab.prefab"/>
+			<property name="CustomIcon" value="satelliteUnitLarge"/>
+			<property name="DisplayType" value="blockMulti"/>
+			<property name="MultiBlockDim" value="3,3,3"/>
+			<property name="ImposterDontBlock" value="true"/>
+			<property name="Collide" value="sight,movement,melee,bullet,arrow,rocket"/>
+			<property name="Path" value="solid"/>
+			<property name="StabilitySupport" value="false"/>
+			<property name="MaxDamage" value="100000"/>
+			<property name="CanPickup" value="false"/>
+			<property name="CreativeMode" value="Dev"/>
+			<drop event="Destroy" count="0"/>
+		</block>
+		<block name="kaijuMaserGenerator">
+			<property name="Class" value="KaijuWeapon, KaijuMod"/>
+			<property name="DescriptionKey" value="kaijuMaserGeneratorDesc"/>
+			<property name="Material" value="Mmetal"/>
+			<property name="Shape" value="ModelEntity"/>
+			<property name="Model" value="@:Entities/Electrical/generatorBankAPrefab.prefab"/>
+			<property name="CustomIcon" value="generatorBankA"/>
+			<property name="ImposterDontBlock" value="true"/>
+			<property name="Collide" value="sight,movement,melee,bullet,arrow,rocket"/>
+			<property name="Path" value="solid"/>
+			<property name="StabilitySupport" value="false"/>
+			<property name="MaxDamage" value="100000"/>
+			<property name="CanPickup" value="false"/>
+			<property name="CreativeMode" value="Dev"/>
 			<drop event="Destroy" count="0"/>
 		</block>
 	</append>
