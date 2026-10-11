@@ -91,6 +91,16 @@
 			<property name="CreativeMode" value="Dev"/>
 			<drop event="Destroy" count="0"/>
 		</block>
+		<!-- The desk the airstrike radio stands on (an office desk; named kaiju* so he never breaks it). -->
+		<block name="kaijuRadioDesk">
+			<property name="Extends" value="officeDesk"/>
+			<property name="IsTerrainDecoration" value="false"/>
+			<property name="CustomIcon" value="officeDesk"/>
+			<property name="MaxDamage" value="100000"/>
+			<property name="CanPickup" value="false"/>
+			<property name="CreativeMode" value="Dev"/>
+			<drop event="Destroy" count="0"/>
+		</block>
 		<block name="kaijuAirstrikeRadio">
 			<property name="Class" value="KaijuWeapon, KaijuMod"/>
 			<property name="DescriptionKey" value="kaijuAirstrikeRadioDesc"/>

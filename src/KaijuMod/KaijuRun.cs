@@ -48,6 +48,9 @@ namespace KaijuMod
         // across from the post's middle (clear of the trail up the middle) and out from its front.
         private static readonly int[] WeaponAcross = { -10, -10, -14, 10, 12, 14 };
         public static int WeaponOut = 4;
+        // The airstrike radio stands on a desk so it is easy to spot.
+        public const string DeskBlock = "kaijuRadioDesk";
+        private static readonly bool[] WeaponOnDesk = { false, true, false, false, false, false };
         public static int MissileSalvo = 8;
         /// <summary>Seconds between salvos, and how far the missiles reach, metres.</summary>
         public static float MissileReload = 30f, MissileRange = 2500f;
@@ -612,15 +615,33 @@ namespace KaijuMod
                     Vector3i spot;
                     if (st.Weapons.TryGetValue(WeaponKeys[w], out spot))
                     {
-                        // Placed inside the post by 0.9.0: move it out front.
-                        if (spot.z < wsite.Z || !GameApi.IsChunkLoaded(world, spot.x, spot.z))
+                        if (!GameApi.IsChunkLoaded(world, spot.x, spot.z))
                             continue;
+                        if (spot.z < wsite.Z)
+                        {
+                            // Out front already (0.9.1); one that belongs on a desk gets it under it.
+                            var below = new Vector3i(spot.x, spot.y - 1, spot.z);
+                            if (WeaponOnDesk[w] && GameApi.BlockName(world, below) != DeskBlock && GameApi.BlockName(world, spot) == WeaponBlocks[w])
+                            {
+                                GameApi.PlaceBlock(world, spot, DeskBlock); // replaces the radio there
+                                var up = new Vector3i(spot.x, spot.y + 1, spot.z);
+                                GameApi.PlaceBlock(world, up, WeaponBlocks[w]);
+                                st.Weapons[WeaponKeys[w]] = up;
+                                Save();
+                                Log.Out("[KaijuMod] " + WeaponBlocks[w] + " put on a desk at " + spot);
+                            }
+                            continue;
+                        }
                         if (GameApi.BlockName(world, spot) == WeaponBlocks[w])
                             GameApi.ClearBlocks(world, new List<Vector3i> { spot });
                         st.Weapons.Remove(WeaponKeys[w]);
                         Log.Out("[KaijuMod] " + WeaponBlocks[w] + " moved out of the post at " + spot);
                     }
-                    if (FindFrontSpot(world, wsite, WeaponAcross[w], WeaponClear[w], out spot) && GameApi.PlaceBlock(world, spot, WeaponBlocks[w]))
+                    if (!FindFrontSpot(world, wsite, WeaponAcross[w], WeaponOnDesk[w] ? 1 : WeaponClear[w], out spot))
+                        continue;
+                    if (WeaponOnDesk[w] && GameApi.PlaceBlock(world, spot, DeskBlock))
+                        spot = new Vector3i(spot.x, spot.y + 1, spot.z);
+                    if (GameApi.PlaceBlock(world, spot, WeaponBlocks[w]))
                     {
                         st.Weapons[WeaponKeys[w]] = spot;
                         Save();
