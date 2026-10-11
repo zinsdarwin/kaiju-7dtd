@@ -44,6 +44,10 @@ namespace KaijuMod
         private static readonly string[] WeaponBlocks = { MissileBlock, AirstrikeBlock, MaserBlock, GeneratorBlock, GeneratorBlock, GeneratorBlock };
         private static readonly int[] WeaponParts = { 1, 2, 3, 3, 3, 3 };
         private static readonly int[] WeaponClear = { 0, 0, 2, 0, 0, 0 };
+        // Out in front of the post, on the open shelf facing the city so you can watch him: metres
+        // across from the post's middle (clear of the trail up the middle) and out from its front.
+        private static readonly int[] WeaponAcross = { -10, -10, -14, 10, 12, 14 };
+        public static int WeaponOut = 4;
         public static int MissileSalvo = 8;
         /// <summary>Seconds between salvos, and how far the missiles reach, metres.</summary>
         public static float MissileReload = 30f, MissileRange = 2500f;
@@ -602,10 +606,21 @@ namespace KaijuMod
                 }
                 for (int w = 0; w < WeaponKeys.Length; w++)
                 {
-                    if (WeaponParts[w] != i || st.Weapons.ContainsKey(WeaponKeys[w]) || data.SiteFor(i + 1) == null)
+                    var wsite = data.SiteFor(i + 1);
+                    if (WeaponParts[w] != i || wsite == null)
                         continue;
                     Vector3i spot;
-                    if (FindSiteSpot(world, data.SiteFor(i + 1), out spot, WeaponClear[w]) && GameApi.PlaceBlock(world, spot, WeaponBlocks[w]))
+                    if (st.Weapons.TryGetValue(WeaponKeys[w], out spot))
+                    {
+                        // Placed inside the post by 0.9.0: move it out front.
+                        if (spot.z < wsite.Z || !GameApi.IsChunkLoaded(world, spot.x, spot.z))
+                            continue;
+                        if (GameApi.BlockName(world, spot) == WeaponBlocks[w])
+                            GameApi.ClearBlocks(world, new List<Vector3i> { spot });
+                        st.Weapons.Remove(WeaponKeys[w]);
+                        Log.Out("[KaijuMod] " + WeaponBlocks[w] + " moved out of the post at " + spot);
+                    }
+                    if (FindFrontSpot(world, wsite, WeaponAcross[w], WeaponClear[w], out spot) && GameApi.PlaceBlock(world, spot, WeaponBlocks[w]))
                     {
                         st.Weapons[WeaponKeys[w]] = spot;
                         Save();
@@ -749,6 +764,35 @@ namespace KaijuMod
                                 spot = new Vector3i(x, y, z);
                                 return true;
                             }
+                        }
+                    }
+                }
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// Open ground just in front of a post (its south side, toward the city), across metres from
+        /// its middle: the first free spot on solid ground, searching outward a few metres.
+        /// </summary>
+        private bool FindFrontSpot(World world, PartSite site, int across, int clear, out Vector3i spot)
+        {
+            spot = default(Vector3i);
+            int x0 = Mathf.RoundToInt(site.Centre.x) + across, z0 = Mathf.FloorToInt(site.Z) - WeaponOut - clear;
+            if (!GameApi.IsChunkLoaded(world, x0, z0))
+                return false;
+            int ground = Mathf.RoundToInt(site.Y);
+            for (int r = 0; r <= 4; r++)
+            {
+                foreach (int dx in new[] { 0, r, -r })
+                {
+                    int x = x0 + dx, z = z0 - r;
+                    for (int y = ground + 6; y >= ground - 6; y--)
+                    {
+                        if (Free(world, x, y, z, clear))
+                        {
+                            spot = new Vector3i(x, y, z);
+                            return true;
                         }
                     }
                 }
