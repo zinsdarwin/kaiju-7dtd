@@ -15,7 +15,7 @@ A survival run across a custom snake-shaped map, one biome per 7-day blood moon 
 
 1. **Day 1.** You spawn in the pine forest at the bottom left of the map, just east of a big coastal city. Godzilla comes out of the western ocean and destroys that city.
 2. **The chase.** Radiation spreads east from the ruined city and chases you along the strip. You have 7 days to loot your way to the big city at the strip's east end.
-3. **Blood moon.** You survive the horde in or near the east city. About 30 real minutes after the horde ends (time to loot; Duke's note warns that the horde comes before him), Godzilla comes out of the eastern ocean and destroys that city.
+3. **Blood moon.** You survive the horde in or near the east city. An in-game hour after the horde ends (Duke's note warns that the horde comes before him), Godzilla comes out of the eastern ocean and destroys that city.
 4. **The escape.** You have a few hours after the horde to get north through the mountain pass into the burnt forest.
 5. **Repeat.** The radiation now chases you west along the burnt strip to its west-end city, Godzilla hits it after the next horde, and so on through all five biomes.
 

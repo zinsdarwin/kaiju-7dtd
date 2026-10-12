@@ -23,8 +23,8 @@ namespace KaijuMod
 
         /// <summary>Real seconds after the first spawn before he attacks the start city. None: his walk in from the sea is the lead-in.</summary>
         public static float StartAttackDelay = 0f;
-        /// <summary>Real minutes after a blood moon horde ends before he attacks the end city: time to loot.</summary>
-        public static float AttackDelayMinutes = 30f;
+        /// <summary>In-game minutes after a blood moon horde ends (dawn) before he attacks the end city.</summary>
+        public static int AttackDelayMinutes = 60;
         /// <summary>In-game hours after an end-city attack before the next strip's front starts.</summary>
         public static int GraceHours = 4;
         /// <summary>The front stops this far short of the end city's inland edge, metres.</summary>
@@ -242,11 +242,8 @@ namespace KaijuMod
             st.BloodMoonActive = 0;
             if (st.Strip >= 0 && !st.Complete)
             {
-                // VERIFIED (V3.3): GamePrefs DayNightLength is real minutes per in-game day (24000
-                // world time); DayTimeTracker reads it the same way.
-                float dayMinutes = Mathf.Max(1, GamePrefs.GetInt(EnumGamePrefs.DayNightLength));
-                st.AttackAt = now + (ulong)(AttackDelayMinutes / dayMinutes * 24000f);
-                Log.Out("[KaijuMod] Horde over; " + data.EndCity(st.Strip)?.Name + " is attacked in " + AttackDelayMinutes + " real minutes");
+                st.AttackAt = now + (ulong)(AttackDelayMinutes * 1000 / 60); // 1000 world time per in-game hour
+                Log.Out("[KaijuMod] Horde over; " + data.EndCity(st.Strip)?.Name + " is attacked in " + AttackDelayMinutes + " in-game minutes");
             }
             Save();
         }
@@ -1066,8 +1063,8 @@ namespace KaijuMod
             {
                 var end = data.EndCity(st.Strip);
                 s += "\nStrip " + st.Strip + " (" + end?.Biome + "), next attack: " + end?.Name
-                    + (st.AttackAt > 0 ? " in " + ((st.AttackAt - Mathf.Min(st.AttackAt, now)) / 1000f).ToString("0.0", CultureInfo.InvariantCulture) + " in-game hours."
-                        : ", " + AttackDelayMinutes + " real minutes after the blood moon horde ends.");
+                    + (st.AttackAt > 0 ? " in " + ((st.AttackAt - System.Math.Min(st.AttackAt, now)) * 60 / 1000) + " in-game minutes."
+                        : ", " + AttackDelayMinutes + " in-game minutes after the blood moon horde ends.");
                 if (now < st.FrontStart)
                     s += "\nGrace: the front starts in " + ((st.FrontStart - now) / 1000f).ToString("0.0", CultureInfo.InvariantCulture) + " h"
                         + (st.Strip > 0 ? "; strip " + (st.Strip - 1) + " sweep at x " + Mathf.RoundToInt(SweepX(st.Strip - 1, now)) : "") + ".";
