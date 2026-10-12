@@ -23,6 +23,8 @@ namespace KaijuMod
 
         /// <summary>Real seconds after the first spawn before he attacks the start city. None: his walk in from the sea is the lead-in.</summary>
         public static float StartAttackDelay = 0f;
+        /// <summary>Real minutes after a blood moon horde ends before he attacks the end city: time to loot.</summary>
+        public static float AttackDelayMinutes = 30f;
         /// <summary>In-game hours after an end-city attack before the next strip's front starts.</summary>
         public static int GraceHours = 4;
         /// <summary>The front stops this far short of the end city's inland edge, metres.</summary>
@@ -68,6 +70,7 @@ namespace KaijuMod
             public ulong SweepStart;        // world time of the last end-city attack (previous strip's sweep)
             public int BloodMoonActive;     // blood moon day seen in progress, 0 if none
             public int LastAttackedBloodMoon;
+            public ulong AttackAt;          // world time the end city's attack is due (after the horde), 0 if none
             public bool RadiationOn = true;
             public bool Complete;
             // Weapon parts
@@ -163,6 +166,9 @@ namespace KaijuMod
             {
                 OnHordeEnded(now);
             }
+            // Saved, so it still comes after a reload, or at once if you slept past it.
+            if (st.AttackAt > 0 && now >= st.AttackAt)
+                AttackEndCity(now);
 
             radTimer += dt;
             if (radTimer >= 1f)
@@ -234,11 +240,20 @@ namespace KaijuMod
         {
             st.LastAttackedBloodMoon = st.BloodMoonActive;
             st.BloodMoonActive = 0;
-            if (st.Strip < 0 || st.Complete)
+            if (st.Strip >= 0 && !st.Complete)
             {
-                Save();
-                return;
+                // VERIFIED (V3.3): GamePrefs DayNightLength is real minutes per in-game day (24000
+                // world time); DayTimeTracker reads it the same way.
+                float dayMinutes = Mathf.Max(1, GamePrefs.GetInt(EnumGamePrefs.DayNightLength));
+                st.AttackAt = now + (ulong)(AttackDelayMinutes / dayMinutes * 24000f);
+                Log.Out("[KaijuMod] Horde over; " + data.EndCity(st.Strip)?.Name + " is attacked in " + AttackDelayMinutes + " real minutes");
             }
+            Save();
+        }
+
+        private void AttackEndCity(ulong now)
+        {
+            st.AttackAt = 0;
             Settlement city = data.EndCity(st.Strip);
             if (st.Strip == data.Strips - 1)
                 st.FinaleActive = true; // the last city: the Oxygen Destroyer's chance
@@ -309,6 +324,8 @@ namespace KaijuMod
                 return 0f;
             int d = data.Direction(strip);
             float stop = to.X - d * (to.HalfWidth + FrontStopMargin);
+            if (st.AttackAt > 0)
+                return stop; // waiting for him after the horde: the front stays where the blood moon left it
             var duskDawn = GameApi.DuskDawn();
             ulong end = GameApi.DayTimeToWorldTime(GameApi.BloodMoonDay(), duskDawn.Item1, 0);
             return Mathf.Lerp(from.X, stop, Progress(now, st.FrontStart, end));
@@ -1048,7 +1065,9 @@ namespace KaijuMod
             else
             {
                 var end = data.EndCity(st.Strip);
-                s += "\nStrip " + st.Strip + " (" + end?.Biome + "), next attack: " + end?.Name + " when the blood moon horde ends.";
+                s += "\nStrip " + st.Strip + " (" + end?.Biome + "), next attack: " + end?.Name
+                    + (st.AttackAt > 0 ? " in " + ((st.AttackAt - Mathf.Min(st.AttackAt, now)) / 1000f).ToString("0.0", CultureInfo.InvariantCulture) + " in-game hours."
+                        : ", " + AttackDelayMinutes + " real minutes after the blood moon horde ends.");
                 if (now < st.FrontStart)
                     s += "\nGrace: the front starts in " + ((st.FrontStart - now) / 1000f).ToString("0.0", CultureInfo.InvariantCulture) + " h"
                         + (st.Strip > 0 ? "; strip " + (st.Strip - 1) + " sweep at x " + Mathf.RoundToInt(SweepX(st.Strip - 1, now)) : "") + ".";
@@ -1100,6 +1119,7 @@ namespace KaijuMod
                 e.SetAttribute("sweepStart", st.SweepStart.ToString(CultureInfo.InvariantCulture));
                 e.SetAttribute("bloodMoonActive", st.BloodMoonActive.ToString(CultureInfo.InvariantCulture));
                 e.SetAttribute("lastAttackedBloodMoon", st.LastAttackedBloodMoon.ToString(CultureInfo.InvariantCulture));
+                e.SetAttribute("attackAt", st.AttackAt.ToString(CultureInfo.InvariantCulture));
                 e.SetAttribute("radiation", st.RadiationOn ? "1" : "0");
                 e.SetAttribute("complete", st.Complete ? "1" : "0");
                 e.SetAttribute("maserUsed", st.MaserUsed ? "1" : "0");
@@ -1162,6 +1182,8 @@ namespace KaijuMod
                 st.SweepStart = ulong.Parse(e.GetAttribute("sweepStart"), CultureInfo.InvariantCulture);
                 st.BloodMoonActive = int.Parse(e.GetAttribute("bloodMoonActive"), CultureInfo.InvariantCulture);
                 st.LastAttackedBloodMoon = int.Parse(e.GetAttribute("lastAttackedBloodMoon"), CultureInfo.InvariantCulture);
+                ulong attackAt;
+                st.AttackAt = ulong.TryParse(e.GetAttribute("attackAt"), NumberStyles.Integer, CultureInfo.InvariantCulture, out attackAt) ? attackAt : 0;
                 st.RadiationOn = e.GetAttribute("radiation") != "0";
                 st.Complete = e.GetAttribute("complete") == "1";
                 st.MaserUsed = e.GetAttribute("maserUsed") == "1";

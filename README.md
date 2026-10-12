@@ -61,7 +61,7 @@ Start a new game on the **Kaiju Snake** world (from `tools/snakemap`) and The Ru
 
 - As soon as you spawn, Godzilla rises from the sea and destroys the start city. He walks in along its main road, back out along the next street, and uses his atomic breath on the blocks in between.
 - A radiation front then sweeps along the strip from the ruined city toward the strip's end city, timed to stop 200 m short of it when the blood moon starts. Anyone behind it, or in an earlier strip, takes 4 radiation damage a second and gets an on-screen warning.
-- When the blood moon horde ends (dawn), he destroys the end city. For the next 4 in-game hours the front sweeps over that city to the coast while you escape north through the pass; then the next strip's front starts.
+- When the blood moon horde ends (dawn), you have 30 real minutes to loot (12 in-game hours at the default day length), then he destroys the end city. For the next 4 in-game hours the front sweeps over that city to the coast while you escape north through the pass; then the next strip's front starts.
 - **Weapons and the Oxygen Destroyer.** In the burnt forest, desert, snow and wasteland, each town's trader offers a quest for one part of that strip's weapon, in a glowing crate in a building in the same town. Build the weapon at a workbench from its 3 parts and place it where you can see him attack the end city. None of the weapons stops him:
   - The missile battery (burnt forest) fires salvos.
   - The airstrike radio (desert) sends jets that carpet-bomb him on two passes.
