@@ -35,34 +35,28 @@ namespace KaijuMod
         public const string DeviceItem = "kaijuOxygenDestroyer";
         /// <summary>You can drop it when he is within this distance across the ground, metres (its fins steer it onto him).</summary>
         public static float DropRange = 150f;
-        // Weapons the mod places in the army posts (block, post's part 0-based, clearance in
-        // cells either side): the missile battery above Cinder Bay, the airstrike radio above Dune
-        // Point, the maser cannon (a 3x3 dish) and its three generators above Frostport.
-        public const string MissileBlock = "kaijuMissileControl", AirstrikeBlock = "kaijuAirstrikeRadio",
-            MaserBlock = "kaijuMaserCannon", GeneratorBlock = "kaijuMaserGenerator";
-        private static readonly string[] WeaponKeys = { "missile", "airstrike", "maser", "gen1", "gen2", "gen3" };
-        private static readonly string[] WeaponBlocks = { MissileBlock, AirstrikeBlock, MaserBlock, GeneratorBlock, GeneratorBlock, GeneratorBlock };
-        private static readonly int[] WeaponParts = { 1, 2, 3, 3, 3, 3 };
-        private static readonly int[] WeaponClear = { 0, 0, 2, 0, 0, 0 };
-        // Out in front of the post, on the open shelf facing the city so you can watch him: metres
-        // across from the post's middle (clear of the trail up the middle) and out from its front.
-        private static readonly int[] WeaponAcross = { -10, -10, -14, 10, 12, 14 };
-        public static int WeaponOut = 4;
-        // The airstrike radio stands on a desk so it is easy to spot.
-        public const string DeskBlock = "kaijuRadioDesk";
-        private static readonly bool[] WeaponOnDesk = { false, true, false, false, false, false };
+        // The weapon for each strip's end-city attack, crafted from parts found in that strip's
+        // towns (one part per town, offered as a quest by its trader): the missile battery (burnt
+        // forest, Cinder Bay), the airstrike radio (desert, Dune Point), the maser cannon (snow,
+        // Frostport) and the Oxygen Destroyer (wasteland, Ashmouth). The pine forest has none.
+        public const string MissileBlock = "kaijuMissileControl", AirstrikeBlock = "kaijuAirstrikeRadio", MaserBlock = "kaijuMaserCannon";
+        public static readonly string[] WeaponItems = { MissileBlock, AirstrikeBlock, MaserBlock, DeviceItem };
+        private static readonly string[] PartPrefix = { "kaijuMissilePart", "kaijuAirstrikePart", "kaijuMaserPart", "kaijuOxygenDestroyerPart" };
+        public const int PartsPerWeapon = 3;
+        // One per WeaponItems entry times PartsPerWeapon; a const because Instance is built before the static fields below it.
+        public const int Parts = 4 * PartsPerWeapon;
+        public static int WeaponOf(int part) { return part / PartsPerWeapon; }
+        public static int WeaponStrip(int weapon) { return weapon + 1; }
+        public static string PartItem(int i) { return PartPrefix[WeaponOf(i)] + (i % PartsPerWeapon + 1); }
+        public static string CrateBlock(int i) { return "kaijuPartCrate" + (i + 1); }
         public static int MissileSalvo = 8;
         /// <summary>Seconds between salvos, and how far the missiles reach, metres.</summary>
         public static float MissileReload = 30f, MissileRange = 2500f;
         /// <summary>How far the airstrike and the maser reach, metres.</summary>
         public static float AirstrikeRange = 3000f, MaserRange = 1500f;
-        /// <summary>Gas each maser generator takes.</summary>
+        /// <summary>Gas for each third of the maser's charge.</summary>
         public const string Fuel = "ammoGasCan";
-        public static int FuelPerGenerator = 25;
-        /// <summary>Oxygen Destroyer parts: one crate in a military site by the end city of each strip.</summary>
-        public const int Parts = 5;
-        public static string PartItem(int i) { return "kaijuOxygenDestroyerPart" + (i + 1); }
-        public static string CrateBlock(int i) { return "kaijuPartCrate" + (i + 1); }
+        public static int FuelPerCharge = 25;
 
         private const string StateFile = "kaiju_run.xml";
 
@@ -76,16 +70,14 @@ namespace KaijuMod
             public int LastAttackedBloodMoon;
             public bool RadiationOn = true;
             public bool Complete;
-            // Oxygen Destroyer
+            // Weapon parts
             public readonly bool[] CratePlaced = new bool[Parts];
             public readonly Vector3i[] CratePos = new Vector3i[Parts];
             // Part taken from its crate (held once, or the crate opened and emptied of it, or the
             // crate gone): its marker, light and trader quest never come back.
             public readonly bool[] PartTaken = new bool[Parts];
-            // Weapons placed in the posts (WeaponKeys -> block position), the maser's fuelled
-            // generators and whether it has fired its one shot.
-            public readonly Dictionary<string, Vector3i> Weapons = new Dictionary<string, Vector3i>();
-            public readonly bool[] Fueled = new bool[3];
+            // The maser's charge (thirds) and whether it has fired its one shot.
+            public int MaserCharge;
             public bool MaserUsed;
             public bool FinaleActive;
             public string Outcome = "";     // "", "won" or "lost"
@@ -581,10 +573,18 @@ namespace KaijuMod
             }
         }
 
-        // ---- Oxygen Destroyer: part crates
+        // ---- weapon parts: one crate in each town of the strip, offered by its trader
+
+        /// <summary>Town (0-2 in its strip, in kaiju.xml order) and strip of a part.</summary>
+        private Settlement TownFor(int part)
+        {
+            var towns = data.Towns(WeaponStrip(WeaponOf(part)));
+            int k = part % PartsPerWeapon;
+            return k < towns.Count ? towns[k] : null;
+        }
 
         /// <summary>
-        /// Places each part crate once its city's ground is loaded (in the POI nearest the city
+        /// Places each part crate once its town's ground is loaded (in the POI nearest the town
         /// centre, on a free ground-floor cell), then keeps its light and compass marker up to date.
         /// </summary>
         private void TickParts(World world, EntityPlayer player)
@@ -592,61 +592,20 @@ namespace KaijuMod
             Vector3 p = player != null ? GameApi.Position(player) : Vector3.zero;
             for (int i = 0; i < Parts; i++)
             {
-                Settlement city = data.EndCity(i);
-                if (city == null)
+                Settlement town = TownFor(i);
+                if (town == null)
                     continue;
                 if (!st.CratePlaced[i])
                 {
                     Vector3i spot;
-                    if (FindCrateSpot(world, city, data.SiteFor(i + 1), out spot) && GameApi.PlaceBlock(world, spot, CrateBlock(i)))
+                    if (FindCrateSpot(world, town, out spot) && GameApi.PlaceBlock(world, spot, CrateBlock(i)))
                     {
                         st.CratePlaced[i] = true;
                         st.CratePos[i] = spot;
                         Save();
-                        Log.Out("[KaijuMod] Oxygen Destroyer part " + (i + 1) + " crate placed in " + city.Name + " at " + spot);
+                        Log.Out("[KaijuMod] " + PartItem(i) + " crate placed in " + town.Name + " at " + spot);
                     }
                     continue;
-                }
-                for (int w = 0; w < WeaponKeys.Length; w++)
-                {
-                    var wsite = data.SiteFor(i + 1);
-                    if (WeaponParts[w] != i || wsite == null)
-                        continue;
-                    Vector3i spot;
-                    if (st.Weapons.TryGetValue(WeaponKeys[w], out spot))
-                    {
-                        if (!GameApi.IsChunkLoaded(world, spot.x, spot.z))
-                            continue;
-                        if (spot.z < wsite.Z)
-                        {
-                            // Out front already (0.9.1); one that belongs on a desk gets it under it.
-                            var below = new Vector3i(spot.x, spot.y - 1, spot.z);
-                            if (WeaponOnDesk[w] && GameApi.BlockName(world, below) != DeskBlock && GameApi.BlockName(world, spot) == WeaponBlocks[w])
-                            {
-                                GameApi.PlaceBlock(world, spot, DeskBlock); // replaces the radio there
-                                var up = new Vector3i(spot.x, spot.y + 1, spot.z);
-                                GameApi.PlaceBlock(world, up, WeaponBlocks[w]);
-                                st.Weapons[WeaponKeys[w]] = up;
-                                Save();
-                                Log.Out("[KaijuMod] " + WeaponBlocks[w] + " put on a desk at " + spot);
-                            }
-                            continue;
-                        }
-                        if (GameApi.BlockName(world, spot) == WeaponBlocks[w])
-                            GameApi.ClearBlocks(world, new List<Vector3i> { spot });
-                        st.Weapons.Remove(WeaponKeys[w]);
-                        Log.Out("[KaijuMod] " + WeaponBlocks[w] + " moved out of the post at " + spot);
-                    }
-                    if (!FindFrontSpot(world, wsite, WeaponAcross[w], WeaponOnDesk[w] ? 1 : WeaponClear[w], out spot))
-                        continue;
-                    if (WeaponOnDesk[w] && GameApi.PlaceBlock(world, spot, DeskBlock))
-                        spot = new Vector3i(spot.x, spot.y + 1, spot.z);
-                    if (GameApi.PlaceBlock(world, spot, WeaponBlocks[w]))
-                    {
-                        st.Weapons[WeaponKeys[w]] = spot;
-                        Save();
-                        Log.Out("[KaijuMod] " + WeaponBlocks[w] + " placed by " + city.Name + " at " + spot);
-                    }
                 }
                 if (player == null)
                     continue;
@@ -659,7 +618,7 @@ namespace KaijuMod
                 {
                     st.PartTaken[i] = true;
                     Save();
-                    Log.Out("[KaijuMod] Oxygen Destroyer part " + (i + 1) + " taken from its crate");
+                    Log.Out("[KaijuMod] " + PartItem(i) + " taken from its crate");
                 }
                 // Once taken it stays taken: stashing or crafting the part must not bring the marker back.
                 hasPart = hasPart || st.PartTaken[i];
@@ -671,13 +630,11 @@ namespace KaijuMod
                     Object.Destroy(crateLights[i].gameObject);
                     crateLights[i] = null;
                 }
-                // Compass marker: once at the city or its military site, until you carry the part.
-                var site = data.SiteFor(i + 1);
-                bool inCity = InCity(city, p, 40f)
-                    || (site != null && (new Vector2(p.x, p.z) - site.Centre).magnitude < Mathf.Max(site.W, site.D) + 100f);
-                if (inCity && !hasPart && markers[i] == null)
+                // Compass marker: once in the town, until you carry the part.
+                bool inTown = InCity(town, p, 40f);
+                if (inTown && !hasPart && markers[i] == null)
                     markers[i] = GameApi.AddMarker("kaiju_part", crate);
-                else if ((!inCity || hasPart) && markers[i] != null)
+                else if ((!inTown || hasPart) && markers[i] != null)
                 {
                     GameApi.RemoveMarker(markers[i]);
                     markers[i] = null;
@@ -685,14 +642,12 @@ namespace KaijuMod
             }
         }
 
-        private bool FindCrateSpot(World world, Settlement city, PartSite site, out Vector3i spot)
+        /// <summary>A free ground-floor cell in the POI nearest a town's centre (not its trader).</summary>
+        private bool FindCrateSpot(World world, Settlement town, out Vector3i spot)
         {
             spot = default(Vector3i);
-            if (site != null)
-                return FindSiteSpot(world, site, out spot);
-            if (!GameApi.IsChunkLoaded(world, Mathf.RoundToInt(city.X), Mathf.RoundToInt(city.Z)))
+            if (!GameApi.IsChunkLoaded(world, Mathf.RoundToInt(town.X), Mathf.RoundToInt(town.Z)))
                 return false;
-            // Older worlds: the POI nearest the city centre (not a trader), else the centre itself.
             PrefabInstance best = null;
             float bestD = float.MaxValue;
             foreach (var poi in GameApi.Pois())
@@ -701,9 +656,9 @@ namespace KaijuMod
                     continue;
                 float cx = poi.boundingBoxPosition.x + poi.boundingBoxSize.x * 0.5f;
                 float cz = poi.boundingBoxPosition.z + poi.boundingBoxSize.z * 0.5f;
-                if (Mathf.Abs(cx - city.X) > city.HalfWidth || Mathf.Abs(cz - city.Z) > city.HalfDepth)
+                if (Mathf.Abs(cx - town.X) > town.HalfWidth || Mathf.Abs(cz - town.Z) > town.HalfDepth)
                     continue;
-                float d = (cx - city.X) * (cx - city.X) + (cz - city.Z) * (cz - city.Z);
+                float d = (cx - town.X) * (cx - town.X) + (cz - town.Z) * (cz - town.Z);
                 if (d < bestD)
                 {
                     bestD = d;
@@ -720,13 +675,13 @@ namespace KaijuMod
             }
             else
             {
-                x0 = Mathf.RoundToInt(city.X);
-                z0 = Mathf.RoundToInt(city.Z);
+                x0 = Mathf.RoundToInt(town.X);
+                z0 = Mathf.RoundToInt(town.Z);
                 rx = rz = 10;
             }
             if (!GameApi.IsChunkLoaded(world, x0, z0))
                 return false;
-            int ground = Mathf.RoundToInt(city.Y);
+            int ground = Mathf.RoundToInt(town.Y);
             // Spiral out from the POI centre; first free ground-floor cell with a floor under it.
             for (int r = 0; r <= Mathf.Max(rx, rz); r++)
             {
@@ -754,91 +709,6 @@ namespace KaijuMod
             return false;
         }
 
-        /// <summary>
-        /// A free cell inside the part's military POI, as near its middle as possible, at or just
-        /// above its ground level (camps and checkpoints are mostly one storey; the bunker's
-        /// surface buildings sit on the ground too).
-        /// </summary>
-        private bool FindSiteSpot(World world, PartSite site, out Vector3i spot, int clear = 0)
-        {
-            spot = default(Vector3i);
-            int x0 = Mathf.RoundToInt(site.Centre.x), z0 = Mathf.RoundToInt(site.Centre.y);
-            if (!GameApi.IsChunkLoaded(world, x0, z0))
-                return false;
-            int rx = Mathf.Max(2, Mathf.RoundToInt(site.W / 2f) - 3), rz = Mathf.Max(2, Mathf.RoundToInt(site.D / 2f) - 3);
-            int ground = Mathf.RoundToInt(site.Y);
-            for (int r = 0; r <= Mathf.Max(rx, rz); r++)
-            {
-                for (int dx = -r; dx <= r; dx++)
-                {
-                    for (int dz = -r; dz <= r; dz++)
-                    {
-                        if (Mathf.Max(Mathf.Abs(dx), Mathf.Abs(dz)) != r || Mathf.Abs(dx) > rx || Mathf.Abs(dz) > rz)
-                            continue;
-                        int x = x0 + dx, z = z0 + dz;
-                        if (!GameApi.IsChunkLoaded(world, x, z))
-                            continue;
-                        for (int y = ground - 1; y <= ground + 4; y++)
-                        {
-                            if (Free(world, x, y, z, clear))
-                            {
-                                spot = new Vector3i(x, y, z);
-                                return true;
-                            }
-                        }
-                    }
-                }
-            }
-            return false;
-        }
-
-        /// <summary>
-        /// Open ground just in front of a post (its south side, toward the city), across metres from
-        /// its middle: the first free spot on solid ground, searching outward a few metres.
-        /// </summary>
-        private bool FindFrontSpot(World world, PartSite site, int across, int clear, out Vector3i spot)
-        {
-            spot = default(Vector3i);
-            int x0 = Mathf.RoundToInt(site.Centre.x) + across, z0 = Mathf.FloorToInt(site.Z) - WeaponOut - clear;
-            if (!GameApi.IsChunkLoaded(world, x0, z0))
-                return false;
-            int ground = Mathf.RoundToInt(site.Y);
-            for (int r = 0; r <= 4; r++)
-            {
-                foreach (int dx in new[] { 0, r, -r })
-                {
-                    int x = x0 + dx, z = z0 - r;
-                    for (int y = ground + 6; y >= ground - 6; y--)
-                    {
-                        if (Free(world, x, y, z, clear))
-                        {
-                            spot = new Vector3i(x, y, z);
-                            return true;
-                        }
-                    }
-                }
-            }
-            return false;
-        }
-
-        /// <summary>Air from y up (2 cells, or 4 for something bigger) clear cells either side, on solid floor.</summary>
-        private static bool Free(World world, int x, int y, int z, int clear)
-        {
-            int height = clear > 0 ? 4 : 2;
-            for (int dx = -clear; dx <= clear; dx++)
-            {
-                for (int dz = -clear; dz <= clear; dz++)
-                {
-                    if (!GameApi.IsChunkLoaded(world, x + dx, z + dz) || GameApi.IsAir(world, new Vector3i(x + dx, y - 1, z + dz)))
-                        return false;
-                    for (int dy = 0; dy < height; dy++)
-                        if (!GameApi.IsAir(world, new Vector3i(x + dx, y + dy, z + dz)))
-                            return false;
-                }
-            }
-            return true;
-        }
-
         private static bool InCity(Settlement city, Vector3 p, float margin)
         {
             return Mathf.Abs(p.x - city.X) <= city.HalfWidth + margin
@@ -857,7 +727,7 @@ namespace KaijuMod
             }
         }
 
-        /// <summary>Gives the local player a part (1-4) for testing.</summary>
+        /// <summary>Gives the local player a part (0-based) for testing.</summary>
         public bool GivePart(int i)
         {
             var player = boundWorld != null ? GameApi.LocalPlayer(boundWorld) : null;
@@ -867,33 +737,26 @@ namespace KaijuMod
         public string PartsStatus()
         {
             if (data == null)
-                return "No Oxygen Destroyer parts: this world has no " + KaijuWorldData.FileName + ".";
+                return "No weapon parts: this world has no " + KaijuWorldData.FileName + ".";
             var player = GameApi.LocalPlayer(boundWorld);
-            var s = "Oxygen Destroyer parts:";
+            var s = "Weapon parts (one in each town, from its trader):";
             for (int i = 0; i < Parts; i++)
             {
-                Settlement city = data.EndCity(i);
+                Settlement town = TownFor(i);
                 bool has = player != null && GameApi.ItemCount(player, PartItem(i)) > 0;
-                var site = data.SiteFor(i + 1);
-                s += "\n  " + (i + 1) + ". " + (city != null ? city.Name : "?")
-                    + (site != null ? " (" + site.Name + ", tier " + site.Tier + ", at " + Mathf.RoundToInt(site.Centre.x) + " " + Mathf.RoundToInt(site.Centre.y) + ")" : "") + ": "
+                s += "\n  " + (i + 1) + ". " + PartItem(i) + " in " + (town != null ? town.Name : "?") + ": "
                     + (st.PartTaken[i] ? "taken" : st.CratePlaced[i] ? "crate at " + st.CratePos[i] : "crate not placed yet (placed when you get near)")
                     + (has ? ", YOU HAVE IT" : "");
             }
-            s += "\nWeapons:";
-            foreach (string key in WeaponKeys)
-                s += " " + key + (st.Weapons.ContainsKey(key) ? " at " + st.Weapons[key] : " not placed yet") + ";";
-            s += " maser " + (st.MaserUsed ? "used" : FueledCount() + "/3 generators fuelled") + ".";
-            s += "\nDevice: " + (player != null && GameApi.ItemCount(player, DeviceItem) > 0 ? "YOU HAVE IT" : "not carried")
+            s += "\nMaser: " + (st.MaserUsed ? "used" : "charge " + (st.MaserCharge * 100 / 3) + "%")
+                + ". Device: " + (player != null && GameApi.ItemCount(player, DeviceItem) > 0 ? "YOU HAVE IT" : "not carried")
                 + ". Finale: " + (st.Outcome == "won" ? "won" : st.Outcome == "lost" ? "lost" : st.FinaleActive ? "in progress" : "after the last blood moon") + ".";
             return s;
         }
 
-        // ---- Oxygen Destroyer: part quests from the part cities' traders
-
         /// <summary>
         /// The part (0-based) whose quest this trader should offer, or -1: the trader must be in a
-        /// part's city, and the player must not have the part, the device, the quest (active or
+        /// part's town, and the player must not have the part, its weapon, the quest (active or
         /// done), and the part must still be in its crate. sitePos/siteSize: where the quest leads.
         /// </summary>
         public int PartQuestFor(EntityTrader trader, EntityPlayer player, out Vector3 sitePos, out Vector3 siteSize)
@@ -904,10 +767,10 @@ namespace KaijuMod
             Vector3 tp = trader.traderArea != null ? (Vector3)trader.traderArea.Position : trader.position;
             for (int i = 0; i < Parts; i++)
             {
-                Settlement city = data.EndCity(i);
-                if (city == null || !InCity(city, tp, 30f))
+                Settlement town = TownFor(i);
+                if (town == null || !InCity(town, tp, 30f))
                     continue;
-                if (st.PartTaken[i] || GameApi.ItemCount(player, PartItem(i)) > 0 || GameApi.ItemCount(player, DeviceItem) > 0)
+                if (st.PartTaken[i] || GameApi.ItemCount(player, PartItem(i)) > 0 || GameApi.ItemCount(player, WeaponItems[WeaponOf(i)]) > 0)
                     return -1;
                 // VERIFIED (V3.3): QuestJournal.FindActiveOrCompleteQuest(name, faction = -1).
                 if (player.QuestJournal != null && player.QuestJournal.FindActiveOrCompleteQuest(KaijuPartQuests.QuestId(i)) != null)
@@ -916,20 +779,14 @@ namespace KaijuMod
                 if (st.CratePlaced[i] && world != null && GameApi.IsChunkLoaded(world, st.CratePos[i].x, st.CratePos[i].z)
                     && GameApi.BlockName(world, st.CratePos[i]) != CrateBlock(i))
                     return -1; // crate already emptied and gone
-                var site = data.SiteFor(i + 1);
-                if (site != null)
-                {
-                    sitePos = new Vector3(site.X, site.Y, site.Z);
-                    siteSize = new Vector3(site.W, 20f, site.D);
-                }
-                else if (st.CratePlaced[i])
+                if (st.CratePlaced[i])
                 {
                     sitePos = new Vector3(st.CratePos[i].x - 15, st.CratePos[i].y, st.CratePos[i].z - 15);
                     siteSize = new Vector3(30f, 20f, 30f);
                 }
                 else
                 {
-                    sitePos = new Vector3(city.X - 50f, city.Y, city.Z - 50f);
+                    sitePos = new Vector3(town.X - 50f, town.Y, town.Z - 50f);
                     siteSize = new Vector3(100f, 20f, 100f);
                 }
                 return i;
@@ -937,7 +794,7 @@ namespace KaijuMod
             return -1;
         }
 
-        // ---- the weapons in the posts: missiles, airstrike, maser
+        // ---- the weapons, crafted from the parts and placed by you: missiles, airstrike, maser
 
         /// <summary>He is out, not dying, and within range of a world position.</summary>
         private static bool Targetable(Vector3i pos, float range)
@@ -946,30 +803,10 @@ namespace KaijuMod
             return d.Running && !d.Dying && (d.Position - new Vector2(pos.x, pos.z)).sqrMagnitude <= range * range;
         }
 
-        private int FueledCount()
+        /// <summary>The radial menu's commands for a weapon block (Localization blockcommand_*).</summary>
+        public string[] WeaponCommands(string block)
         {
-            int n = 0;
-            foreach (bool f in st.Fueled)
-                if (f)
-                    n++;
-            return n;
-        }
-
-        private int GeneratorIndex(Vector3i pos)
-        {
-            for (int g = 0; g < 3; g++)
-            {
-                Vector3i p;
-                if (st.Weapons.TryGetValue("gen" + (g + 1), out p) && p == pos)
-                    return g;
-            }
-            return -1;
-        }
-
-        /// <summary>The radial menu's command for a weapon block (Localization blockcommand_*).</summary>
-        public string WeaponCommand(string block)
-        {
-            return block == AirstrikeBlock ? "call" : block == GeneratorBlock ? "fuel" : "fire";
+            return block == AirstrikeBlock ? new[] { "call", "take" } : block == MaserBlock ? new[] { "fuel", "fire", "take" } : new[] { "fire", "take" };
         }
 
         /// <summary>What a weapon block says when you look at it.</summary>
@@ -985,32 +822,22 @@ namespace KaijuMod
                         ? (airstrikeFor == KaijuDirector.Instance.Attacking ? "jets on their way" : "target in range, call it in")
                         : "no target");
                 case MaserBlock:
-                    return "Maser cannon: " + (st.MaserUsed ? "burnt out" : FueledCount() < 3 ? "charge " + (FueledCount() * 100 / 3) + "%, fuel the generators"
+                    return "Maser cannon: " + (st.MaserUsed ? "burnt out" : st.MaserCharge < 3 ? "charge " + (st.MaserCharge * 100 / 3) + "%, fuel it (" + FuelPerCharge + " gas each)"
                         : Targetable(pos, MaserRange) ? "charged, target in range" : "charged, no target");
-                case GeneratorBlock:
-                    int g = GeneratorIndex(pos);
-                    return "Maser generator: " + (g >= 0 && st.Fueled[g] ? "fuelled" : "needs " + FuelPerGenerator + " gas");
             }
             return "";
         }
 
-        public void UseWeapon(string block, Vector3i pos, EntityPlayer player)
+        public void UseWeapon(string block, string command, Vector3i pos, EntityPlayer player)
         {
-            switch (block)
-            {
-                case MissileBlock:
-                    FireMissiles(pos, player);
-                    break;
-                case AirstrikeBlock:
-                    CallAirstrike(pos, player);
-                    break;
-                case MaserBlock:
-                    FireMaser(pos, player);
-                    break;
-                case GeneratorBlock:
-                    FuelGenerator(pos, player);
-                    break;
-            }
+            if (command == "fuel")
+                FuelMaser(player);
+            else if (block == MissileBlock)
+                FireMissiles(pos, player);
+            else if (block == AirstrikeBlock)
+                CallAirstrike(pos, player);
+            else if (block == MaserBlock)
+                FireMaser(pos, player);
         }
 
         /// <summary>The launch button: a salvo at him if he is out and in range. It won't stop him.</summary>
@@ -1052,24 +879,23 @@ namespace KaijuMod
             Log.Out("[KaijuMod] Airstrike called from " + pos);
         }
 
-        private void FuelGenerator(Vector3i pos, EntityPlayer player)
+        private void FuelMaser(EntityPlayer player)
         {
-            int g = GeneratorIndex(pos);
-            if (g < 0 || st.Fueled[g])
+            if (st.MaserUsed || st.MaserCharge >= 3)
                 return;
-            if (!GameApi.TakeItem(player, Fuel, FuelPerGenerator))
+            if (!GameApi.TakeItem(player, Fuel, FuelPerCharge))
             {
-                GameApi.Tooltip(player, "It needs " + FuelPerGenerator + " gas.");
+                GameApi.Tooltip(player, "It takes " + FuelPerCharge + " gas.");
                 return;
             }
-            st.Fueled[g] = true;
+            st.MaserCharge++;
             Save();
-            GameApi.Tooltip(player, "Generator running. Maser charge " + (FueledCount() * 100 / 3) + "%.");
+            GameApi.Tooltip(player, "Maser charge " + (st.MaserCharge * 100 / 3) + "%.");
         }
 
         /// <summary>
         /// The maser's one shot: a beam for a few seconds while he staggers, then he turns his breath
-        /// on the cannon and destroys it with its generators.
+        /// on the cannon and destroys it.
         /// </summary>
         private void FireMaser(Vector3i pos, EntityPlayer player)
         {
@@ -1078,9 +904,9 @@ namespace KaijuMod
                 GameApi.Tooltip(player, "Burnt out.");
                 return;
             }
-            if (FueledCount() < 3)
+            if (st.MaserCharge < 3)
             {
-                GameApi.Tooltip(player, "Charge " + (FueledCount() * 100 / 3) + "%: fuel all three generators.");
+                GameApi.Tooltip(player, "Charge " + (st.MaserCharge * 100 / 3) + "%: fuel it first.");
                 return;
             }
             if (!Targetable(pos, MaserRange))
@@ -1091,31 +917,23 @@ namespace KaijuMod
             st.MaserUsed = true;
             Save();
             var dish = new Vector3(pos.x + 0.5f, pos.y + 3f, pos.z + 0.5f);
-            KaijuMaser.Fire(dish, () => KaijuDirector.Instance.Retaliate(dish, MaserRange + 300f, DestroyMaser));
+            KaijuMaser.Fire(dish, () => KaijuDirector.Instance.Retaliate(dish, MaserRange + 300f, () => DestroyMaser(pos)));
             GameApi.Tooltip(player, "Maser firing! Then get clear of it.");
             Log.Out("[KaijuMod] Maser fired from " + pos);
         }
 
-        /// <summary>His breath has reached the cannon: it and its generators go up.</summary>
-        private void DestroyMaser()
+        /// <summary>His breath has reached the cannon: it goes up.</summary>
+        private void DestroyMaser(Vector3i pos)
         {
             World world = GameApi.World;
             if (world == null)
                 return;
-            var gone = new List<Vector3i>();
-            foreach (string key in new[] { "maser", "gen1", "gen2", "gen3" })
-            {
-                Vector3i p;
-                if (st.Weapons.TryGetValue(key, out p))
-                {
-                    gone.Add(p);
-                    var at = new Vector3(p.x + 0.5f, p.y + 1f, p.z + 0.5f);
-                    KaijuEffects.Flash(at, 60f, 6f, 0.8f, new Color(0.6f, 0.8f, 1f));
-                    KaijuEffects.Burst(at, KaijuDirector.Instance.EffectMaterial("KaijuSpark"), KaijuDirector.Instance.EffectMaterial("KaijuSmoke"));
-                    KaijuAudio.MissileHit(at);
-                }
-            }
-            GameApi.ClearBlocks(world, gone);
+            var at = new Vector3(pos.x + 0.5f, pos.y + 1f, pos.z + 0.5f);
+            KaijuEffects.Flash(at, 60f, 6f, 0.8f, new Color(0.6f, 0.8f, 1f));
+            KaijuEffects.Burst(at, KaijuDirector.Instance.EffectMaterial("KaijuSpark"), KaijuDirector.Instance.EffectMaterial("KaijuSmoke"));
+            KaijuAudio.MissileHit(at);
+            if (GameApi.BlockName(world, pos) == MaserBlock)
+                GameApi.ClearBlocks(world, new List<Vector3i> { pos });
             Log.Out("[KaijuMod] The maser cannon is destroyed");
         }
 
@@ -1285,14 +1103,7 @@ namespace KaijuMod
                 e.SetAttribute("radiation", st.RadiationOn ? "1" : "0");
                 e.SetAttribute("complete", st.Complete ? "1" : "0");
                 e.SetAttribute("maserUsed", st.MaserUsed ? "1" : "0");
-                e.SetAttribute("fueled", (st.Fueled[0] ? "1" : "0") + (st.Fueled[1] ? "1" : "0") + (st.Fueled[2] ? "1" : "0"));
-                foreach (var w in st.Weapons)
-                {
-                    var r = doc.CreateElement("weapon");
-                    r.SetAttribute("key", w.Key);
-                    r.SetAttribute("pos", w.Value.x + "," + w.Value.y + "," + w.Value.z);
-                    e.AppendChild(r);
-                }
+                e.SetAttribute("maserCharge", st.MaserCharge.ToString(CultureInfo.InvariantCulture));
                 e.SetAttribute("finale", st.FinaleActive ? "1" : "0");
                 e.SetAttribute("outcome", st.Outcome);
                 foreach (string name in st.Ruined)
@@ -1354,11 +1165,8 @@ namespace KaijuMod
                 st.RadiationOn = e.GetAttribute("radiation") != "0";
                 st.Complete = e.GetAttribute("complete") == "1";
                 st.MaserUsed = e.GetAttribute("maserUsed") == "1";
-                string fueled = e.GetAttribute("fueled") ?? "";
-                for (int g = 0; g < st.Fueled.Length && g < fueled.Length; g++)
-                    st.Fueled[g] = fueled[g] == '1';
-                foreach (XmlElement r in e.SelectNodes("weapon"))
-                    st.Weapons[r.GetAttribute("key")] = ParseV3i(r.GetAttribute("pos"));
+                int charge;
+                st.MaserCharge = int.TryParse(e.GetAttribute("maserCharge"), NumberStyles.Integer, CultureInfo.InvariantCulture, out charge) ? charge : 0;
                 st.FinaleActive = e.GetAttribute("finale") == "1";
                 st.Outcome = e.GetAttribute("outcome") ?? "";
                 foreach (XmlElement r in e.SelectNodes("ruined"))

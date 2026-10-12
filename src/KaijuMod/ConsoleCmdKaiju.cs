@@ -31,9 +31,9 @@ namespace KaijuMod
                 + "  kaiju version        the mod's version (from ModInfo.xml)\n"
                 + "  kaiju run [reset]    The Run status: day, strip, radiation front, next attack (reset starts it over: clears radiation and clouds)\n"
                 + "  kaiju attack <city|start|end|finale>  send him at a city now (a name from kaiju.xml; start starts The Run over, clearing radiation and clouds; end is this strip's end city; or the final attack, where dropping the Oxygen Destroyer on him wins)\n"
-                + "  kaiju parts          Oxygen Destroyer parts: where each crate is, which you carry, the missile battery, device and finale state\n"
+                + "  kaiju parts          weapon parts: which town each crate is in, which you carry, the maser, device and finale state\n"
                 + "  kaiju style <minusone|classic>  city attacks: one city-destroying blast (default), or six breaths along the streets\n"
-                + "  kaiju give <1-5|all|device>  put Oxygen Destroyer parts, or the device itself, in your backpack (testing)\n"
+                + "  kaiju give <1-12|all|device>  put weapon parts (see kaiju parts), or the Oxygen Destroyer itself, in your backpack (testing)\n"
                 + "  kaiju radiation <on|off>  turn the radiation chase on or off\n"
                 + "  kaiju start          walk this session's recorded waypoints, else route.txt, else the built-in list\n"
                 + "  kaiju test [dist]    walk a straight line from dist m in front of you, through you (default 120)\n"
@@ -158,10 +158,10 @@ namespace KaijuMod
                     {
                         for (int i = 0; i < KaijuRun.Parts; i++)
                             KaijuRun.Instance.GivePart(i);
-                        GameApi.ConsoleOut("Gave all " + KaijuRun.Parts + " Oxygen Destroyer parts.");
+                        GameApi.ConsoleOut("Gave all " + KaijuRun.Parts + " weapon parts.");
                     }
                     else if (int.TryParse(arg, out n) && n >= 1 && n <= KaijuRun.Parts)
-                        GameApi.ConsoleOut(KaijuRun.Instance.GivePart(n - 1) ? "Gave Oxygen Destroyer part " + n + "." : "Could not give it (backpack full?).");
+                        GameApi.ConsoleOut(KaijuRun.Instance.GivePart(n - 1) ? "Gave part " + n + "." : "Could not give it (backpack full?).");
                     else
                         GameApi.ConsoleOut("Usage: kaiju give <1-" + KaijuRun.Parts + "|all|device>");
                     break;

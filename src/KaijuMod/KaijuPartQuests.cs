@@ -5,11 +5,11 @@ using UnityEngine;
 namespace KaijuMod
 {
     /// <summary>
-    /// The trader in each part city offers a special quest for that city's Oxygen Destroyer part,
-    /// at the top of their job list: go to the part's military site (map marker), get the part,
-    /// return to the trader. Quests kaijuPart1-5 in Config/quests.xml, built from vanilla
+    /// The trader in each town of the burnt, desert, snow and wasteland strips offers a special quest
+    /// for that town's weapon part, at the top of their job list: go to the marked building in town,
+    /// get the part, return to the trader. Quests kaijuPart1-12 in Config/quests.xml, built from vanilla
     /// objectives (Goto at a preset position, FetchKeep, ReturnToNPC, InteractWithNPC). Not offered
-    /// once the part is held, the device is built or armed, the crate is emptied, or the quest is
+    /// once the part or its weapon is held, the crate is emptied, or the quest is
     /// active or done. Works in any world with a kaiju.xml.
     /// </summary>
     public static class KaijuPartQuests
@@ -59,7 +59,7 @@ namespace KaijuMod
                     if (q == null)
                         return;
                     __result.Insert(0, q);
-                    Log.Out("[KaijuMod] " + __instance.EntityName + " offers the Oxygen Destroyer part " + (part + 1) + " quest");
+                    Log.Out("[KaijuMod] " + __instance.EntityName + " offers the " + KaijuRun.PartItem(part) + " quest");
                 }
                 catch (System.Exception e)
                 {

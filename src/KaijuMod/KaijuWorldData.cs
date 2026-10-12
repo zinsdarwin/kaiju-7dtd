@@ -68,6 +68,12 @@ namespace KaijuMod
             return Settlements.Find(s => s.Role == "end" && s.Strip == strip);
         }
 
+        /// <summary>The towns (not cities) of a strip, in kaiju.xml order.</summary>
+        public List<Settlement> Towns(int strip)
+        {
+            return Settlements.FindAll(s => s.Kind == "town" && s.Strip == strip);
+        }
+
         /// <summary>A settlement by name, case-insensitive, or null.</summary>
         public Settlement Find(string name)
         {

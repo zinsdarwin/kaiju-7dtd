@@ -42,17 +42,19 @@ The game's random world generator can't make this layout, so it is a custom worl
 ### The atomic breath
 His breath ends in an atomic blast, as in Minus One: flash, shockwave, a crater much wider than the beam, and a mushroom cloud a few hundred metres tall. He uses it on each city he attacks.
 
-### The finale: the Oxygen Destroyer
-Part of The Run. Decided by Darwin 2026-10-03.
+### Weapons and the finale
+Part of The Run. Decided by Darwin 2026-10-03, reworked 2026-10-10 and 2026-10-11.
 
-- Five parts of the Oxygen Destroyer, one in a glowing crate in the army post up the mountains north of each end city (Cedar Harbor, Cinder Bay, Dune Point, Frostport, Ashmouth). You hole up there for the blood moon and watch him hit the city at dawn. Each crate holds a field note pointing to the next post; each part city's trader offers the part as a quest.
-- The army post above Cinder Bay (end of the burnt forest) has a missile battery: its launch control, next to the part crate, fires a salvo of missiles at him while he attacks. They don't stop him; he roars and stops for a moment. One salvo every 30 s. (Decided by Darwin 2026-10-10.)
-- Bigger weapons further along (decided by Darwin 2026-10-10). None of them stops the attack:
-  - The post above Dune Point (desert) has a radio. Calling in an airstrike sends three jets in from the sea. They carpet-bomb a line of explosions across him, turn and make a second pass, and he staggers. Once per attack.
-  - The post above Frostport (snow) has an experimental maser cannon with three generators. Fuel each with 25 gas to charge it. Its one shot is a crackling beam for 6 s while he staggers. Then he turns his breath on the cannon and destroys it, so get clear.
+- Each strip after the pine forest has a weapon for its end-city attack, built from parts found in that strip's towns. Each of the 3 towns has one part, in a glowing crate in a building near its middle. The town's trader offers it as a quest at the top of the job list. Craft the weapon at a workbench from its 3 parts and place it anywhere in range, e.g. the army post in the mountains north of the end city, where you hole up for the blood moon. None of the weapons stops the attack:
+  - Burnt forest (Cinder Bay): a missile battery launch control. It fires a salvo of 8 missiles that arc onto him; he roars and stops for a moment. One salvo every 30 s.
+  - Desert (Dune Point): an airstrike radio. Three jets come in from the sea, carpet-bomb a line of explosions across him, turn and make a second pass, and he staggers. Once per attack.
+  - Snow (Frostport): an experimental maser cannon. Fuel it with 25 gas three times to charge it. Its one shot is a crackling beam for 6 s while he staggers. Then he turns his breath on the cannon and destroys it, so get clear.
+  - Wasteland (Ashmouth): the Oxygen Destroyer.
+- The pine forest has no weapon: Cedar Harbor gets the plain attack.
+- Two of the snow quests also reward the gyrocopter chassis and accessories: assemble a gyrocopter at a workbench before the last blood moon.
+- The finale: when the final blood moon horde ends, Godzilla attacks Ashmouth, walking slower than in the other attacks. Fly the gyrocopter over him with the Oxygen Destroyer aboard and drop it on him (right mouse button). It falls, its fins steer it onto him, and he dies (death sequence, run won). A miss doesn't go off, and the device comes back to you to try again. If the attack ends without a hit, Ashmouth falls and the run is lost.
 - Dune Point is filled with tier 3-4 POIs, and Frostport has deeper blocks filled with tier 4-5 POIs (factories, hospital, stadium...).
-- The Frostport crate also holds a gyrocopter chassis and accessories: assemble a gyrocopter at a workbench before the last blood moon.
-- Craft the Oxygen Destroyer at a workbench from the five parts. When the final blood moon horde ends, Godzilla attacks Ashmouth, walking slower than in the other attacks. Fly the gyrocopter over him with the device aboard and drop it on him (right mouse button): it falls, its fins steer it onto him, and he dies (death sequence, run won). A miss doesn't go off and the device comes back to you to try again. If the attack ends without a hit, Ashmouth falls and the run is lost. (Decided by Darwin 2026-10-10; replaces placing and arming the device in the city.)
+- G-cell zombies: the fallout carries Godzilla's cells, and the dead it touches get back up. That's the outbreak's story, told in Duke's note. The game's radiated zombies glow his atomic blue instead of green.
 
 ## Architecture
 

@@ -1,74 +1,150 @@
 <configs>
-	<!-- Oxygen Destroyer parts: one in a glowing crate in a military site by each end city.
-	     Quest-style: not sold to traders, not scrappable, one per stack. -->
+	<!-- Weapon parts: one in a glowing crate in each town of the burnt, desert, snow and wasteland
+	     strips, offered as a quest by the town's trader. Not sold, not scrappable, one per stack. -->
 	<append xpath="/items">
-		<item name="kaijuOxygenDestroyerPart1">
+		<item name="kaijuMissilePart1">
 			<property name="Extends" value="resourceElectricParts"/>
 			<property name="Tags" value="kaijuPart"/>
-			<property name="CustomIcon" value="resourceElectricParts"/>
 			<property name="CustomIconTint" value="7fd4ff"/>
-			<property name="DescriptionKey" value="kaijuOxygenDestroyerPart1Desc"/>
 			<property name="Stacknumber" value="1"/>
 			<property name="EconomicValue" value="0"/>
 			<property name="SellableToTrader" value="false"/>
 			<property name="NoScrapping" value="true"/>
 			<property name="CreativeMode" value="Dev"/>
+			<property name="CustomIcon" value="resourceElectricParts"/>
+			<property name="DescriptionKey" value="kaijuMissilePart1Desc"/>
+		</item>
+		<item name="kaijuMissilePart2">
+			<property name="Extends" value="resourceElectricParts"/>
+			<property name="Tags" value="kaijuPart"/>
+			<property name="CustomIconTint" value="7fd4ff"/>
+			<property name="Stacknumber" value="1"/>
+			<property name="EconomicValue" value="0"/>
+			<property name="SellableToTrader" value="false"/>
+			<property name="NoScrapping" value="true"/>
+			<property name="CreativeMode" value="Dev"/>
+			<property name="CustomIcon" value="resourceMetalPipe"/>
+			<property name="DescriptionKey" value="kaijuMissilePart2Desc"/>
+		</item>
+		<item name="kaijuMissilePart3">
+			<property name="Extends" value="resourceElectricParts"/>
+			<property name="Tags" value="kaijuPart"/>
+			<property name="CustomIconTint" value="7fd4ff"/>
+			<property name="Stacknumber" value="1"/>
+			<property name="EconomicValue" value="0"/>
+			<property name="SellableToTrader" value="false"/>
+			<property name="NoScrapping" value="true"/>
+			<property name="CreativeMode" value="Dev"/>
+			<property name="CustomIcon" value="ammoRocketHE"/>
+			<property name="DescriptionKey" value="kaijuMissilePart3Desc"/>
+		</item>
+		<item name="kaijuAirstrikePart1">
+			<property name="Extends" value="resourceElectricParts"/>
+			<property name="Tags" value="kaijuPart"/>
+			<property name="CustomIconTint" value="7fd4ff"/>
+			<property name="Stacknumber" value="1"/>
+			<property name="EconomicValue" value="0"/>
+			<property name="SellableToTrader" value="false"/>
+			<property name="NoScrapping" value="true"/>
+			<property name="CreativeMode" value="Dev"/>
+			<property name="CustomIcon" value="resourceElectricParts"/>
+			<property name="DescriptionKey" value="kaijuAirstrikePart1Desc"/>
+		</item>
+		<item name="kaijuAirstrikePart2">
+			<property name="Extends" value="resourceElectricParts"/>
+			<property name="Tags" value="kaijuPart"/>
+			<property name="CustomIconTint" value="7fd4ff"/>
+			<property name="Stacknumber" value="1"/>
+			<property name="EconomicValue" value="0"/>
+			<property name="SellableToTrader" value="false"/>
+			<property name="NoScrapping" value="true"/>
+			<property name="CreativeMode" value="Dev"/>
+			<property name="CustomIcon" value="resourceMetalPipe"/>
+			<property name="DescriptionKey" value="kaijuAirstrikePart2Desc"/>
+		</item>
+		<item name="kaijuAirstrikePart3">
+			<property name="Extends" value="resourceElectricParts"/>
+			<property name="Tags" value="kaijuPart"/>
+			<property name="CustomIconTint" value="7fd4ff"/>
+			<property name="Stacknumber" value="1"/>
+			<property name="EconomicValue" value="0"/>
+			<property name="SellableToTrader" value="false"/>
+			<property name="NoScrapping" value="true"/>
+			<property name="CreativeMode" value="Dev"/>
+			<property name="CustomIcon" value="resourcePaper"/>
+			<property name="DescriptionKey" value="kaijuAirstrikePart3Desc"/>
+		</item>
+		<item name="kaijuMaserPart1">
+			<property name="Extends" value="resourceElectricParts"/>
+			<property name="Tags" value="kaijuPart"/>
+			<property name="CustomIconTint" value="7fd4ff"/>
+			<property name="Stacknumber" value="1"/>
+			<property name="EconomicValue" value="0"/>
+			<property name="SellableToTrader" value="false"/>
+			<property name="NoScrapping" value="true"/>
+			<property name="CreativeMode" value="Dev"/>
+			<property name="CustomIcon" value="resourceElectricParts"/>
+			<property name="DescriptionKey" value="kaijuMaserPart1Desc"/>
+		</item>
+		<item name="kaijuMaserPart2">
+			<property name="Extends" value="resourceElectricParts"/>
+			<property name="Tags" value="kaijuPart"/>
+			<property name="CustomIconTint" value="7fd4ff"/>
+			<property name="Stacknumber" value="1"/>
+			<property name="EconomicValue" value="0"/>
+			<property name="SellableToTrader" value="false"/>
+			<property name="NoScrapping" value="true"/>
+			<property name="CreativeMode" value="Dev"/>
+			<property name="CustomIcon" value="carBattery"/>
+			<property name="DescriptionKey" value="kaijuMaserPart2Desc"/>
+		</item>
+		<item name="kaijuMaserPart3">
+			<property name="Extends" value="resourceElectricParts"/>
+			<property name="Tags" value="kaijuPart"/>
+			<property name="CustomIconTint" value="7fd4ff"/>
+			<property name="Stacknumber" value="1"/>
+			<property name="EconomicValue" value="0"/>
+			<property name="SellableToTrader" value="false"/>
+			<property name="NoScrapping" value="true"/>
+			<property name="CreativeMode" value="Dev"/>
+			<property name="CustomIcon" value="resourceSpring"/>
+			<property name="DescriptionKey" value="kaijuMaserPart3Desc"/>
+		</item>
+		<item name="kaijuOxygenDestroyerPart1">
+			<property name="Extends" value="resourceElectricParts"/>
+			<property name="Tags" value="kaijuPart"/>
+			<property name="CustomIconTint" value="7fd4ff"/>
+			<property name="Stacknumber" value="1"/>
+			<property name="EconomicValue" value="0"/>
+			<property name="SellableToTrader" value="false"/>
+			<property name="NoScrapping" value="true"/>
+			<property name="CreativeMode" value="Dev"/>
+			<property name="CustomIcon" value="resourceElectricParts"/>
+			<property name="DescriptionKey" value="kaijuOxygenDestroyerPart1Desc"/>
 		</item>
 		<item name="kaijuOxygenDestroyerPart2">
-			<property name="Extends" value="kaijuOxygenDestroyerPart1"/>
+			<property name="Extends" value="resourceElectricParts"/>
+			<property name="Tags" value="kaijuPart"/>
+			<property name="CustomIconTint" value="7fd4ff"/>
+			<property name="Stacknumber" value="1"/>
+			<property name="EconomicValue" value="0"/>
+			<property name="SellableToTrader" value="false"/>
+			<property name="NoScrapping" value="true"/>
+			<property name="CreativeMode" value="Dev"/>
 			<property name="CustomIcon" value="resourceMechanicalParts"/>
 			<property name="DescriptionKey" value="kaijuOxygenDestroyerPart2Desc"/>
 		</item>
 		<item name="kaijuOxygenDestroyerPart3">
-			<property name="Extends" value="kaijuOxygenDestroyerPart1"/>
-			<property name="CustomIcon" value="resourceRadiator"/>
-			<property name="DescriptionKey" value="kaijuOxygenDestroyerPart3Desc"/>
-		</item>
-		<item name="kaijuOxygenDestroyerPart4">
-			<property name="Extends" value="kaijuOxygenDestroyerPart1"/>
-			<property name="CustomIcon" value="resourceSpring"/>
-			<property name="DescriptionKey" value="kaijuOxygenDestroyerPart4Desc"/>
-		</item>
-		<!-- Field notes found with each part: where the next part is (Localization kaijuPartNoteNDesc). -->
-		<item name="kaijuPartNote1">
-			<property name="Extends" value="blankNoteMaster"/>
-			<property name="CreativeMode" value="Dev"/>
-			<property name="DescriptionKey" value="readTheNote"/>
-			<property name="CustomIcon" value="challengeQuestMaster"/>
+			<property name="Extends" value="resourceElectricParts"/>
+			<property name="Tags" value="kaijuPart"/>
 			<property name="CustomIconTint" value="7fd4ff"/>
-			<property name="NoScrapping" value="true"/>
+			<property name="Stacknumber" value="1"/>
+			<property name="EconomicValue" value="0"/>
 			<property name="SellableToTrader" value="false"/>
-			<property name="SoundPickup" value="map_grab"/>
-			<property name="SoundPlace" value="map_place"/>
-			<property class="Action0">
-				<property name="Class" value="Eat"/>
-				<property name="Delay" value="1.0"/>
-				<property name="Sound_start" value="read_mod"/>
-				<property name="Sound_in_head" value="true"/>
-				<property name="PromptTitle" value="kaijuPartNote"/>
-				<property name="PromptDescription" value="kaijuPartNote1Desc"/>
-			</property>
-		</item>
-		<item name="kaijuPartNote2">
-			<property name="Extends" value="kaijuPartNote1"/>
-			<property class="Action0"><property name="PromptDescription" value="kaijuPartNote2Desc"/></property>
-		</item>
-		<item name="kaijuPartNote3">
-			<property name="Extends" value="kaijuPartNote1"/>
-			<property class="Action0"><property name="PromptDescription" value="kaijuPartNote3Desc"/></property>
-		</item>
-		<item name="kaijuPartNote4">
-			<property name="Extends" value="kaijuPartNote1"/>
-			<property class="Action0"><property name="PromptDescription" value="kaijuPartNote4Desc"/></property>
-		</item>
-		<item name="kaijuPartNote5">
-			<property name="Extends" value="kaijuPartNote1"/>
-			<property class="Action0"><property name="PromptDescription" value="kaijuPartNote5Desc"/></property>
-		</item>
-		<item name="kaijuOxygenDestroyerPart5">
-			<property name="Extends" value="kaijuOxygenDestroyerPart1"/>
+			<property name="NoScrapping" value="true"/>
+			<property name="CreativeMode" value="Dev"/>
 			<property name="CustomIcon" value="resourceAcid"/>
-			<property name="DescriptionKey" value="kaijuOxygenDestroyerPart5Desc"/>
+			<property name="DescriptionKey" value="kaijuOxygenDestroyerPart3Desc"/>
 		</item>
 	</append>
 </configs>

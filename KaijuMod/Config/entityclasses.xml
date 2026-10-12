@@ -1,0 +1,6 @@
+<configs>
+	<!-- G-cell zombies: the fallout carries Godzilla's cells and the dead it touches get back up, so
+	     the radiated zombies glow his atomic blue instead of green (MatColor "radiated" sets their
+	     _EmissiveColor; alpha + 1 is the emissive power). -->
+	<set xpath="/entity_classes/color[@name='radiated']/@value">0.2,0.65,1.6, 0.3</set>
+</configs>
