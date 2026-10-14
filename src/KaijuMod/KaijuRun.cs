@@ -637,7 +637,12 @@ namespace KaijuMod
                         st.Weapons.Remove(WeaponKeys[w]);
                         Log.Out("[KaijuMod] " + WeaponBlocks[w] + " moved out of the post at " + spot);
                     }
-                    if (!FindFrontSpot(world, wsite, WeaponAcross[w], WeaponOnDesk[w] ? 1 : WeaponClear[w], out spot))
+                    // The maser dish wants clear flat ground around it; take less room rather than none.
+                    int clear = WeaponOnDesk[w] ? 1 : WeaponClear[w];
+                    bool found = false;
+                    for (int c = clear; c >= 0 && !found; c--)
+                        found = FindFrontSpot(world, wsite, WeaponAcross[w], c, out spot);
+                    if (!found)
                         continue;
                     if (WeaponOnDesk[w] && GameApi.PlaceBlock(world, spot, DeskBlock))
                         spot = new Vector3i(spot.x, spot.y + 1, spot.z);
