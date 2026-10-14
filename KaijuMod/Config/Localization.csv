@@ -109,4 +109,15 @@ kaijuMaserDishDesc,"Scenery for the maser cannon: place it beside the cannon's c
 blockcommand_fire,"Fire"
 blockcommand_call,"Call in"
 blockcommand_fuel,"Fuel"
-noteDuke01Desc,"We must find a way to stop Godzilla! The fallout he leaves carries his cells, and the dead it touches get back up. That's where they came from, and why they glow like he does. Head east along the road through the forest. The army had a post up in the mountains north of Cedar Harbor, at the far end of it. Get there before the blood moon and hole up there for the night. You'll know he's coming by the horde that comes before him.\n\nAsk the traders along the way about army gear: they know where the pieces are.\n\nThe Duke"
+noteDuke01,"Note from the Disaster Response Bureau"
+noteDuke01Desc,"To any survivor near Port Hemlock: we must find a way to stop Godzilla. The fallout he leaves carries his cells, and the dead it touches get back up. That's where they came from, and why they glow like he does.
+
+Get on your bike and head east along the road through the forest. The army had a post up in the mountains north of Cedar Harbor, at the far end of it. Get there before the blood moon and hole up there for the night. You'll know he's coming by the horde that comes before him.
+
+Ask the traders along the way about army gear: they know where the pieces are.
+
+Kenji Noda, Director
+Large-Scale Disaster Response Bureau"
+buffDukeNoteName,"Read the note from the Disaster Response Bureau"
+buffDukeNoteDesc,"Reading the note from the Disaster Response Bureau or reaching level 2 will dismiss this buff."
+buffDukeNoteToolTip,"[00FF00]The Disaster Response Bureau left you a note to read[-]"

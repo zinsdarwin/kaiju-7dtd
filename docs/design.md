@@ -15,7 +15,7 @@ A survival run across a custom snake-shaped map, one biome per 7-day blood moon 
 
 1. **Day 1.** You spawn in the pine forest at the bottom left of the map, just east of a big coastal city. Godzilla comes out of the western ocean and destroys that city.
 2. **The chase.** Radiation spreads east from the ruined city and chases you along the strip. You have 7 days to loot your way to the big city at the strip's east end.
-3. **Blood moon.** You survive the horde in or near the east city. An in-game hour after the horde ends (Duke's note warns that the horde comes before him), Godzilla comes out of the eastern ocean and destroys that city.
+3. **Blood moon.** You survive the horde in or near the east city. An in-game hour after the horde ends (the Disaster Response Bureau's note warns that the horde comes before him), Godzilla comes out of the eastern ocean and destroys that city.
 4. **The escape.** You have a few hours after the horde to get north through the mountain pass into the burnt forest.
 5. **Repeat.** The radiation now chases you west along the burnt strip to its west-end city, Godzilla hits it after the next horde, and so on through all five biomes.
 
@@ -54,7 +54,7 @@ Part of The Run. Decided by Darwin 2026-10-03, reworked 2026-10-10 and 2026-10-1
 - Two of the snow quests also reward the gyrocopter chassis and accessories: assemble a gyrocopter at a workbench before the last blood moon.
 - The finale: when the final blood moon horde ends, Godzilla attacks Ashmouth, walking slower than in the other attacks. Fly the gyrocopter over him with the Oxygen Destroyer aboard and drop it on him (right mouse button). It falls, its fins steer it onto him, and he dies (death sequence, run won). A miss doesn't go off, and the device comes back to you to try again. If the attack ends without a hit, Ashmouth falls and the run is lost.
 - POI tiers climb along the run (decided by Darwin 2026-10-13). Every town and city in a strip fills its lots from its biome's band first: pine 1-2, burnt 2-3, desert 3-4, snow 4-5, wasteland 4-5. Other tiers only fill gaps. The snow and wasteland settlements have deeper blocks so the 100 m tier 4-5 POIs fit. Ashmouth is the big tier 5 city: every big tier 5 landmark (Dishong Tower, Crack-a-Book HQ, Higashi Pharmaceutical, Vanity Tower...) and then more tier 5.
-- G-cell zombies: the fallout carries Godzilla's cells, and the dead it touches get back up. That's the outbreak's story, told in Duke's note. The vanilla tiers are stages of infection (decided by Darwin 2026-10-13):
+- G-cell zombies: the fallout carries Godzilla's cells, and the dead it touches get back up. That's the outbreak's story, told in the starting note from the Large-Scale Disaster Response Bureau (Godzilla Minus Zero's response agency, director Kenji Noda). You also start with your bike: you were out camping with it when he came. The vanilla tiers are stages of infection (decided by Darwin 2026-10-13):
   - Normal and feral zombies are darkened, with patches of black scales.
   - Radiated, charged and infernal zombies have more scales each stage, darker skin, and his atomic blue glow, brighter each stage. The skins are made in code from each zombie's own texture.
   - Radiated, charged and infernal zombies now and then spit a small atomic breath at you (a blue bolt you can dodge; range, damage and frequency rise by stage).

@@ -6,4 +6,7 @@
 	<set xpath="/entity_classes/color[@name='radiated']/@value">0.2,0.65,1.6, 0.3</set>
 	<set xpath="/entity_classes/color[@name='charged']/@value">0.3,0.75,2.2, 0.6</set>
 	<set xpath="/entity_classes/color[@name='infernal']/@value">0.55,0.85,3, 1</set>
+	<!-- You were out camping with your bike when he came: start with it (the vanilla placeable bicycle). -->
+	<set xpath="/entity_classes/entity_class[@name='playerMale']/property[@class='ItemsOnEnterGame']/property[@name='GameModeSurvival']/@value">drinkJarBoiledWater=2,foodCanChili,medicalFirstAidBandage,meleeToolTorch,noteDuke01,vehicleBicyclePlaceable</set>
+	<set xpath="/entity_classes/entity_class[@name='playerMale']/property[@class='ItemsOnEnterGame']/property[@name='GameModeSurvivalSP']/@value">drinkJarBoiledWater,foodCanChili,medicalFirstAidBandage,meleeToolTorch,vehicleBicyclePlaceable</set>
 </configs>

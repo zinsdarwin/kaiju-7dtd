@@ -33,7 +33,7 @@ namespace KaijuMod
                 + "  kaiju attack <city|start|end|finale>  send him at a city now (a name from kaiju.xml; start starts The Run over, clearing radiation and clouds; end is this strip's end city; or the final attack, where dropping the Oxygen Destroyer on him wins)\n"
                 + "  kaiju parts          weapon parts: which town each crate is in, which you carry, the maser, device and finale state\n"
                 + "  kaiju style <minusone|classic>  city attacks: one city-destroying blast (default), or six breaths along the streets\n"
-                + "  kaiju give <1-12|all|device>  put weapon parts (see kaiju parts), or the Oxygen Destroyer itself, in your backpack (testing)\n"
+                + "  kaiju give <1-12|all|device|bike>  put weapon parts (see kaiju parts), the Oxygen Destroyer, or a bicycle in your backpack\n"
                 + "  kaiju gcell [Joe|FatCop|Arlene...]  spawn one of each G-cell stage (normal, feral, radiated, charged, infernal) in front of you\n"
                 + "  kaiju zbreath <on|off>  G-cell zombies' atomic breath\n"
                 + "  kaiju zblast <on|off>   G-cell zombies blowing up when they die\n"
@@ -152,7 +152,12 @@ namespace KaijuMod
                 {
                     string arg = _params.Count > 1 ? _params[1].ToLowerInvariant() : "";
                     int n;
-                    if (arg == "device")
+                    if (arg == "bike")
+                    {
+                        var me = GameApi.LocalPlayer(GameApi.World);
+                        GameApi.ConsoleOut(me != null && GameApi.GiveItem(me, "vehicleBicyclePlaceable") ? "Gave a bicycle." : "Could not give it (backpack full?).");
+                    }
+                    else if (arg == "device")
                     {
                         var me = GameApi.LocalPlayer(GameApi.World);
                         GameApi.ConsoleOut(me != null && GameApi.GiveItem(me, KaijuRun.DeviceItem) ? "Gave the Oxygen Destroyer." : "Could not give it (backpack full?).");
@@ -166,7 +171,7 @@ namespace KaijuMod
                     else if (int.TryParse(arg, out n) && n >= 1 && n <= KaijuRun.Parts)
                         GameApi.ConsoleOut(KaijuRun.Instance.GivePart(n - 1) ? "Gave part " + n + "." : "Could not give it (backpack full?).");
                     else
-                        GameApi.ConsoleOut("Usage: kaiju give <1-" + KaijuRun.Parts + "|all|device>");
+                        GameApi.ConsoleOut("Usage: kaiju give <1-" + KaijuRun.Parts + "|all|device|bike>");
                     break;
                 }
                 case "zbreath":
