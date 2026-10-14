@@ -27,10 +27,11 @@ namespace KaijuMod
         private static float timer, blastWindow;
         private static int blastsThisWindow;
 
+        // Zombies whose skins have been checked (the model hook does most; this catches the rest).
+        private static readonly HashSet<int> skinned = new HashSet<int>();
+
         public static void Tick(float dt)
         {
-            if (!BreathOn && !BlastOn)
-                return;
             timer += dt;
             if (timer < 0.25f)
                 return;
@@ -53,11 +54,17 @@ namespace KaijuMod
                 if (z == null || z.EntityClass == null)
                     continue;
                 int stage = KaijuGCell.StageOf(z.EntityClass.entityClassName);
-                if (stage < 2)
-                    continue;
                 Vector3 zp = z.position;
                 float dist = Vector3.Distance(zp, pp);
                 if (dist > WatchRange)
+                    continue;
+                // VERIFIED (V3.3): Entity.emodel is the entity's EModelBase.
+                if (KaijuGCell.SkinsOn && z.emodel != null && !skinned.Contains(z.entityId) && KaijuGCell.Ready)
+                {
+                    skinned.Add(z.entityId);
+                    KaijuGCell.Apply(z.emodel.gameObject, z.EntityClass.entityClassName);
+                }
+                if (stage < 2 || (!BreathOn && !BlastOn))
                     continue;
                 if (z.IsDead())
                 {
@@ -82,8 +89,9 @@ namespace KaijuMod
                 nextBreath[z.entityId] = Time.time + BreathCooldown[stage] * Random.Range(0.8f, 1.25f);
                 ZombieBolt.Fire(z.getHeadPosition(), player, BreathDamage[stage], stage);
             }
-            if (nextBreath.Count > 500 || blasted.Count > 2000)
+            if (nextBreath.Count > 500 || blasted.Count > 2000 || skinned.Count > 5000)
             {
+                skinned.Clear();
                 nextBreath.Clear();
                 blasted.Clear();
             }

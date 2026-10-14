@@ -15,14 +15,17 @@ namespace KaijuMod
     public static class KaijuGCell
     {
         /// <summary>Per stage (0 normal, 1 feral, 2 radiated, 3 charged, 4 infernal): how dark the skin goes and how much is scales.</summary>
-        public static readonly float[] Darken = { 0.25f, 0.32f, 0.45f, 0.58f, 0.72f };
-        public static readonly float[] Coverage = { 0.18f, 0.26f, 0.42f, 0.6f, 0.82f };
+        public static readonly float[] Darken = { 0.42f, 0.5f, 0.6f, 0.7f, 0.82f };
+        public static readonly float[] Coverage = { 0.32f, 0.4f, 0.55f, 0.7f, 0.88f };
         /// <summary>Largest texture side the scale pass works at (zombie textures are scaled down to this).</summary>
         public static int MaxSize = 512;
         /// <summary>`kaiju gcell skins off` leaves zombies' own skins (each new skin costs a moment's work when it first appears).</summary>
         public static bool SkinsOn = true;
-        // New skins made at most this often, seconds; zombies spawned meanwhile keep their own skin.
+        // New skins made at most this often, seconds; zombies spawned meanwhile keep their own skin
+        // until the zombie tick checks them again.
         private static float nextSkin;
+        /// <summary>True when a new skin may be made now (the zombie tick waits for this before checking a zombie).</summary>
+        public static bool Ready { get { return Time.realtimeSinceStartup >= nextSkin; } }
         public static float SkinInterval = 0.5f;
 
         // Processed textures, by source texture and stage.
@@ -53,28 +56,60 @@ namespace KaijuMod
                 {
                     if (!SkinsOn || __instance == null || _ec == null || _ec.entityClassName == null || !_ec.entityClassName.StartsWith("zombie"))
                         return;
-                    int stage = StageOf(_ec.entityClassName);
-                    foreach (var r in __instance.GetComponentsInChildren<SkinnedMeshRenderer>(true))
-                    {
-                        if (!r.CompareTag("LOD"))
-                            continue;
-                        foreach (var m in r.materials)
-                        {
-                            string prop = m.HasProperty("_ZombieColor") ? "_ZombieColor" : m.HasProperty("_Albedo") ? "_Albedo" : null;
-                            var tex = prop != null ? m.GetTexture(prop) : null;
-                            if (tex == null)
-                                continue;
-                            var g = Infect(tex, stage);
-                            if (g != null)
-                                m.SetTexture(prop, g);
-                        }
-                    }
+                    Apply(__instance.gameObject, _ec.entityClassName);
                 }
                 catch (System.Exception e)
                 {
                     Log.Warning("[KaijuMod] G-cell skin skipped: " + e.Message);
                 }
             }
+        }
+
+        // Skin texture properties, the game's zombie shader first (DismembermentManager), then common ones.
+        private static readonly string[] SkinProps = { "_ZombieColor", "_Albedo", "_MainTex", "_BaseColorMap", "_BaseMap" };
+        private static readonly HashSet<string> reported = new HashSet<string>();
+        private static readonly HashSet<Texture> made = new HashSet<Texture>();
+
+        /// <summary>Darkens and scales the skin of every renderer of a zombie's model; logs once per zombie type what it did.</summary>
+        public static void Apply(GameObject model, string className)
+        {
+            int stage = StageOf(className);
+            int renderers = 0, textured = 0, done = 0;
+            string shaders = "";
+            foreach (var r in model.GetComponentsInChildren<Renderer>(true))
+            {
+                if (!(r is SkinnedMeshRenderer) && !(r is MeshRenderer))
+                    continue;
+                renderers++;
+                foreach (var m in r.materials)
+                {
+                    if (m == null)
+                        continue;
+                    if (shaders.Length < 120 && m.shader != null && shaders.IndexOf(m.shader.name) < 0)
+                        shaders += m.shader.name + " ";
+                    foreach (string prop in SkinProps)
+                    {
+                        if (!m.HasProperty(prop))
+                            continue;
+                        var tex = m.GetTexture(prop);
+                        if (tex == null)
+                            continue;
+                        if (made.Contains(tex))
+                            break; // already infected
+                        textured++;
+                        var g = Infect(tex, stage);
+                        if (g != null)
+                        {
+                            m.SetTexture(prop, g);
+                            done++;
+                        }
+                        break;
+                    }
+                }
+            }
+            if (reported.Add(className))
+                Log.Out("[KaijuMod] G-cell skin, " + className + " (stage " + stage + "): " + renderers + " renderers, " + textured
+                    + " skin textures, " + done + " infected; shaders " + shaders);
         }
 
         /// <summary>The zombie skin darkened and grown over with scales for a stage (cached).</summary>
@@ -110,6 +145,7 @@ namespace KaijuMod
             t.name = src.name + "_gcell" + stage;
             t.Apply(true, true);
             cache[key] = t;
+            made.Add(t);
             return t;
         }
 
