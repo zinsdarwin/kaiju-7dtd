@@ -24,6 +24,7 @@ Usage:
   python tools/snakemap/snakemap.py [--name "Kaiju Snake"] [--seed 7] [--out DIR] [--preview PNG]
 """
 import argparse
+import csv
 import glob
 import math
 import os
@@ -97,7 +98,7 @@ ASHMOUTH_LANDMARKS = [
     "theater_stage_01",   # Minotaur Theater
 ]
 CITY_STYLE = {
-    "wasteland": dict(half=350, x=2180, band=(5, 5), required=ASHMOUTH_LANDMARKS),
+    "wasteland": dict(half=350, x=2180, band=(5, 5), required=ASHMOUTH_LANDMARKS, repeats=True),
 }
 
 
@@ -234,6 +235,19 @@ def load_pois(game):
     return pois
 
 
+def load_display_names(game):
+    """English names of POIs from the game's Localization.csv (Lazy Fitness for downtown_filler_01)."""
+    names = {}
+    try:
+        with open(os.path.join(game, "Data", "Config", "Localization.csv"), encoding="utf-8-sig", newline="") as f:
+            for row in csv.DictReader(f):
+                if row.get("english"):
+                    names[row["Key"]] = row["english"]
+    except OSError:
+        pass
+    return names
+
+
 def load_part(game, name):
     """A prefab from Data/Prefabs/Parts (the game finds prefabs in any folder under Prefabs)."""
     t = open(os.path.join(game, "Data", "Prefabs", "Parts", name + ".xml"), encoding="utf-8-sig", errors="ignore").read()
@@ -270,6 +284,7 @@ class SnakeMap:
         self.rand = random.Random(seed)
         self.game = game
         self.pois = load_pois(game)
+        self.display = load_display_names(game)
         self.traders = [p for p in self.pois if p.name.startswith("trader_") and "_signs" not in p.name]
         self.prefabs = []      # (name, x, y, z, rot)
         self.roads = []        # (points[(x,z)], half width, asphalt?)
@@ -508,7 +523,7 @@ class SnakeMap:
             # The strip's tier band first, then a tier below it, the rest only to fill gaps.
             lo, hi = s.get("band", TIER_BAND[s["biome"]])
             high = [p for p in pool if lo <= p.tier <= hi]
-            near = [p for p in pool if lo - 1 <= p.tier <= hi]
+            near = [p for p in pool if max(1, lo - 1) <= p.tier <= hi]  # never the tier 0 ruins
             if lo >= 4 and s["kind"] == "town":
                 near = pool = []  # few small high-tier POIs: leave the gaps open rather than fill them low
             # Landmarks that must be in this city, placed first wherever they fit (whatever their tags).
@@ -537,7 +552,8 @@ class SnakeMap:
                                                     s, x, bx1, face_z, hw_face, depth, north_of_main)
                         else:
                             placed = None
-                            for cand in (required, high, near, pool):
+                            # Nothing below a tier under the band: an open lot beats a repeat or a shack.
+                            for cand in (required, high, near):
                                 if cand:
                                     placed = self.place_lot(cand, s, x, bx1, face_z, hw_face, depth, north_of_main)
                                 if placed is not None:
@@ -570,7 +586,14 @@ class SnakeMap:
                 if x0 <= px <= x1 and z0 <= pz <= z1 and not name.startswith("trader_"):
                     h[tiers.get(name, 0)] += 1
             lo, hi = s.get("band", TIER_BAND[s["biome"]])
-            print("  %-17s %-9s tiers 0-5: %s, %d%% in band %d-%d" % (s["name"], s["biome"], h, 100 * sum(h[lo:hi + 1]) // max(1, sum(h)), lo, hi))
+            names = [n for n in s.get("here", []) if not n.startswith("trader_")]
+            dups = sorted({n for n in names if names.count(n) > 1})
+            print("  %-17s %-9s tiers 0-5: %s, %d%% in band %d-%d, repeats: %s"
+                  % (s["name"], s["biome"], h, 100 * sum(h[lo:hi + 1]) // max(1, sum(h)), lo, hi, ", ".join(dups) or "none"))
+
+    def family(self, name):
+        """POIs that are the same building to a player: the same English name, else the same prefab."""
+        return self.display.get(name, name)
 
     def place_lot(self, pool, s, x, xmax, face_z, hw_face, depth, north_of_main):
         """Places one POI at x along a block edge facing a street. Returns its far x, or None."""
@@ -586,10 +609,25 @@ class SnakeMap:
                 fits.append((p, b, w, dpt))
         if not fits:
             return None
-        # Prefer unused, larger lots; a little randomness.
-        fits.sort(key=lambda f: (self.used.get(f[0].name, 0), -f[2] * f[3] + self.rand.uniform(-900, 900)))
+        # No repeats within a settlement: not the same POI or another with the same name (variants
+        # of one building); a gap stays open rather than repeat one. Only a city that allows repeats
+        # (Ashmouth, to stay tier 5) takes one, and then not the one next door.
+        here = s.setdefault("here", [])
+        fams = {self.family(n) for n in here}
+        fresh = [f for f in fits if self.family(f[0].name) not in fams]
+        if not fresh and s.get("repeats"):
+            fresh = [f for f in fits if not here or f[0].name != here[-1]]
+        if not fresh:
+            return None
+        fits = fresh
+        # Prefer ones that leave room for another building (or none) beside them, then unused,
+        # larger ones; a little randomness.
+        narrowest = min(f[2] for f in fits)
+        wasted = lambda f: 12 <= room - f[2] - LOT_GAP < narrowest
+        fits.sort(key=lambda f: (wasted(f), self.used.get(f[0].name, 0), -f[2] * f[3] + self.rand.uniform(-900, 900)))
         p, b, w, dpt = fits[0] if self.rand.random() < 0.7 else self.rand.choice(fits[:8])
         self.used[p.name] = self.used.get(p.name, 0) + 1
+        here.append(p.name)
         if north_of_main:
             zmin = face_z + hw_face + 2
         else:
