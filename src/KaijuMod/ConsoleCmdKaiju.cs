@@ -34,6 +34,7 @@ namespace KaijuMod
                 + "  kaiju parts          Oxygen Destroyer parts: where each crate is, which you carry, the missile battery, device and finale state\n"
                 + "  kaiju style <minusone|classic>  city attacks: one city-destroying blast (default), or six breaths along the streets\n"
                 + "  kaiju give <1-5|all|device>  put Oxygen Destroyer parts, or the device itself, in your backpack (testing)\n"
+                + "  kaiju maser turn     turn the maser dish a quarter turn\n"
                 + "  kaiju radiation <on|off>  turn the radiation chase on or off\n"
                 + "  kaiju start          walk this session's recorded waypoints, else route.txt, else the built-in list\n"
                 + "  kaiju test [dist]    walk a straight line from dist m in front of you, through you (default 120)\n"
@@ -166,6 +167,9 @@ namespace KaijuMod
                         GameApi.ConsoleOut("Usage: kaiju give <1-" + KaijuRun.Parts + "|all|device>");
                     break;
                 }
+                case "maser":
+                    GameApi.ConsoleOut(KaijuRun.Instance.TurnMaser());
+                    break;
                 case "radiation":
                 {
                     if (_params.Count > 1 && (_params[1] == "on" || _params[1] == "off"))

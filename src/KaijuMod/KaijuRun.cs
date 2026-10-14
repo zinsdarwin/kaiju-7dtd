@@ -39,18 +39,22 @@ namespace KaijuMod
         // cells either side): the missile battery above Cinder Bay, the airstrike radio above Dune
         // Point, the maser cannon (a 3x3 dish) and its three generators above Frostport.
         public const string MissileBlock = "kaijuMissileControl", AirstrikeBlock = "kaijuAirstrikeRadio",
-            MaserBlock = "kaijuMaserCannon", GeneratorBlock = "kaijuMaserGenerator";
-        private static readonly string[] WeaponKeys = { "missile", "airstrike", "maser", "gen1", "gen2", "gen3" };
-        private static readonly string[] WeaponBlocks = { MissileBlock, AirstrikeBlock, MaserBlock, GeneratorBlock, GeneratorBlock, GeneratorBlock };
-        private static readonly int[] WeaponParts = { 1, 2, 3, 3, 3, 3 };
-        private static readonly int[] WeaponClear = { 0, 0, 2, 0, 0, 0 };
+            MaserBlock = "kaijuMaserCannon", MaserControlBlock = "kaijuMaserControl", GeneratorBlock = "kaijuMaserGenerator";
+        // The maser dish is scenery (a 3x3 multiblock you could not reliably use); you fire it from
+        // a control panel beside it.
+        private static readonly string[] WeaponKeys = { "missile", "airstrike", "maser", "gen1", "gen2", "gen3", "maserctl" };
+        private static readonly string[] WeaponBlocks = { MissileBlock, AirstrikeBlock, MaserBlock, GeneratorBlock, GeneratorBlock, GeneratorBlock, MaserControlBlock };
+        private static readonly int[] WeaponParts = { 1, 2, 3, 3, 3, 3, 3 };
+        private static readonly int[] WeaponClear = { 0, 0, 2, 0, 0, 0, 0 };
+        /// <summary>The dish's rotation: facing south, toward the city and the sea he comes from (`kaiju maser turn` turns it).</summary>
+        public static byte MaserRotation = 2;
         // Out in front of the post, on the open shelf facing the city so you can watch him: metres
         // across from the post's middle (clear of the trail up the middle) and out from its front.
-        private static readonly int[] WeaponAcross = { -10, -10, -14, 10, 12, 14 };
+        private static readonly int[] WeaponAcross = { -10, -10, -14, 10, 12, 14, -10 };
         public static int WeaponOut = 4;
         // The airstrike radio stands on a desk so it is easy to spot.
         public const string DeskBlock = "kaijuRadioDesk";
-        private static readonly bool[] WeaponOnDesk = { false, true, false, false, false, false };
+        private static readonly bool[] WeaponOnDesk = { false, true, false, false, false, false, false };
         public static int MissileSalvo = 8;
         /// <summary>Seconds between salvos, and how far the missiles reach, metres.</summary>
         public static float MissileReload = 30f, MissileRange = 2500f;
@@ -87,6 +91,7 @@ namespace KaijuMod
             public readonly Dictionary<string, Vector3i> Weapons = new Dictionary<string, Vector3i>();
             public readonly bool[] Fueled = new bool[3];
             public bool MaserUsed;
+            public int MaserRot = -1;       // the dish's rotation once set, -1 before (0.9.3 placed it unturned)
             public bool FinaleActive;
             public string Outcome = "";     // "", "won" or "lost"
             // Cities he has attacked: fallout hangs over them for the rest of the run.
@@ -619,6 +624,8 @@ namespace KaijuMod
                             continue;
                         if (spot.z < wsite.Z)
                         {
+                            if (WeaponBlocks[w] == MaserBlock && st.MaserRot < 0 && GameApi.BlockName(world, spot) == MaserBlock)
+                                TurnMaser(MaserRotation);
                             // Out front already (0.9.1); one that belongs on a desk gets it under it.
                             var below = new Vector3i(spot.x, spot.y - 1, spot.z);
                             if (WeaponOnDesk[w] && GameApi.BlockName(world, below) != DeskBlock && GameApi.BlockName(world, spot) == WeaponBlocks[w])
@@ -646,8 +653,11 @@ namespace KaijuMod
                         continue;
                     if (WeaponOnDesk[w] && GameApi.PlaceBlock(world, spot, DeskBlock))
                         spot = new Vector3i(spot.x, spot.y + 1, spot.z);
-                    if (GameApi.PlaceBlock(world, spot, WeaponBlocks[w]))
+                    bool dish = WeaponBlocks[w] == MaserBlock;
+                    if (GameApi.PlaceBlock(world, spot, WeaponBlocks[w], dish ? MaserRotation : (byte)0))
                     {
+                        if (dish)
+                            st.MaserRot = MaserRotation;
                         st.Weapons[WeaponKeys[w]] = spot;
                         Save();
                         Log.Out("[KaijuMod] " + WeaponBlocks[w] + " placed by " + city.Name + " at " + spot);
@@ -989,7 +999,7 @@ namespace KaijuMod
                     return "Airstrike radio: " + (Targetable(pos, AirstrikeRange)
                         ? (airstrikeFor == KaijuDirector.Instance.Attacking ? "jets on their way" : "target in range, call it in")
                         : "no target");
-                case MaserBlock:
+                case MaserControlBlock:
                     return "Maser cannon: " + (st.MaserUsed ? "burnt out" : FueledCount() < 3 ? "charge " + (FueledCount() * 100 / 3) + "%, fuel the generators"
                         : Targetable(pos, MaserRange) ? "charged, target in range" : "charged, no target");
                 case GeneratorBlock:
@@ -1009,7 +1019,7 @@ namespace KaijuMod
                 case AirstrikeBlock:
                     CallAirstrike(pos, player);
                     break;
-                case MaserBlock:
+                case MaserControlBlock:
                     FireMaser(pos, player);
                     break;
                 case GeneratorBlock:
@@ -1095,10 +1105,28 @@ namespace KaijuMod
             }
             st.MaserUsed = true;
             Save();
-            var dish = new Vector3(pos.x + 0.5f, pos.y + 3f, pos.z + 0.5f);
+            // The beam leaves the dish (or the control panel if there is no dish).
+            Vector3i dp;
+            if (!st.Weapons.TryGetValue("maser", out dp))
+                dp = pos;
+            var dish = new Vector3(dp.x + 0.5f, dp.y + 3f, dp.z + 0.5f);
             KaijuMaser.Fire(dish, () => KaijuDirector.Instance.Retaliate(dish, MaserRange + 300f, DestroyMaser));
             GameApi.Tooltip(player, "Maser firing! Then get clear of it.");
             Log.Out("[KaijuMod] Maser fired from " + pos);
+        }
+
+        /// <summary>Turns the maser dish to a rotation (0-3), or a quarter turn on from where it is (-1).</summary>
+        public string TurnMaser(int rotation = -1)
+        {
+            World world = GameApi.World;
+            Vector3i pos;
+            if (world == null || !st.Weapons.TryGetValue("maser", out pos) || !GameApi.IsChunkLoaded(world, pos.x, pos.z))
+                return "The maser dish isn't placed, or its ground isn't loaded.";
+            int rot = rotation >= 0 ? rotation : (Mathf.Max(0, st.MaserRot) + 1) % 4;
+            GameApi.PlaceBlock(world, pos, MaserBlock, (byte)rot);
+            st.MaserRot = rot;
+            Save();
+            return "Maser dish turned to rotation " + rot + ".";
         }
 
         /// <summary>His breath has reached the cannon: it and its generators go up.</summary>
@@ -1108,7 +1136,7 @@ namespace KaijuMod
             if (world == null)
                 return;
             var gone = new List<Vector3i>();
-            foreach (string key in new[] { "maser", "gen1", "gen2", "gen3" })
+            foreach (string key in new[] { "maser", "maserctl", "gen1", "gen2", "gen3" })
             {
                 Vector3i p;
                 if (st.Weapons.TryGetValue(key, out p))
@@ -1290,6 +1318,7 @@ namespace KaijuMod
                 e.SetAttribute("radiation", st.RadiationOn ? "1" : "0");
                 e.SetAttribute("complete", st.Complete ? "1" : "0");
                 e.SetAttribute("maserUsed", st.MaserUsed ? "1" : "0");
+                e.SetAttribute("maserRot", st.MaserRot.ToString(CultureInfo.InvariantCulture));
                 e.SetAttribute("fueled", (st.Fueled[0] ? "1" : "0") + (st.Fueled[1] ? "1" : "0") + (st.Fueled[2] ? "1" : "0"));
                 foreach (var w in st.Weapons)
                 {
@@ -1359,6 +1388,8 @@ namespace KaijuMod
                 st.RadiationOn = e.GetAttribute("radiation") != "0";
                 st.Complete = e.GetAttribute("complete") == "1";
                 st.MaserUsed = e.GetAttribute("maserUsed") == "1";
+                int rot;
+                st.MaserRot = int.TryParse(e.GetAttribute("maserRot"), NumberStyles.Integer, CultureInfo.InvariantCulture, out rot) ? rot : -1;
                 string fueled = e.GetAttribute("fueled") ?? "";
                 for (int g = 0; g < st.Fueled.Length && g < fueled.Length; g++)
                     st.Fueled[g] = fueled[g] == '1';

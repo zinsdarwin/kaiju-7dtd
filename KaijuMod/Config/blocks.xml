@@ -117,7 +117,6 @@
 			<drop event="Destroy" count="0"/>
 		</block>
 		<block name="kaijuMaserCannon">
-			<property name="Class" value="KaijuWeapon, KaijuMod"/>
 			<property name="DescriptionKey" value="kaijuMaserCannonDesc"/>
 			<property name="Material" value="Mmetal"/>
 			<property name="Shape" value="ModelEntity"/>
@@ -126,6 +125,21 @@
 			<property name="DisplayType" value="blockMulti"/>
 			<property name="MultiBlockDim" value="3,3,3"/>
 			<property name="ImposterDontBlock" value="true"/>
+			<property name="Collide" value="sight,movement,melee,bullet,arrow,rocket"/>
+			<property name="Path" value="solid"/>
+			<property name="StabilitySupport" value="false"/>
+			<property name="MaxDamage" value="100000"/>
+			<property name="CanPickup" value="false"/>
+			<property name="CreativeMode" value="Dev"/>
+			<drop event="Destroy" count="0"/>
+		</block>
+		<block name="kaijuMaserControl">
+			<property name="Class" value="KaijuWeapon, KaijuMod"/>
+			<property name="DescriptionKey" value="kaijuMaserCannonDesc"/>
+			<property name="Material" value="Mmetal"/>
+			<property name="Shape" value="ModelEntity"/>
+			<property name="Model" value="@:Entities/Industrial/controlPanelBase_02Prefab.prefab"/>
+			<property name="CustomIcon" value="controlPanelBase02"/>
 			<property name="Collide" value="sight,movement,melee,bullet,arrow,rocket"/>
 			<property name="Path" value="solid"/>
 			<property name="StabilitySupport" value="false"/>

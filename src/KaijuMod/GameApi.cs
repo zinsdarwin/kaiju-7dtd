@@ -158,7 +158,7 @@ namespace KaijuMod
         }
 
         /// <summary>Places a block by name. Returns false if the name is unknown.</summary>
-        public static bool PlaceBlock(World world, Vector3i pos, string blockName)
+        public static bool PlaceBlock(World world, Vector3i pos, string blockName, byte rotation = 0)
         {
             // VERIFIED (V3.3): Block.GetBlockValue(name) and WorldBase.SetBlockRPC(BlockValueRef, BlockValue)
             // (Vector3i converts to BlockValueRef). A CompositeTileEntity block creates its tile entity
@@ -166,6 +166,8 @@ namespace KaijuMod
             BlockValue bv = Block.GetBlockValue(blockName);
             if (bv.isair)
                 return false;
+            // VERIFIED (V3.3): BlockValue.rotation, 0-3 quarter turns about y for a ModelEntity.
+            bv.rotation = rotation;
             world.SetBlockRPC(pos, bv);
             return true;
         }
