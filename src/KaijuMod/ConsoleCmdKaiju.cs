@@ -196,7 +196,7 @@ namespace KaijuMod
                         GameApi.ConsoleOut("G-cell zombie skins " + _params[2] + " (zombies spawned from now on).");
                         break;
                     }
-                    // One of each G-cell stage in a row in front of you, to look at.
+                    // A vanilla one on the left to compare, then one of each G-cell stage, in a row in front of you.
                     string kind = _params.Count > 1 ? _params[1] : "Joe";
                     var me = GameApi.LocalPlayer(GameApi.World);
                     if (me == null)
@@ -205,13 +205,25 @@ namespace KaijuMod
                     float yaw = GameApi.YawDegrees(me) * Mathf.Deg2Rad;
                     var fwd = new Vector3(Mathf.Sin(yaw), 0f, Mathf.Cos(yaw));
                     var side = new Vector3(fwd.z, 0f, -fwd.x);
-                    string[] stages = { "", "Feral", "Radiated", "Charged", "Infernal" };
+                    string[] stages = { "", "", "Feral", "Radiated", "Charged", "Infernal" };
+                    string order = "Left to right:";
                     for (int i = 0; i < stages.Length; i++)
                     {
                         string name = "zombie" + kind + stages[i];
-                        Vector3 at = p + fwd * 8f + side * ((i - 2) * 2.5f);
-                        GameApi.ConsoleOut(GameApi.SpawnEntity(GameApi.World, name, at) ? "Spawned " + name : "No such zombie: " + name);
+                        bool plain = i == 0;
+                        Vector3 at = p + fwd * 8f + side * ((i - 2.5f) * 2.5f);
+                        at.y = GameApi.GroundHeight(GameApi.World, Mathf.FloorToInt(at.x), Mathf.FloorToInt(at.z)) + 0.5f;
+                        // The plain one is flagged before it spawns, so its model keeps the game's skin.
+                        bool skins = KaijuGCell.SkinsOn;
+                        if (plain)
+                            KaijuGCell.SkinsOn = false; // its model may be made as it is created
+                        int id = GameApi.SpawnEntity(GameApi.World, name, at, e => { if (plain) KaijuGCell.Plain.Add(e.entityId); });
+                        KaijuGCell.SkinsOn = skins;
+                        string label = plain ? name + " (vanilla, no G-cell)" : name;
+                        order += " " + (id >= 0 ? label : "[no such zombie: " + name + "]") + (i < stages.Length - 1 ? "," : ".");
+                        Log.Out("[KaijuMod] kaiju gcell: " + (id >= 0 ? "spawned " + label + " id " + id : "no such zombie " + name));
                     }
+                    GameApi.ConsoleOut(order);
                     break;
                 }
                 case "radiation":

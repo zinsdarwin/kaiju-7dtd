@@ -172,16 +172,19 @@ namespace KaijuMod
             return true;
         }
 
-        /// <summary>Spawns an entity by its entityclasses.xml name at a world position. False if the name is unknown.</summary>
-        public static bool SpawnEntity(World world, string className, Vector3 pos)
+        /// <summary>Spawns an entity by its entityclasses.xml name at a world position. Its entity id, or -1 if the name is unknown.</summary>
+        public static int SpawnEntity(World world, string className, Vector3 pos, System.Action<Entity> beforeSpawn = null)
         {
             // VERIFIED (V3.3): EntityClass.FromString (name hash), EntityClass.list, EntityFactory.CreateEntity(int, Vector3),
             // World.SpawnEntityInWorld(Entity).
             int id = EntityClass.FromString(className);
             if (!EntityClass.list.ContainsKey(id))
-                return false;
-            world.SpawnEntityInWorld(EntityFactory.CreateEntity(id, pos));
-            return true;
+                return -1;
+            Entity e = EntityFactory.CreateEntity(id, pos);
+            if (beforeSpawn != null)
+                beforeSpawn(e);
+            world.SpawnEntityInWorld(e);
+            return e.entityId;
         }
 
         /// <summary>The POI's difficulty tier (0-5).</summary>

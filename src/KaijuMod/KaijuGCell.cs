@@ -15,8 +15,8 @@ namespace KaijuMod
     public static class KaijuGCell
     {
         /// <summary>Per stage (0 normal, 1 feral, 2 radiated, 3 charged, 4 infernal): how dark the skin goes and how much is scales.</summary>
-        public static readonly float[] Darken = { 0.42f, 0.5f, 0.6f, 0.7f, 0.82f };
-        public static readonly float[] Coverage = { 0.32f, 0.4f, 0.55f, 0.7f, 0.88f };
+        public static readonly float[] Darken = { 0.35f, 0.45f, 0.58f, 0.72f, 0.86f };
+        public static readonly float[] Coverage = { 0.25f, 0.35f, 0.5f, 0.7f, 0.92f };
         /// <summary>Largest texture side the scale pass works at (zombie textures are scaled down to this).</summary>
         public static int MaxSize = 512;
         /// <summary>`kaiju gcell skins off` leaves zombies' own skins (each new skin costs a moment's work when it first appears).</summary>
@@ -26,7 +26,7 @@ namespace KaijuMod
         private static float nextSkin;
         /// <summary>True when a new skin may be made now (the zombie tick waits for this before checking a zombie).</summary>
         public static bool Ready { get { return Time.realtimeSinceStartup >= nextSkin; } }
-        public static float SkinInterval = 0.5f;
+        public static float SkinInterval = 0.2f;
 
         // Processed textures, by source texture and stage.
         private static readonly Dictionary<long, Texture2D> cache = new Dictionary<long, Texture2D>();
@@ -56,6 +56,9 @@ namespace KaijuMod
                 {
                     if (!SkinsOn || __instance == null || _ec == null || _ec.entityClassName == null || !_ec.entityClassName.StartsWith("zombie"))
                         return;
+                    // VERIFIED (V3.3): EModelBase.entity.
+                    if (__instance.entity != null && Plain.Contains(__instance.entity.entityId))
+                        return;
                     Apply(__instance.gameObject, _ec.entityClassName);
                 }
                 catch (System.Exception e)
@@ -71,7 +74,11 @@ namespace KaijuMod
         private static readonly HashSet<Texture> made = new HashSet<Texture>();
 
         /// <summary>Darkens and scales the skin of every renderer of a zombie's model; logs once per zombie type what it did.</summary>
-        public static void Apply(GameObject model, string className)
+        /// <summary>Zombies left as the game makes them (the vanilla one `kaiju gcell` spawns to compare).</summary>
+        public static readonly HashSet<int> Plain = new HashSet<int>();
+
+        /// <summary>Infects the skins of a zombie's model. True when every skin texture it has is done (false: try again later).</summary>
+        public static bool Apply(GameObject model, string className)
         {
             int stage = StageOf(className);
             int renderers = 0, textured = 0, done = 0;
@@ -95,7 +102,11 @@ namespace KaijuMod
                         if (tex == null)
                             continue;
                         if (made.Contains(tex))
+                        {
+                            textured++;
+                            done++;
                             break; // already infected
+                        }
                         textured++;
                         var g = Infect(tex, stage);
                         if (g != null)
@@ -107,9 +118,10 @@ namespace KaijuMod
                     }
                 }
             }
-            if (reported.Add(className))
+            if (done == textured && reported.Add(className))
                 Log.Out("[KaijuMod] G-cell skin, " + className + " (stage " + stage + "): " + renderers + " renderers, " + textured
                     + " skin textures, " + done + " infected; shaders " + shaders);
+            return done == textured;
         }
 
         /// <summary>The zombie skin darkened and grown over with scales for a stage (cached).</summary>

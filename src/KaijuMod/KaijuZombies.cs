@@ -59,11 +59,10 @@ namespace KaijuMod
                 if (dist > WatchRange)
                     continue;
                 // VERIFIED (V3.3): Entity.emodel is the entity's EModelBase.
-                if (KaijuGCell.SkinsOn && z.emodel != null && !skinned.Contains(z.entityId) && KaijuGCell.Ready)
-                {
+                // Until all its skins are done (new skins are made a few a second).
+                if (KaijuGCell.SkinsOn && z.emodel != null && !skinned.Contains(z.entityId) && !KaijuGCell.Plain.Contains(z.entityId)
+                    && KaijuGCell.Ready && KaijuGCell.Apply(z.emodel.gameObject, z.EntityClass.entityClassName))
                     skinned.Add(z.entityId);
-                    KaijuGCell.Apply(z.emodel.gameObject, z.EntityClass.entityClassName);
-                }
                 if (stage < 2 || (!BreathOn && !BlastOn))
                     continue;
                 if (z.IsDead())
