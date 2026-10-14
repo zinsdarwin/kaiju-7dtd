@@ -170,9 +170,26 @@ namespace KaijuMod
         private static void Scale(Color32[] px, int w, int h, int stage)
         {
             float dark = Darken[stage], cover = Coverage[stage];
-            const float cells = 48f; // scales across the texture
-            var scaleCol = new Color(0.07f, 0.08f, 0.09f);
-            var rimCol = stage == 4 ? new Color(0.1f, 0.3f, 0.55f) : stage >= 2 ? new Color(0.12f, 0.22f, 0.32f) : new Color(0.16f, 0.17f, 0.18f);
+            const float cells = 22f; // scales across the texture: big enough to read at a distance
+            // Each scale: a body shaded lighter toward the top (lit from above, so it reads as raised),
+            // a pale ridge along its rim, and a dark crease where it tucks under the next row.
+            Color body = new Color(0.17f, 0.17f, 0.17f), lit = new Color(0.42f, 0.42f, 0.4f), ridge = new Color(0.58f, 0.57f, 0.53f);
+            Color crease = new Color(0.02f, 0.02f, 0.02f);
+            if (stage >= 2)
+            {
+                body = new Color(0.13f, 0.15f, 0.18f);
+                lit = new Color(0.35f, 0.42f, 0.5f);
+                ridge = new Color(0.5f, 0.62f, 0.72f);
+            }
+            if (stage == 4)
+            {
+                // Infernal: charred, with blue embers along the rims.
+                body = new Color(0.07f, 0.07f, 0.08f);
+                lit = new Color(0.2f, 0.22f, 0.26f);
+                ridge = new Color(0.2f, 0.55f, 1f);
+                crease = new Color(0.02f, 0.05f, 0.12f);
+            }
+            float threshold = 0.78f - cover * 0.62f; // the patch noise runs about 0.2-0.8
             for (int y = 0; y < h; y++)
             {
                 float v = (float)y / h;
@@ -182,23 +199,34 @@ namespace KaijuMod
                     int i = y * w + x;
                     Color c = px[i];
                     c = Color.Lerp(c, new Color(0.05f, 0.05f, 0.06f, c.a), dark);
-                    // Patches: smooth noise above a threshold set by the coverage.
+                    // Patches: smooth noise above a threshold set by the coverage, with a crisp edge.
                     float n = ValueNoise(u * 6f, v * 6f) * 0.65f + ValueNoise(u * 17f, v * 17f) * 0.35f;
-                    float patch = Mathf.Clamp01((n - (1f - cover)) * 6f);
+                    float patch = Mathf.Clamp01((n - threshold) * 12f);
                     if (patch > 0f)
                     {
-                        // Overlapping scales: offset rows, round cells, darker centre, lighter rim.
+                        // Overlapping rows, each offset by half a scale and each scale nudged a little.
                         float sy = v * cells, row = Mathf.Floor(sy);
-                        float sx = u * cells + (row % 2f) * 0.5f;
-                        float fx = sx - Mathf.Floor(sx) - 0.5f, fy = sy - row - 0.35f;
-                        float d = Mathf.Sqrt(fx * fx + fy * fy * 1.6f);
-                        Color s = Color.Lerp(scaleCol, rimCol, Mathf.SmoothStep(0.25f, 0.5f, d));
+                        float sx = u * cells + (row % 2f) * 0.5f, col = Mathf.Floor(sx);
+                        float r1 = Hash((int)col, (int)row), r2 = Hash((int)col + 7, (int)row);
+                        float fx = sx - col - 0.5f + (r1 - 0.5f) * 0.18f, fy = sy - row - 0.3f + (r2 - 0.5f) * 0.15f;
+                        float d = Mathf.Sqrt(fx * fx + fy * fy * 1.4f);
+                        Color s = Color.Lerp(body, lit, Mathf.Clamp01(0.6f - fy));
+                        s = Color.Lerp(s, ridge, Edge(0.38f, 0.45f, d) * (1f - Edge(0.47f, 0.5f, d)) * Mathf.Clamp01(1.1f - fy * 1.4f));
+                        s = Color.Lerp(s, crease, Edge(0.49f, 0.54f, d));
+                        s *= 0.85f + 0.3f * r1;
                         s.a = c.a;
                         c = Color.Lerp(c, s, patch);
                     }
                     px[i] = c;
                 }
             }
+        }
+
+        /// <summary>0 below e0, 1 above e1, smooth between (GLSL smoothstep; Unity's Mathf.SmoothStep interpolates values instead).</summary>
+        private static float Edge(float e0, float e1, float x)
+        {
+            float t = Mathf.Clamp01((x - e0) / (e1 - e0));
+            return t * t * (3f - 2f * t);
         }
 
         private static float Hash(int x, int y)
