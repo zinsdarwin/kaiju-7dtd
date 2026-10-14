@@ -206,12 +206,9 @@
 			<property name="DescriptionKey" value="kaijuMaserCannonDesc"/>
 			<property name="Material" value="Mmetal"/>
 			<property name="Shape" value="ModelEntity"/>
-			<property name="Model" value="@:Entities/Electrical/satelliteUnit3X3LargePrefab.prefab"/>
-			<property name="CustomIcon" value="satelliteUnitLarge"/>
+			<property name="Model" value="@:Entities/Industrial/controlPanelBase_02Prefab.prefab"/>
+			<property name="CustomIcon" value="controlPanelBase02"/>
 			<property name="CustomIconTint" value="7fd4ff"/>
-			<property name="DisplayType" value="blockMulti"/>
-			<property name="MultiBlockDim" value="3,3,3"/>
-			<property name="ImposterDontBlock" value="true"/>
 			<property name="Place" value="TowardsPlacerInverted"/>
 			<property name="Collide" value="sight,movement,melee,bullet,arrow,rocket"/>
 			<property name="Path" value="solid"/>
@@ -223,6 +220,24 @@
 			<property name="CreativeMode" value="Player"/>
 			<property name="FilterTags" value="MC_building,SC_decor"/>
 			<drop event="Destroy" count="0"/>
+		</block>
+		<block name="kaijuMaserDish">
+			<property name="DescriptionKey" value="kaijuMaserDishDesc"/>
+			<property name="Material" value="Mmetal_thin"/>
+			<property name="Shape" value="ModelEntity"/>
+			<property name="Model" value="@:Entities/Electrical/satelliteUnit3X3LargePrefab.prefab"/>
+			<property name="CustomIcon" value="satelliteUnitLarge"/>
+			<property name="CustomIconTint" value="7fd4ff"/>
+			<property name="DisplayType" value="blockMulti"/>
+			<property name="MultiBlockDim" value="3,3,3"/>
+			<property name="ImposterDontBlock" value="true"/>
+			<property name="Place" value="TowardsPlacerInverted"/>
+			<property name="Collide" value="movement,melee,bullet,arrow,rocket"/>
+			<property name="Path" value="solid"/>
+			<property name="StabilitySupport" value="false"/>
+			<property name="CanPickup" value="true"/>
+			<property name="CreativeMode" value="Player"/>
+			<property name="FilterTags" value="MC_building,SC_decor"/>
 		</block>
 
 		<!-- The Oxygen Destroyer: crafted from the wasteland parts and dropped on him from a gyrocopter
