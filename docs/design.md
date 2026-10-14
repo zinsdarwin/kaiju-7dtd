@@ -54,7 +54,13 @@ Part of The Run. Decided by Darwin 2026-10-03, reworked 2026-10-10 and 2026-10-1
 - Two of the snow quests also reward the gyrocopter chassis and accessories: assemble a gyrocopter at a workbench before the last blood moon.
 - The finale: when the final blood moon horde ends, Godzilla attacks Ashmouth, walking slower than in the other attacks. Fly the gyrocopter over him with the Oxygen Destroyer aboard and drop it on him (right mouse button). It falls, its fins steer it onto him, and he dies (death sequence, run won). A miss doesn't go off, and the device comes back to you to try again. If the attack ends without a hit, Ashmouth falls and the run is lost.
 - POI tiers climb along the run (decided by Darwin 2026-10-13). Every town and city in a strip fills its lots from its biome's band first: pine 1-2, burnt 2-3, desert 3-4, snow 4-5, wasteland 4-5. Other tiers only fill gaps. The snow and wasteland settlements have deeper blocks so the 100 m tier 4-5 POIs fit. Ashmouth is the big tier 5 city: every big tier 5 landmark (Dishong Tower, Crack-a-Book HQ, Higashi Pharmaceutical, Vanity Tower...) and then more tier 5.
-- G-cell zombies: the fallout carries Godzilla's cells, and the dead it touches get back up. That's the outbreak's story, told in Duke's note. The game's radiated zombies glow his atomic blue instead of green.
+- G-cell zombies: the fallout carries Godzilla's cells, and the dead it touches get back up. That's the outbreak's story, told in Duke's note. The vanilla tiers are stages of infection (decided by Darwin 2026-10-13):
+  - Normal and feral zombies are darkened, with patches of black scales.
+  - Radiated, charged and infernal zombies have more scales each stage, darker skin, and his atomic blue glow, brighter each stage. The skins are made in code from each zombie's own texture.
+  - Radiated, charged and infernal zombies now and then spit a small atomic breath at you (a blue bolt you can dodge; range, damage and frequency rise by stage).
+  - They blow up in a small atomic blast when they die: blue flash, shockwave and damage nearby, but no block damage.
+  - The cop's vomit is a blue atomic bolt.
+  - `kaiju zbreath` and `kaiju zblast` turn the breath and blasts off; `kaiju gcell` spawns one of each stage to look at.
 
 ## Architecture
 

@@ -23,6 +23,7 @@ namespace KaijuMod
                 // via timeScale; to verify), so he stops with it.
                 KaijuDirector.Instance.Tick(Time.deltaTime);
                 KaijuRun.Instance.Tick(Time.deltaTime);
+                KaijuZombies.Tick(Time.deltaTime);
             }
             catch (System.Exception e)
             {

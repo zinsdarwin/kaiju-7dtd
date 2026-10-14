@@ -34,6 +34,9 @@ namespace KaijuMod
                 + "  kaiju parts          weapon parts: which town each crate is in, which you carry, the maser, device and finale state\n"
                 + "  kaiju style <minusone|classic>  city attacks: one city-destroying blast (default), or six breaths along the streets\n"
                 + "  kaiju give <1-12|all|device>  put weapon parts (see kaiju parts), or the Oxygen Destroyer itself, in your backpack (testing)\n"
+                + "  kaiju gcell [Joe|FatCop|Arlene...]  spawn one of each G-cell stage (normal, feral, radiated, charged, infernal) in front of you\n"
+                + "  kaiju zbreath <on|off>  G-cell zombies' atomic breath\n"
+                + "  kaiju zblast <on|off>   G-cell zombies blowing up when they die\n"
                 + "  kaiju radiation <on|off>  turn the radiation chase on or off\n"
                 + "  kaiju start          walk this session's recorded waypoints, else route.txt, else the built-in list\n"
                 + "  kaiju test [dist]    walk a straight line from dist m in front of you, through you (default 120)\n"
@@ -164,6 +167,39 @@ namespace KaijuMod
                         GameApi.ConsoleOut(KaijuRun.Instance.GivePart(n - 1) ? "Gave part " + n + "." : "Could not give it (backpack full?).");
                     else
                         GameApi.ConsoleOut("Usage: kaiju give <1-" + KaijuRun.Parts + "|all|device>");
+                    break;
+                }
+                case "zbreath":
+                case "zblast":
+                {
+                    if (_params.Count > 1 && (_params[1] == "on" || _params[1] == "off"))
+                    {
+                        if (sub == "zbreath")
+                            KaijuZombies.BreathOn = _params[1] == "on";
+                        else
+                            KaijuZombies.BlastOn = _params[1] == "on";
+                    }
+                    GameApi.ConsoleOut("G-cell zombie breath " + (KaijuZombies.BreathOn ? "on" : "off") + ", death blasts " + (KaijuZombies.BlastOn ? "on" : "off") + ".");
+                    break;
+                }
+                case "gcell":
+                {
+                    // One of each G-cell stage in a row in front of you, to look at.
+                    string kind = _params.Count > 1 ? _params[1] : "Joe";
+                    var me = GameApi.LocalPlayer(GameApi.World);
+                    if (me == null)
+                        break;
+                    Vector3 p = GameApi.Position(me);
+                    float yaw = GameApi.YawDegrees(me) * Mathf.Deg2Rad;
+                    var fwd = new Vector3(Mathf.Sin(yaw), 0f, Mathf.Cos(yaw));
+                    var side = new Vector3(fwd.z, 0f, -fwd.x);
+                    string[] stages = { "", "Feral", "Radiated", "Charged", "Infernal" };
+                    for (int i = 0; i < stages.Length; i++)
+                    {
+                        string name = "zombie" + kind + stages[i];
+                        Vector3 at = p + fwd * 8f + side * ((i - 2) * 2.5f);
+                        GameApi.ConsoleOut(GameApi.SpawnEntity(GameApi.World, name, at) ? "Spawned " + name : "No such zombie: " + name);
+                    }
                     break;
                 }
                 case "radiation":

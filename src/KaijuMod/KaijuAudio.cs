@@ -97,6 +97,13 @@ namespace KaijuMod
             Object.Destroy(go, KaijuMaser.Duration);
         }
 
+        /// <summary>A G-cell zombie's atomic breath: a short, higher roar and a crackle.</summary>
+        public static void ZombieBreath(Vector3 worldPos)
+        {
+            Play(worldPos, Clip(Roars[1]), 1.1f, 0.6f, 120f, 0f);
+            Play(worldPos, Clip(SmallBlasts[0]), 1.8f, 0.4f, 120f, 0.05f);
+        }
+
         /// <summary>His roar from a point (his mouth): two creature calls, pitched down, layered.</summary>
         public static void Roar(Vector3 worldPos, float delay = 0f)
         {

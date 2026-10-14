@@ -97,11 +97,11 @@ namespace KaijuMod
         }
 
         /// <summary>A missile or bomb hit: a short burst of fire and a puff of smoke.</summary>
-        public static void Burst(Vector3 worldPos, Material spark, Material smoke)
+        public static void Burst(Vector3 worldPos, Material spark, Material smoke, Color? hot = null, Color? cool = null)
         {
             var go = new GameObject("KaijuBurst");
             Object.DontDestroyOnLoad(go);
-            go.AddComponent<Burst>().Init(worldPos, spark, smoke);
+            go.AddComponent<Burst>().Init(worldPos, spark, smoke, hot ?? new Color(1f, 0.9f, 0.5f), cool ?? new Color(1f, 0.4f, 0.1f));
         }
 
         internal static ParticleSystem Particles(Transform parent, string name, Material mat, int max, bool local)
@@ -458,7 +458,7 @@ namespace KaijuMod
 
     public class Burst : WorldAnchored
     {
-        public void Init(Vector3 pos, Material spark, Material smoke)
+        public void Init(Vector3 pos, Material spark, Material smoke, Color hot, Color cool)
         {
             worldPos = pos;
             LateUpdate();
@@ -470,7 +470,7 @@ namespace KaijuMod
                 main.startLifetime = new ParticleSystem.MinMaxCurve(0.3f, 0.8f);
                 main.startSpeed = new ParticleSystem.MinMaxCurve(8f, 30f);
                 main.startSize = new ParticleSystem.MinMaxCurve(2f, 6f);
-                main.startColor = new ParticleSystem.MinMaxGradient(new Color(1f, 0.9f, 0.5f), new Color(1f, 0.4f, 0.1f));
+                main.startColor = new ParticleSystem.MinMaxGradient(hot, cool);
                 var shape = ps.shape;
                 shape.enabled = true;
                 shape.shapeType = ParticleSystemShapeType.Sphere;
