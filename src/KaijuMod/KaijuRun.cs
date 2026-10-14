@@ -657,6 +657,8 @@ namespace KaijuMod
             }
         }
 
+        // POIs already scanned and found to have no main chest (scanning one is costly).
+        private readonly HashSet<PrefabInstance> noChest = new HashSet<PrefabInstance>();
         // A POI's main loot chest: the reinforced (hero) chest or hardened chest at the end of it.
         private static readonly string[] MainChests = { "cntLootChestHero", "cntHardenedChest" };
 
@@ -670,6 +672,9 @@ namespace KaijuMod
         {
             spot = default(Vector3i);
             rotation = 0;
+            // Nothing to do until you are there: the town's middle must be loaded.
+            if (!GameApi.IsChunkLoaded(world, Mathf.RoundToInt(town.X), Mathf.RoundToInt(town.Z)))
+                return false;
             var pois = new List<PrefabInstance>();
             foreach (var poi in GameApi.Pois())
             {
@@ -691,6 +696,8 @@ namespace KaijuMod
             });
             foreach (var poi in pois)
             {
+                if (noChest.Contains(poi))
+                    continue;
                 bool ready;
                 if (GameApi.FindPoiBlock(world, poi, MainChests, out spot, out rotation, out ready))
                 {
@@ -699,6 +706,7 @@ namespace KaijuMod
                 }
                 if (!ready)
                     return false; // that POI is not all loaded yet: try again later
+                noChest.Add(poi); // scanned all of it: never again
             }
             rotation = 0;
             return FindCrateSpot(world, town, out spot);

@@ -243,6 +243,20 @@ namespace KaijuMod
             // AbstractedLocation; FullPathNoExtension + ".xml" is its xml.
             if (poi == null)
                 return true;
+            // Read each prefab's xml once: this runs for many POIs, and disk reads every tick stutter.
+            bool cached;
+            string key = poi.name ?? "";
+            if (rallyCache.TryGetValue(key, out cached))
+                return cached;
+            bool has = ReadHasRally(poi);
+            rallyCache[key] = has;
+            return has;
+        }
+
+        private static readonly Dictionary<string, bool> rallyCache = new Dictionary<string, bool>();
+
+        private static bool ReadHasRally(PrefabInstance poi)
+        {
             var loc = poi.location;
             string path = loc.FullPathNoExtension;
             if (string.IsNullOrEmpty(path) && poi.prefab != null)

@@ -18,7 +18,12 @@ namespace KaijuMod
         public static readonly float[] Darken = { 0.25f, 0.32f, 0.45f, 0.58f, 0.72f };
         public static readonly float[] Coverage = { 0.18f, 0.26f, 0.42f, 0.6f, 0.82f };
         /// <summary>Largest texture side the scale pass works at (zombie textures are scaled down to this).</summary>
-        public static int MaxSize = 1024;
+        public static int MaxSize = 512;
+        /// <summary>`kaiju gcell skins off` leaves zombies' own skins (each new skin costs a moment's work when it first appears).</summary>
+        public static bool SkinsOn = true;
+        // New skins made at most this often, seconds; zombies spawned meanwhile keep their own skin.
+        private static float nextSkin;
+        public static float SkinInterval = 0.5f;
 
         // Processed textures, by source texture and stage.
         private static readonly Dictionary<long, Texture2D> cache = new Dictionary<long, Texture2D>();
@@ -46,7 +51,7 @@ namespace KaijuMod
             {
                 try
                 {
-                    if (__instance == null || _ec == null || _ec.entityClassName == null || !_ec.entityClassName.StartsWith("zombie"))
+                    if (!SkinsOn || __instance == null || _ec == null || _ec.entityClassName == null || !_ec.entityClassName.StartsWith("zombie"))
                         return;
                     int stage = StageOf(_ec.entityClassName);
                     foreach (var r in __instance.GetComponentsInChildren<SkinnedMeshRenderer>(true))
@@ -79,6 +84,10 @@ namespace KaijuMod
             Texture2D t;
             if (cache.TryGetValue(key, out t))
                 return t;
+            // One new skin at a time, spread out: making one stalls a frame.
+            if (Time.realtimeSinceStartup < nextSkin)
+                return null;
+            nextSkin = Time.realtimeSinceStartup + SkinInterval;
             cache[key] = null; // one try per texture: a failure is not retried every spawn
             int w = src.width, h = src.height;
             while (w > MaxSize || h > MaxSize)

@@ -35,6 +35,7 @@ namespace KaijuMod
                 + "  kaiju style <minusone|classic>  city attacks: one city-destroying blast (default), or six breaths along the streets\n"
                 + "  kaiju give <1-12|all|device|bike>  put weapon parts (see kaiju parts), the Oxygen Destroyer, or a bicycle in your backpack\n"
                 + "  kaiju gcell [Joe|FatCop|Arlene...]  spawn one of each G-cell stage (normal, feral, radiated, charged, infernal) in front of you\n"
+                + "  kaiju gcell skins <on|off>  G-cell scales and darker skin on zombies spawned from now on\n"
                 + "  kaiju zbreath <on|off>  G-cell zombies' atomic breath\n"
                 + "  kaiju zblast <on|off>   G-cell zombies blowing up when they die\n"
                 + "  kaiju radiation <on|off>  turn the radiation chase on or off\n"
@@ -189,6 +190,12 @@ namespace KaijuMod
                 }
                 case "gcell":
                 {
+                    if (_params.Count > 2 && _params[1] == "skins" && (_params[2] == "on" || _params[2] == "off"))
+                    {
+                        KaijuGCell.SkinsOn = _params[2] == "on";
+                        GameApi.ConsoleOut("G-cell zombie skins " + _params[2] + " (zombies spawned from now on).");
+                        break;
+                    }
                     // One of each G-cell stage in a row in front of you, to look at.
                     string kind = _params.Count > 1 ? _params[1] : "Joe";
                     var me = GameApi.LocalPlayer(GameApi.World);
