@@ -1,41 +1,89 @@
 <configs>
-	<!-- Each crate holds its part. -->
+	<!-- Each crate holds its part and a reinforced chest's loot. -->
 	<append xpath="/lootcontainers">
-		<lootcontainer name="kaijuPart1" count="1" size="3,1" sound_open="UseActions/crate_wood_open" sound_close="UseActions/crate_wood_close" loot_quality_template="qualBaseTemplate">
+		<lootgroup name="kaijuPartGroup1" count="all">
 			<item name="kaijuMissilePart1" count="1"/>
+			<item group="groupReinforcedChestT3"/>
+		</lootgroup>
+		<lootcontainer name="kaijuPart1" count="1" size="8,9" sound_open="UseActions/chest_tier3_open" sound_close="UseActions/chest_tier3_close" loot_quality_template="qualPlus1Template">
+			<item group="kaijuPartGroup1"/>
 		</lootcontainer>
-		<lootcontainer name="kaijuPart2" count="1" size="3,1" sound_open="UseActions/crate_wood_open" sound_close="UseActions/crate_wood_close" loot_quality_template="qualBaseTemplate">
+		<lootgroup name="kaijuPartGroup2" count="all">
 			<item name="kaijuMissilePart2" count="1"/>
+			<item group="groupReinforcedChestT3"/>
+		</lootgroup>
+		<lootcontainer name="kaijuPart2" count="1" size="8,9" sound_open="UseActions/chest_tier3_open" sound_close="UseActions/chest_tier3_close" loot_quality_template="qualPlus1Template">
+			<item group="kaijuPartGroup2"/>
 		</lootcontainer>
-		<lootcontainer name="kaijuPart3" count="1" size="3,1" sound_open="UseActions/crate_wood_open" sound_close="UseActions/crate_wood_close" loot_quality_template="qualBaseTemplate">
+		<lootgroup name="kaijuPartGroup3" count="all">
 			<item name="kaijuMissilePart3" count="1"/>
+			<item group="groupReinforcedChestT3"/>
+		</lootgroup>
+		<lootcontainer name="kaijuPart3" count="1" size="8,9" sound_open="UseActions/chest_tier3_open" sound_close="UseActions/chest_tier3_close" loot_quality_template="qualPlus1Template">
+			<item group="kaijuPartGroup3"/>
 		</lootcontainer>
-		<lootcontainer name="kaijuPart4" count="1" size="3,1" sound_open="UseActions/crate_wood_open" sound_close="UseActions/crate_wood_close" loot_quality_template="qualBaseTemplate">
+		<lootgroup name="kaijuPartGroup4" count="all">
 			<item name="kaijuAirstrikePart1" count="1"/>
+			<item group="groupReinforcedChestT3"/>
+		</lootgroup>
+		<lootcontainer name="kaijuPart4" count="1" size="8,9" sound_open="UseActions/chest_tier3_open" sound_close="UseActions/chest_tier3_close" loot_quality_template="qualPlus1Template">
+			<item group="kaijuPartGroup4"/>
 		</lootcontainer>
-		<lootcontainer name="kaijuPart5" count="1" size="3,1" sound_open="UseActions/crate_wood_open" sound_close="UseActions/crate_wood_close" loot_quality_template="qualBaseTemplate">
+		<lootgroup name="kaijuPartGroup5" count="all">
 			<item name="kaijuAirstrikePart2" count="1"/>
+			<item group="groupReinforcedChestT3"/>
+		</lootgroup>
+		<lootcontainer name="kaijuPart5" count="1" size="8,9" sound_open="UseActions/chest_tier3_open" sound_close="UseActions/chest_tier3_close" loot_quality_template="qualPlus1Template">
+			<item group="kaijuPartGroup5"/>
 		</lootcontainer>
-		<lootcontainer name="kaijuPart6" count="1" size="3,1" sound_open="UseActions/crate_wood_open" sound_close="UseActions/crate_wood_close" loot_quality_template="qualBaseTemplate">
+		<lootgroup name="kaijuPartGroup6" count="all">
 			<item name="kaijuAirstrikePart3" count="1"/>
+			<item group="groupReinforcedChestT3"/>
+		</lootgroup>
+		<lootcontainer name="kaijuPart6" count="1" size="8,9" sound_open="UseActions/chest_tier3_open" sound_close="UseActions/chest_tier3_close" loot_quality_template="qualPlus1Template">
+			<item group="kaijuPartGroup6"/>
 		</lootcontainer>
-		<lootcontainer name="kaijuPart7" count="1" size="3,1" sound_open="UseActions/crate_wood_open" sound_close="UseActions/crate_wood_close" loot_quality_template="qualBaseTemplate">
+		<lootgroup name="kaijuPartGroup7" count="all">
 			<item name="kaijuMaserPart1" count="1"/>
+			<item group="groupReinforcedChestT3"/>
+		</lootgroup>
+		<lootcontainer name="kaijuPart7" count="1" size="8,9" sound_open="UseActions/chest_tier3_open" sound_close="UseActions/chest_tier3_close" loot_quality_template="qualPlus1Template">
+			<item group="kaijuPartGroup7"/>
 		</lootcontainer>
-		<lootcontainer name="kaijuPart8" count="1" size="3,1" sound_open="UseActions/crate_wood_open" sound_close="UseActions/crate_wood_close" loot_quality_template="qualBaseTemplate">
+		<lootgroup name="kaijuPartGroup8" count="all">
 			<item name="kaijuMaserPart2" count="1"/>
+			<item group="groupReinforcedChestT3"/>
+		</lootgroup>
+		<lootcontainer name="kaijuPart8" count="1" size="8,9" sound_open="UseActions/chest_tier3_open" sound_close="UseActions/chest_tier3_close" loot_quality_template="qualPlus1Template">
+			<item group="kaijuPartGroup8"/>
 		</lootcontainer>
-		<lootcontainer name="kaijuPart9" count="1" size="3,1" sound_open="UseActions/crate_wood_open" sound_close="UseActions/crate_wood_close" loot_quality_template="qualBaseTemplate">
+		<lootgroup name="kaijuPartGroup9" count="all">
 			<item name="kaijuMaserPart3" count="1"/>
+			<item group="groupReinforcedChestT3"/>
+		</lootgroup>
+		<lootcontainer name="kaijuPart9" count="1" size="8,9" sound_open="UseActions/chest_tier3_open" sound_close="UseActions/chest_tier3_close" loot_quality_template="qualPlus1Template">
+			<item group="kaijuPartGroup9"/>
 		</lootcontainer>
-		<lootcontainer name="kaijuPart10" count="1" size="3,1" sound_open="UseActions/crate_wood_open" sound_close="UseActions/crate_wood_close" loot_quality_template="qualBaseTemplate">
+		<lootgroup name="kaijuPartGroup10" count="all">
 			<item name="kaijuOxygenDestroyerPart1" count="1"/>
+			<item group="groupReinforcedChestT3"/>
+		</lootgroup>
+		<lootcontainer name="kaijuPart10" count="1" size="8,9" sound_open="UseActions/chest_tier3_open" sound_close="UseActions/chest_tier3_close" loot_quality_template="qualPlus1Template">
+			<item group="kaijuPartGroup10"/>
 		</lootcontainer>
-		<lootcontainer name="kaijuPart11" count="1" size="3,1" sound_open="UseActions/crate_wood_open" sound_close="UseActions/crate_wood_close" loot_quality_template="qualBaseTemplate">
+		<lootgroup name="kaijuPartGroup11" count="all">
 			<item name="kaijuOxygenDestroyerPart2" count="1"/>
+			<item group="groupReinforcedChestT3"/>
+		</lootgroup>
+		<lootcontainer name="kaijuPart11" count="1" size="8,9" sound_open="UseActions/chest_tier3_open" sound_close="UseActions/chest_tier3_close" loot_quality_template="qualPlus1Template">
+			<item group="kaijuPartGroup11"/>
 		</lootcontainer>
-		<lootcontainer name="kaijuPart12" count="1" size="3,1" sound_open="UseActions/crate_wood_open" sound_close="UseActions/crate_wood_close" loot_quality_template="qualBaseTemplate">
+		<lootgroup name="kaijuPartGroup12" count="all">
 			<item name="kaijuOxygenDestroyerPart3" count="1"/>
+			<item group="groupReinforcedChestT3"/>
+		</lootgroup>
+		<lootcontainer name="kaijuPart12" count="1" size="8,9" sound_open="UseActions/chest_tier3_open" sound_close="UseActions/chest_tier3_close" loot_quality_template="qualPlus1Template">
+			<item group="kaijuPartGroup12"/>
 		</lootcontainer>
 	</append>
 </configs>

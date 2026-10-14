@@ -158,7 +158,7 @@ namespace KaijuMod
         }
 
         /// <summary>Places a block by name. Returns false if the name is unknown.</summary>
-        public static bool PlaceBlock(World world, Vector3i pos, string blockName)
+        public static bool PlaceBlock(World world, Vector3i pos, string blockName, byte rotation = 0)
         {
             // VERIFIED (V3.3): Block.GetBlockValue(name) and WorldBase.SetBlockRPC(BlockValueRef, BlockValue)
             // (Vector3i converts to BlockValueRef). A CompositeTileEntity block creates its tile entity
@@ -166,8 +166,54 @@ namespace KaijuMod
             BlockValue bv = Block.GetBlockValue(blockName);
             if (bv.isair)
                 return false;
+            // VERIFIED (V3.3): BlockValue.rotation, 0-3 quarter turns about y for a ModelEntity.
+            bv.rotation = rotation;
             world.SetBlockRPC(pos, bv);
             return true;
+        }
+
+        /// <summary>The POI's difficulty tier (0-5).</summary>
+        public static int PoiTier(PrefabInstance poi)
+        {
+            // VERIFIED (V3.3): PrefabInstance.prefab, Prefab.DifficultyTier.
+            return poi != null && poi.prefab != null ? poi.prefab.DifficultyTier : 0;
+        }
+
+        /// <summary>
+        /// The POI's main loot chest: the first block whose name starts with one of the prefixes,
+        /// scanning its bounds top down (end-of-POI loot rooms are usually high up or at the back).
+        /// False if none, or if any of its ground is not loaded yet (ready = false then).
+        /// </summary>
+        public static bool FindPoiBlock(World world, PrefabInstance poi, string[] prefixes, out Vector3i pos, out byte rotation, out bool ready)
+        {
+            // VERIFIED (V3.3): PrefabInstance.boundingBoxPosition/Size (world blocks), World.GetBlock,
+            // BlockValue.isair, .rotation, .ischild, Block.GetBlockName.
+            pos = default(Vector3i);
+            rotation = 0;
+            Vector3i p0 = poi.boundingBoxPosition, sz = poi.boundingBoxSize;
+            ready = IsChunkLoaded(world, p0.x, p0.z) && IsChunkLoaded(world, p0.x + sz.x - 1, p0.z)
+                && IsChunkLoaded(world, p0.x, p0.z + sz.z - 1) && IsChunkLoaded(world, p0.x + sz.x - 1, p0.z + sz.z - 1);
+            if (!ready)
+                return false;
+            for (int y = p0.y + sz.y - 1; y >= p0.y; y--)
+                for (int x = p0.x; x < p0.x + sz.x; x++)
+                    for (int z = p0.z; z < p0.z + sz.z; z++)
+                    {
+                        BlockValue bv = world.GetBlock(new Vector3i(x, y, z));
+                        if (bv.isair || bv.ischild || bv.Block == null)
+                            continue;
+                        string name = bv.Block.GetBlockName();
+                        foreach (string prefix in prefixes)
+                        {
+                            if (name.StartsWith(prefix))
+                            {
+                                pos = new Vector3i(x, y, z);
+                                rotation = bv.rotation;
+                                return true;
+                            }
+                        }
+                    }
+            return false;
         }
 
         /// <summary>

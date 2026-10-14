@@ -70,12 +70,14 @@ CITY_NAMES = {
     "snow": ["Frostport"],
     "wasteland": ["Ashmouth"],
 }
-# End cities that differ from the default (2 rows of 78 m blocks, 250 m half width, any tier):
-# Dune Point fills its lots with tier 3+ POIs first; Frostport has deeper blocks (118 m) for the
-# 100 x 100 m tier 4-5 POIs (factories, hospital, stadium...) and fills its lots with tier 4+
-# first. Ashmouth, the finale, is the big city: wider (moved inland to keep off the beach) with
-# every big tier 5 landmark placed first (the skyscrapers are downtown tiles the usual filter
-# skips), then tier 5, then tier 4.
+# POI tiers climb along the run: every town and city in a strip fills its lots from its biome's
+# tier band first (then a tier below it, then anything, only for gaps). The snow and wasteland
+# settlements have deeper blocks (118 m) so the 100 x 100 m tier 4-5 POIs (factories, hospital,
+# stadium...) fit. Ashmouth, the finale, is the big tier 5 city: wider (moved inland to keep off
+# the beach), with every big tier 5 landmark placed first (the skyscrapers are downtown tiles the
+# usual filter skips).
+TIER_BAND = {"pine": (1, 2), "burnt": (2, 3), "desert": (3, 4), "snow": (4, 5), "wasteland": (4, 5)}
+BIOME_BLOCK = {"snow": 118, "wasteland": 118}
 ASHMOUTH_LANDMARKS = [
     "skyscraper_01",      # Dishong Tower
     "skyscraper_02",      # Crack-a-Book HQ
@@ -95,9 +97,7 @@ ASHMOUTH_LANDMARKS = [
     "theater_stage_01",   # Minotaur Theater
 ]
 CITY_STYLE = {
-    "desert": dict(min_tier=3),
-    "snow": dict(block=118, min_tier=4),
-    "wasteland": dict(block=118, half=350, x=2180, min_tier=4, required=ASHMOUTH_LANDMARKS),
+    "wasteland": dict(half=350, x=2180, band=(5, 5), required=ASHMOUTH_LANDMARKS),
 }
 
 
@@ -340,15 +340,16 @@ class SnakeMap:
             end_x = end_city_x(i)
             if i == 0:
                 self.settlements.append(dict(kind="city", role="start", strip=i, biome=key, x=start_x,
-                                             name=CITY_NAMES[key][1], half=250, rows=2))
+                                             name=CITY_NAMES[key][1], half=250, rows=2, block=BIOME_BLOCK.get(key, BLOCK_S)))
             names = list(TOWN_NAMES[key])
             for n, t in enumerate((0.27, 0.5, 0.73)):
                 x0 = start_x + d * (310 if i == 0 else 120)
                 x1 = d * PASS_X - d * 80
                 x = x0 + (x1 - x0) * t + self.rand.uniform(-60, 60)
                 self.settlements.append(dict(kind="town", role="town", strip=i, biome=key, x=x,
-                                             name=names[n], half=150, rows=1))
-            end = dict(kind="city", role="end", strip=i, biome=key, x=end_x, name=CITY_NAMES[key][0], half=250, rows=2)
+                                             name=names[n], half=150, rows=1, block=BIOME_BLOCK.get(key, BLOCK_S)))
+            end = dict(kind="city", role="end", strip=i, biome=key, x=end_x, name=CITY_NAMES[key][0], half=250, rows=2,
+                       block=BIOME_BLOCK.get(key, BLOCK_S))
             end.update({k: v for k, v in CITY_STYLE.get(key, {}).items() if k != "x"})
             self.settlements.append(end)
 
@@ -492,7 +493,7 @@ class SnakeMap:
             n = s["rows"]
             block = s.get("block", BLOCK_S)
             street_z = [zc + j * block for j in range(-n, n + 1)]
-            step = 112 if s["kind"] == "city" else 100
+            step = 112 if s["kind"] == "city" or block > BLOCK_S else 100  # 100 m lots fit between the streets
             m = int((s["half"]) // step)
             cross_x = [s["x"] + k * step for k in range(-m, m + 1)]
             xa, xb = s["x"] - s["half"], s["x"] + s["half"]
@@ -504,8 +505,12 @@ class SnakeMap:
                 self.roads.append(([(x, street_z[0]), (x, street_z[-1])], STREET_HW, True))
             pool = [p for p in self.pois if usable(p, s["biome"]) and
                     (("city" in p.townships) if s["kind"] == "city" else ("town" in p.townships or "city" in p.townships))]
-            # Higher-tier cities: those POIs first, the rest only to fill gaps they don't fit.
-            high = [p for p in pool if p.tier >= s.get("min_tier", 0)]
+            # The strip's tier band first, then a tier below it, the rest only to fill gaps.
+            lo, hi = s.get("band", TIER_BAND[s["biome"]])
+            high = [p for p in pool if lo <= p.tier <= hi]
+            near = [p for p in pool if lo - 1 <= p.tier <= hi]
+            if lo >= 4 and s["kind"] == "town":
+                near = pool = []  # few small high-tier POIs: leave the gaps open rather than fill them low
             # Landmarks that must be in this city, placed first wherever they fit (whatever their tags).
             by_name = {p.name: p for p in self.pois}
             required = [by_name[name] for name in s.get("required", []) if name in by_name]
@@ -527,14 +532,18 @@ class SnakeMap:
                         # spot it fits.
                         want_trader = (not trader_done and try_trader and abs(face_z - zc) < 1
                                        and c >= len(cross_x) // 2 - 1)
-                        cand = (self.first_traders if s is first_pine else self.traders) if want_trader else required or high
-                        placed = self.place_lot(cand, s, x, bx1, face_z, hw_face, depth, north_of_main)
-                        if placed is not None and not want_trader and required:
-                            required = [p for p in required if p.name != self.prefabs[-1][0]]
-                        elif placed is None and not want_trader and required:
-                            placed = self.place_lot(high, s, x, bx1, face_z, hw_face, depth, north_of_main)
-                        if placed is None and not want_trader and high is not pool:
-                            placed = self.place_lot(pool, s, x, bx1, face_z, hw_face, depth, north_of_main)
+                        if want_trader:
+                            placed = self.place_lot(self.first_traders if s is first_pine else self.traders,
+                                                    s, x, bx1, face_z, hw_face, depth, north_of_main)
+                        else:
+                            placed = None
+                            for cand in (required, high, near, pool):
+                                if cand:
+                                    placed = self.place_lot(cand, s, x, bx1, face_z, hw_face, depth, north_of_main)
+                                if placed is not None:
+                                    break
+                            if placed is not None and required:
+                                required = [p for p in required if p.name != self.prefabs[-1][0]]
                         if placed is None:
                             if want_trader:
                                 try_trader = False  # not in this block; the next block tries again
@@ -553,6 +562,15 @@ class SnakeMap:
         if "trader" not in first:
             raise SystemExit("no trader in %s (first pine town); try another --seed" % first["name"])
         print("traders:", ", ".join("%s %s" % (s["name"], s.get("trader", "-")) for s in self.settlements))
+        tiers = {p.name: p.tier for p in self.pois}
+        for s in self.settlements:
+            x0, x1, z0, z1, _ = self.settlement_rect(s)
+            h = [0] * 6
+            for name, px, _, pz, _ in self.prefabs:
+                if x0 <= px <= x1 and z0 <= pz <= z1 and not name.startswith("trader_"):
+                    h[tiers.get(name, 0)] += 1
+            lo, hi = s.get("band", TIER_BAND[s["biome"]])
+            print("  %-17s %-9s tiers 0-5: %s, %d%% in band %d-%d" % (s["name"], s["biome"], h, 100 * sum(h[lo:hi + 1]) // max(1, sum(h)), lo, hi))
 
     def place_lot(self, pool, s, x, xmax, face_z, hw_face, depth, north_of_main):
         """Places one POI at x along a block edge facing a street. Returns its far x, or None."""

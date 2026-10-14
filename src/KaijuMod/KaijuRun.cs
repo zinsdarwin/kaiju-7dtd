@@ -612,7 +612,8 @@ namespace KaijuMod
                 if (!st.CratePlaced[i])
                 {
                     Vector3i spot;
-                    if (FindCrateSpot(world, town, out spot) && GameApi.PlaceBlock(world, spot, CrateBlock(i)))
+                    byte rot;
+                    if (FindQuestChest(world, town, out spot, out rot) && GameApi.PlaceBlock(world, spot, CrateBlock(i), rot))
                     {
                         st.CratePlaced[i] = true;
                         st.CratePos[i] = spot;
@@ -654,6 +655,53 @@ namespace KaijuMod
                     markers[i] = null;
                 }
             }
+        }
+
+        // A POI's main loot chest: the reinforced (hero) chest or hardened chest at the end of it.
+        private static readonly string[] MainChests = { "cntLootChestHero", "cntHardenedChest" };
+
+        /// <summary>
+        /// Where a town's part goes: the main loot chest of its best quest POI (highest tier, then
+        /// nearest the centre; with a Rally block so its quests work), which the part crate (a hero
+        /// chest with the part on top of that chest's usual loot) replaces. Else a free floor cell
+        /// in the POI nearest the centre. False until that ground is loaded.
+        /// </summary>
+        private bool FindQuestChest(World world, Settlement town, out Vector3i spot, out byte rotation)
+        {
+            spot = default(Vector3i);
+            rotation = 0;
+            var pois = new List<PrefabInstance>();
+            foreach (var poi in GameApi.Pois())
+            {
+                if (poi == null || poi.name == null || poi.name.StartsWith("trader_") || poi.name.StartsWith("sign_"))
+                    continue;
+                float cx = poi.boundingBoxPosition.x + poi.boundingBoxSize.x * 0.5f;
+                float cz = poi.boundingBoxPosition.z + poi.boundingBoxSize.z * 0.5f;
+                if (Mathf.Abs(cx - town.X) <= town.HalfWidth && Mathf.Abs(cz - town.Z) <= town.HalfDepth && GameApi.HasRallyBlock(poi))
+                    pois.Add(poi);
+            }
+            pois.Sort((a, b) =>
+            {
+                int t = GameApi.PoiTier(b).CompareTo(GameApi.PoiTier(a));
+                if (t != 0)
+                    return t;
+                Vector2 ca = new Vector2(a.boundingBoxPosition.x + a.boundingBoxSize.x * 0.5f - town.X, a.boundingBoxPosition.z + a.boundingBoxSize.z * 0.5f - town.Z);
+                Vector2 cb = new Vector2(b.boundingBoxPosition.x + b.boundingBoxSize.x * 0.5f - town.X, b.boundingBoxPosition.z + b.boundingBoxSize.z * 0.5f - town.Z);
+                return ca.sqrMagnitude.CompareTo(cb.sqrMagnitude);
+            });
+            foreach (var poi in pois)
+            {
+                bool ready;
+                if (GameApi.FindPoiBlock(world, poi, MainChests, out spot, out rotation, out ready))
+                {
+                    Log.Out("[KaijuMod] " + town.Name + ": the part goes in the main loot chest of " + poi.name + " (tier " + GameApi.PoiTier(poi) + ")");
+                    return true;
+                }
+                if (!ready)
+                    return false; // that POI is not all loaded yet: try again later
+            }
+            rotation = 0;
+            return FindCrateSpot(world, town, out spot);
         }
 
         /// <summary>A free ground-floor cell in the POI nearest a town's centre (not its trader).</summary>
