@@ -13,11 +13,12 @@ namespace KaijuMod
     {
         public static bool BreathOn = true, BlastOn = true;
         /// <summary>Per stage 2 (radiated), 3 (charged), 4 (infernal): breath range m, seconds between breaths, damage; blast radius m, damage.</summary>
-        public static readonly float[] BreathRange = { 0, 0, 22f, 28f, 36f };
-        public static readonly float[] BreathCooldown = { 0, 0, 22f, 15f, 9f };
-        public static readonly int[] BreathDamage = { 0, 0, 8, 12, 18 };
-        public static readonly float[] BlastRadius = { 0, 0, 3f, 4f, 5.5f };
-        public static readonly int[] BlastDamage = { 0, 0, 15, 25, 40 };
+        // Charged and infernal are the same top tier: charged hits players harder, infernal blows up bigger.
+        public static readonly float[] BreathRange = { 0, 0, 22f, 32f, 32f };
+        public static readonly float[] BreathCooldown = { 0, 0, 22f, 12f, 12f };
+        public static readonly int[] BreathDamage = { 0, 0, 8, 16, 13 };
+        public static readonly float[] BlastRadius = { 0, 0, 3f, 4.5f, 5.5f };
+        public static readonly int[] BlastDamage = { 0, 0, 15, 28, 32 };
         /// <summary>Only zombies this close to you are looked at, metres; at most this many blasts a second.</summary>
         public static float WatchRange = 60f;
         public static int MaxBlastsPerSecond = 4;

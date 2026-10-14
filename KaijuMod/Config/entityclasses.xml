@@ -1,11 +1,11 @@
 <configs>
 	<!-- G-cell zombies: the fallout carries Godzilla's cells and the dead it touches get back up.
-	     Radiated, charged and infernal zombies glow his atomic blue, brighter each stage (MatColor
+	     Radiated zombies glow his atomic blue; charged (bright electric blue) and infernal (dim blue embers in charred skin) are the top stage (MatColor
 	     sets their _EmissiveColor; alpha + 1 is the emissive power). Their skins darken and grow
 	     scales in code (KaijuGCell). -->
 	<set xpath="/entity_classes/color[@name='radiated']/@value">0.2,0.65,1.6, 0.3</set>
-	<set xpath="/entity_classes/color[@name='charged']/@value">0.3,0.75,2.2, 0.6</set>
-	<set xpath="/entity_classes/color[@name='infernal']/@value">0.55,0.85,3, 1</set>
+	<set xpath="/entity_classes/color[@name='charged']/@value">0.35,0.85,3, 1</set>
+	<set xpath="/entity_classes/color[@name='infernal']/@value">0.15,0.45,1.5, 0.4</set>
 	<!-- You were out camping with your bike when he came: start with it (the vanilla placeable bicycle). -->
 	<set xpath="/entity_classes/entity_class[@name='playerMale']/property[@class='ItemsOnEnterGame']/property[@name='GameModeSurvival']/@value">drinkJarBoiledWater=2,foodCanChili,medicalFirstAidBandage,meleeToolTorch,noteDuke01,vehicleBicyclePlaceable</set>
 	<set xpath="/entity_classes/entity_class[@name='playerMale']/property[@class='ItemsOnEnterGame']/property[@name='GameModeSurvivalSP']/@value">drinkJarBoiledWater,foodCanChili,medicalFirstAidBandage,meleeToolTorch,vehicleBicyclePlaceable</set>

@@ -14,9 +14,14 @@ namespace KaijuMod
     /// </summary>
     public static class KaijuGCell
     {
-        /// <summary>Per stage (0 normal, 1 feral, 2 radiated, 3 charged, 4 infernal): how dark the skin goes and how much is scales.</summary>
-        public static readonly float[] Darken = { 0.35f, 0.45f, 0.58f, 0.72f, 0.86f };
-        public static readonly float[] Coverage = { 0.25f, 0.35f, 0.5f, 0.7f, 0.92f };
+        /// <summary>
+        /// Per stage (0 normal, 1 feral, 2 radiated, 3 charged, 4 infernal): how dark the skin goes and
+        /// how much is scales. Charged and infernal are the same top tier (as in the game) with two
+        /// flavours: charged keeps more skin and glows electric blue, infernal is charred near black
+        /// with blue embers in the scales.
+        /// </summary>
+        public static readonly float[] Darken = { 0.35f, 0.45f, 0.58f, 0.68f, 0.88f };
+        public static readonly float[] Coverage = { 0.25f, 0.35f, 0.5f, 0.78f, 0.82f };
         /// <summary>Largest texture side the scale pass works at (zombie textures are scaled down to this).</summary>
         public static int MaxSize = 512;
         /// <summary>`kaiju gcell skins off` leaves zombies' own skins (each new skin costs a moment's work when it first appears).</summary>
@@ -167,7 +172,7 @@ namespace KaijuMod
             float dark = Darken[stage], cover = Coverage[stage];
             const float cells = 48f; // scales across the texture
             var scaleCol = new Color(0.07f, 0.08f, 0.09f);
-            var rimCol = stage >= 2 ? new Color(0.12f, 0.22f, 0.32f) : new Color(0.16f, 0.17f, 0.18f);
+            var rimCol = stage == 4 ? new Color(0.1f, 0.3f, 0.55f) : stage >= 2 ? new Color(0.12f, 0.22f, 0.32f) : new Color(0.16f, 0.17f, 0.18f);
             for (int y = 0; y < h; y++)
             {
                 float v = (float)y / h;
