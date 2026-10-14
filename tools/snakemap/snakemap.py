@@ -70,13 +70,40 @@ CITY_NAMES = {
     "snow": ["Frostport"],
     "wasteland": ["Ashmouth"],
 }
-# End cities that differ from the default (2 rows of 78 m blocks, any tier): Dune Point fills its
-# lots with tier 3+ POIs first; Frostport has deeper blocks (118 m) for the 100 x 100 m tier 4-5
-# POIs (factories, hospital, stadium...) and fills its lots with tier 4+ first.
+# End cities that differ from the default (2 rows of 78 m blocks, 250 m half width, any tier):
+# Dune Point fills its lots with tier 3+ POIs first; Frostport has deeper blocks (118 m) for the
+# 100 x 100 m tier 4-5 POIs (factories, hospital, stadium...) and fills its lots with tier 4+
+# first. Ashmouth, the finale, is the big city: wider (moved inland to keep off the beach) with
+# every big tier 5 landmark placed first (the skyscrapers are downtown tiles the usual filter
+# skips), then tier 5, then tier 4.
+ASHMOUTH_LANDMARKS = [
+    "skyscraper_01",      # Dishong Tower
+    "skyscraper_02",      # Crack-a-Book HQ
+    "skyscraper_03",      # Higashi Pharmaceutical
+    "apartments_02",      # Vanity Tower
+    "apartments_06",      # Two Bit Tower
+    "hospital_01",        # Navezgane General Hospital
+    "hotel_ostrich",      # Ostrich Hotel
+    "hotel_02",           # Haven Hotel
+    "hotel_03",           # 7 Days Suites
+    "factory_01",         # Shamway Factory
+    "factory_02",         # Shotgun Messiah Factory
+    "factory_03",         # Pop-N-Pills Factory
+    "football_stadium",   # Navezgane Athletics Complex
+    "soccer_stadium_01",  # Champions Coliseum
+    "nursing_home_01",    # The Last Sunset Nursing Home
+    "theater_stage_01",   # Minotaur Theater
+]
 CITY_STYLE = {
     "desert": dict(min_tier=3),
     "snow": dict(block=118, min_tier=4),
+    "wasteland": dict(block=118, half=350, x=2180, min_tier=4, required=ASHMOUTH_LANDMARKS),
 }
+
+
+def end_city_x(i):
+    """End city centre x of strip i (CITY_X unless its style moves it)."""
+    return strip_dir(i) * CITY_STYLE.get(BIOMES[i][0], {}).get("x", CITY_X)
 
 TOWN_NAMES = {
     "pine": ["Fernvale", "Mossbridge", "Elk Hollow"],
@@ -310,7 +337,7 @@ class SnakeMap:
             d = strip_dir(i)
             zc = strip_center(i)
             start_x = -CITY_X if i == 0 else -d * PASS_X
-            end_x = d * CITY_X
+            end_x = end_city_x(i)
             if i == 0:
                 self.settlements.append(dict(kind="city", role="start", strip=i, biome=key, x=start_x,
                                              name=CITY_NAMES[key][1], half=250, rows=2))
@@ -321,8 +348,9 @@ class SnakeMap:
                 x = x0 + (x1 - x0) * t + self.rand.uniform(-60, 60)
                 self.settlements.append(dict(kind="town", role="town", strip=i, biome=key, x=x,
                                              name=names[n], half=150, rows=1))
-            self.settlements.append(dict(kind="city", role="end", strip=i, biome=key, x=end_x,
-                                         name=CITY_NAMES[key][0], half=250, rows=2, **CITY_STYLE.get(key, {})))
+            end = dict(kind="city", role="end", strip=i, biome=key, x=end_x, name=CITY_NAMES[key][0], half=250, rows=2)
+            end.update({k: v for k, v in CITY_STYLE.get(key, {}).items() if k != "x"})
+            self.settlements.append(end)
 
         # Main road per strip: meanders between settlements, straight through them.
         self.strip_roads = []
@@ -330,7 +358,7 @@ class SnakeMap:
             d = strip_dir(i)
             zc = strip_center(i)
             start_x = -CITY_X if i == 0 else -d * PASS_X
-            end_x = d * CITY_X
+            end_x = end_city_x(i)
             xs = np.arange(min(start_x, end_x), max(start_x, end_x) + 1, 2.0)
             if d < 0:
                 xs = xs[::-1]
@@ -478,6 +506,9 @@ class SnakeMap:
                     (("city" in p.townships) if s["kind"] == "city" else ("town" in p.townships or "city" in p.townships))]
             # Higher-tier cities: those POIs first, the rest only to fill gaps they don't fit.
             high = [p for p in pool if p.tier >= s.get("min_tier", 0)]
+            # Landmarks that must be in this city, placed first wherever they fit (whatever their tags).
+            by_name = {p.name: p for p in self.pois}
+            required = [by_name[name] for name in s.get("required", []) if name in by_name]
             trader_done = False
             for j in range(len(street_z) - 1):
                 za, zb = street_z[j], street_z[j + 1]
@@ -496,8 +527,12 @@ class SnakeMap:
                         # spot it fits.
                         want_trader = (not trader_done and try_trader and abs(face_z - zc) < 1
                                        and c >= len(cross_x) // 2 - 1)
-                        cand = (self.first_traders if s is first_pine else self.traders) if want_trader else high
+                        cand = (self.first_traders if s is first_pine else self.traders) if want_trader else required or high
                         placed = self.place_lot(cand, s, x, bx1, face_z, hw_face, depth, north_of_main)
+                        if placed is not None and not want_trader and required:
+                            required = [p for p in required if p.name != self.prefabs[-1][0]]
+                        elif placed is None and not want_trader and required:
+                            placed = self.place_lot(high, s, x, bx1, face_z, hw_face, depth, north_of_main)
                         if placed is None and not want_trader and high is not pool:
                             placed = self.place_lot(pool, s, x, bx1, face_z, hw_face, depth, north_of_main)
                         if placed is None:
@@ -509,6 +544,8 @@ class SnakeMap:
                             trader_done = True
                             s["trader"] = self.prefabs[-1][0]
                         x = placed + LOT_GAP
+            if required:
+                print("warning: no room in %s for %s" % (s["name"], ", ".join(p.name for p in required)))
             if not trader_done:
                 print("warning: no trader fits in", s["name"])
         # The start city is the first attack, so the first pine town is where the game really starts.
