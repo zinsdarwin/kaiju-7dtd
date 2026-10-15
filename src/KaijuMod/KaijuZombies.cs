@@ -22,6 +22,8 @@ namespace KaijuMod
         /// <summary>Only zombies this close to you are looked at, metres; at most this many blasts a second.</summary>
         public static float WatchRange = 60f;
         public static int MaxBlastsPerSecond = 4;
+        /// <summary>Zombies whose skins are looked at per tick (each look walks the model's renderers).</summary>
+        public static int MaxSkinChecks = 2;
 
         private static readonly Dictionary<int, float> nextBreath = new Dictionary<int, float>();
         private static readonly HashSet<int> blasted = new HashSet<int>();
@@ -47,6 +49,7 @@ namespace KaijuMod
                 blastsThisWindow = 0;
             }
             Vector3 pp = GameApi.Position(player);
+            int skinChecks = 0;
             // VERIFIED (V3.3): World.Entities (DictionaryList, .list), Entity.EntityClass.entityClassName,
             // Entity.IsDead, Entity.getHeadPosition, EntityAlive.CanSee(EntityAlive).
             foreach (Entity e in world.Entities.list)
@@ -61,7 +64,8 @@ namespace KaijuMod
                     continue;
                 // VERIFIED (V3.3): Entity.emodel is the entity's EModelBase.
                 // Until all its skins are done (new skins are made a few a second).
-                if (KaijuGCell.SkinsOn && KaijuPerf.On("skins") && z.emodel != null && !skinned.Contains(z.entityId) && !KaijuGCell.Plain.Contains(z.entityId))
+                if (KaijuGCell.SkinsOn && KaijuPerf.On("skins") && z.emodel != null && !skinned.Contains(z.entityId) && !KaijuGCell.Plain.Contains(z.entityId)
+                    && skinChecks++ < MaxSkinChecks)
                 {
                     long t = KaijuPerf.Begin();
                     if (KaijuGCell.Apply(z.emodel.gameObject, z.EntityClass.entityClassName))
