@@ -19,9 +19,15 @@ namespace KaijuMod
         /// <summary>A part quest for this trader, set up to point at the part's site, or null.</summary>
         public static Quest Create(EntityTrader trader, int part, Vector3 sitePos, Vector3 siteSize)
         {
+            return Create(trader, QuestId(part), sitePos, siteSize);
+        }
+
+        /// <summary>A quest by id from this trader, its Goto preset to a place, or null.</summary>
+        public static Quest Create(EntityTrader trader, string questId, Vector3 sitePos, Vector3 siteSize)
+        {
             // VERIFIED (V3.3): QuestClass.GetQuest (case-insensitive), CreateQuest, and the fields
             // EntityTrader.PopulateActiveQuests sets on the quests it offers.
-            QuestClass qc = QuestClass.GetQuest(QuestId(part));
+            QuestClass qc = QuestClass.GetQuest(questId);
             if (qc == null)
                 return null;
             Quest q = qc.CreateQuest();
@@ -51,6 +57,7 @@ namespace KaijuMod
                     return;
                 try
                 {
+                    KaijuStarterTrader.OfferNextTrader(__instance, player, __result);
                     Vector3 sitePos, siteSize;
                     int part = KaijuRun.Instance.PartQuestFor(__instance, player, out sitePos, out siteSize);
                     if (part < 0)

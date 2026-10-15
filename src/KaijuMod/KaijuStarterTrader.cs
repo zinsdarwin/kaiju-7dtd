@@ -64,6 +64,45 @@ namespace KaijuMod
         }
 
         /// <summary>
+        /// The trader in a port city he will attack (an end city before the last strip) always
+        /// offers "Opening Trade Routes" to the next biome's nearest trader, at the top of the job
+        /// list, unless the player already has that tier's one (active or done): tier2_nexttrader
+        /// first, then tier3 and up. Added to the list the game builds (KaijuPartQuests' offer patch).
+        /// </summary>
+        public static void OfferNextTrader(EntityTrader trader, EntityPlayer player, System.Collections.Generic.List<Quest> list)
+        {
+            var data = KaijuRun.Instance.Data;
+            if (data == null || trader == null || player == null || player.QuestJournal == null)
+                return;
+            Vector3 tp = trader.traderArea != null ? (Vector3)trader.traderArea.Position : trader.position;
+            int strip = data.StripOf(tp.z);
+            Settlement city = data.EndCity(strip);
+            if (city == null || strip + 1 >= data.Strips || Mathf.Abs(tp.x - city.X) > city.HalfWidth + 30f || Mathf.Abs(tp.z - city.Z) > city.HalfDepth + 30f)
+                return;
+            var target = NextBiomeTrader(new Vector2(tp.x, tp.z));
+            if (target == null)
+                return;
+            // VERIFIED (V3.3): QuestJournal.FindActiveOrCompleteQuest(name); tier2..tier5_nexttrader in quests.xml.
+            for (int tier = 2; tier <= 5; tier++)
+            {
+                string id = "tier" + tier + "_nexttrader";
+                if (player.QuestJournal.FindActiveOrCompleteQuest(id) != null)
+                    continue;
+                foreach (var q in list)
+                    if (q != null && q.QuestClass != null && q.QuestClass.ID == id)
+                        return; // already offered
+                var pos = new Vector3(target.boundingBoxPosition.x, target.boundingBoxPosition.y, target.boundingBoxPosition.z);
+                var size = new Vector3(target.boundingBoxSize.x, target.boundingBoxSize.y, target.boundingBoxSize.z);
+                Quest quest = KaijuPartQuests.Create(trader, id, pos, size);
+                if (quest == null)
+                    return;
+                list.Insert(0, quest);
+                Log.Out("[KaijuMod] " + trader.EntityName + " offers " + id + " to " + target.name);
+                return;
+            }
+        }
+
+        /// <summary>
         /// Moves an "Opening Trade Routes" quest already in the journal, still on its way, to the
         /// next strip's first trader (saves made before this fix sent it back toward the radiation).
         /// </summary>
