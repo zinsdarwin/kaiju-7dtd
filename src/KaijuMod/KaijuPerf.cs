@@ -12,7 +12,7 @@ namespace KaijuMod
     /// </summary>
     public static class KaijuPerf
     {
-        public static readonly string[] Subsystems = { "director", "run", "radiation", "fallout", "clouds", "parts", "zombies", "skins" };
+        public static readonly string[] Subsystems = { "director", "run", "radiation", "fallout", "horizon", "clouds", "parts", "zombies", "skins" };
         public static float SpikeMs = 5f;
 
         private class Stat
