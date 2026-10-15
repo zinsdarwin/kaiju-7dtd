@@ -61,10 +61,14 @@ namespace KaijuMod
                     continue;
                 // VERIFIED (V3.3): Entity.emodel is the entity's EModelBase.
                 // Until all its skins are done (new skins are made a few a second).
-                if (KaijuGCell.SkinsOn && z.emodel != null && !skinned.Contains(z.entityId) && !KaijuGCell.Plain.Contains(z.entityId)
-                    && KaijuGCell.Ready && KaijuGCell.Apply(z.emodel.gameObject, z.EntityClass.entityClassName))
-                    skinned.Add(z.entityId);
-                if (stage < 2 || (!BreathOn && !BlastOn))
+                if (KaijuGCell.SkinsOn && KaijuPerf.On("skins") && z.emodel != null && !skinned.Contains(z.entityId) && !KaijuGCell.Plain.Contains(z.entityId))
+                {
+                    long t = KaijuPerf.Begin();
+                    if (KaijuGCell.Apply(z.emodel.gameObject, z.EntityClass.entityClassName))
+                        skinned.Add(z.entityId);
+                    KaijuPerf.End("skins", t);
+                }
+                if (stage < 2 || (!BreathOn && !BlastOn) || !KaijuPerf.On("zombies"))
                     continue;
                 if (z.IsDead())
                 {

@@ -124,6 +124,7 @@ namespace KaijuMod
 
         public void Tick(float dt)
         {
+            long t0 = KaijuPerf.Begin();
             World world = GameApi.World;
             if (world == null)
             {
@@ -170,22 +171,30 @@ namespace KaijuMod
             if (st.AttackAt > 0 && now >= st.AttackAt)
                 AttackEndCity(now);
 
+            TickFinale();
+            TickGyro(player);
+            KaijuPerf.End("run", t0);
+
+            long t = KaijuPerf.Begin();
             radTimer += dt;
-            if (radTimer >= 1f)
+            if (radTimer >= 1f && KaijuPerf.On("radiation"))
             {
                 radTimer = 0f;
                 ApplyRadiation(world, now);
             }
-
-            TickFinale();
-            TickGyro(player);
-            TickFallout(world, player, now);
+            KaijuPerf.End("radiation", t);
+            t = KaijuPerf.Begin();
+            if (KaijuPerf.On("fallout"))
+                TickFallout(world, player, now);
+            KaijuPerf.End("fallout", t);
+            t = KaijuPerf.Begin();
             partsTimer += dt;
-            if (partsTimer >= 1f)
+            if (partsTimer >= 1f && KaijuPerf.On("parts"))
             {
                 partsTimer = 0f;
                 TickParts(world, player);
             }
+            KaijuPerf.End("parts", t);
         }
 
         private void Bind(World world)
@@ -521,6 +530,18 @@ namespace KaijuMod
             float stripZ = -data.Size / 2f + (strip + 0.5f) * data.StripHeight;
             float capY = data.SeaLevel + KaijuDirector.Instance.Footprint.Height * KaijuEffects.ExplosionScale * 4.6f;
             frontCloud.MoveTo(new Vector3(fx - data.Direction(strip) * FrontCloudDepth * 0.5f, capY, stripZ));
+        }
+
+        /// <summary>Shows or hides the smoke: fallout over ruined cities, the cloud bank over the front, ash (`kaiju perf off clouds`).</summary>
+        public void ShowClouds(bool show)
+        {
+            foreach (var f in fallout.Values)
+                if (f != null)
+                    f.gameObject.SetActive(show);
+            if (frontCloud != null)
+                frontCloud.gameObject.SetActive(show);
+            if (ash != null)
+                ash.gameObject.SetActive(show);
         }
 
         private void AddFallout(Settlement city)

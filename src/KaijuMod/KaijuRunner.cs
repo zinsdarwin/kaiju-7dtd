@@ -21,9 +21,15 @@ namespace KaijuMod
             {
                 // Time.deltaTime is 0 while the single player game is paused (if the game pauses
                 // via timeScale; to verify), so he stops with it.
-                KaijuDirector.Instance.Tick(Time.deltaTime);
-                KaijuRun.Instance.Tick(Time.deltaTime);
-                KaijuZombies.Tick(Time.deltaTime);
+                long t = KaijuPerf.Begin();
+                if (KaijuPerf.On("director"))
+                    KaijuDirector.Instance.Tick(Time.deltaTime);
+                KaijuPerf.End("director", t);
+                KaijuRun.Instance.Tick(Time.deltaTime); // times its own parts
+                t = KaijuPerf.Begin();
+                if (KaijuPerf.On("zombies") || KaijuPerf.On("skins"))
+                    KaijuZombies.Tick(Time.deltaTime);
+                KaijuPerf.End("zombies", t);
             }
             catch (System.Exception e)
             {
@@ -38,7 +44,11 @@ namespace KaijuMod
             try
             {
                 // After animation: the breath aims the head and puts the beam on the mouth.
-                KaijuDirector.Instance.LateTick();
+                long t = KaijuPerf.Begin();
+                if (KaijuPerf.On("director"))
+                    KaijuDirector.Instance.LateTick();
+                KaijuPerf.End("director", t);
+                KaijuPerf.EndFrame();
             }
             catch (System.Exception e)
             {

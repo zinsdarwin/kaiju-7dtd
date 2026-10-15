@@ -59,12 +59,14 @@ namespace KaijuMod
             {
                 try
                 {
-                    if (!SkinsOn || __instance == null || _ec == null || _ec.entityClassName == null || !_ec.entityClassName.StartsWith("zombie"))
+                    if (!SkinsOn || !KaijuPerf.On("skins") || __instance == null || _ec == null || _ec.entityClassName == null || !_ec.entityClassName.StartsWith("zombie"))
                         return;
                     // VERIFIED (V3.3): EModelBase.entity.
                     if (__instance.entity != null && Plain.Contains(__instance.entity.entityId))
                         return;
+                    long t = KaijuPerf.Begin();
                     Apply(__instance.gameObject, _ec.entityClassName);
+                    KaijuPerf.End("skins", t);
                 }
                 catch (System.Exception e)
                 {
@@ -129,14 +131,38 @@ namespace KaijuMod
             return done == textured;
         }
 
-        /// <summary>The zombie skin darkened and grown over with scales for a stage (cached).</summary>
+        // Skins being made: the copy is read back on the main thread, the per-pixel work runs on a
+        // worker thread, and the result is uploaded on the main thread when it is done.
+        private class Job
+        {
+            public Texture2D Tex;
+            public Color32[] Px;
+            public int W, H, Stage;
+            public volatile bool Done;
+        }
+
+        private static readonly Dictionary<long, Job> jobs = new Dictionary<long, Job>();
+
+        /// <summary>The zombie skin darkened and grown over with scales for a stage (cached); null while it is being made.</summary>
         public static Texture2D Infect(Texture src, int stage)
         {
             long key = ((long)src.GetInstanceID() << 3) | (uint)stage;
             Texture2D t;
             if (cache.TryGetValue(key, out t))
                 return t;
-            // One new skin at a time, spread out: making one stalls a frame.
+            Job job;
+            if (jobs.TryGetValue(key, out job))
+            {
+                if (!job.Done)
+                    return null;
+                jobs.Remove(key);
+                job.Tex.SetPixels32(job.Px);
+                job.Tex.Apply(true, true);
+                cache[key] = job.Tex;
+                made.Add(job.Tex);
+                return job.Tex;
+            }
+            // One new skin at a time, spread out: the read back stalls a frame a little.
             if (Time.realtimeSinceStartup < nextSkin)
                 return null;
             nextSkin = Time.realtimeSinceStartup + SkinInterval;
@@ -156,14 +182,17 @@ namespace KaijuMod
             t.ReadPixels(new Rect(0, 0, w, h), 0, 0);
             RenderTexture.active = prev;
             RenderTexture.ReleaseTemporary(rt);
-            var px = t.GetPixels32();
-            Scale(px, w, h, stage);
-            t.SetPixels32(px);
             t.name = src.name + "_gcell" + stage;
-            t.Apply(true, true);
-            cache[key] = t;
-            made.Add(t);
-            return t;
+            job = new Job { Tex = t, Px = t.GetPixels32(), W = w, H = h, Stage = stage };
+            cache.Remove(key);
+            jobs[key] = job;
+            System.Threading.ThreadPool.QueueUserWorkItem(_ =>
+            {
+                try { Scale(job.Px, job.W, job.H, job.Stage); }
+                catch (System.Exception) { }
+                job.Done = true;
+            });
+            return null;
         }
 
         /// <summary>Darkens toward black and lays scales in patches (low-frequency noise over the coverage).</summary>

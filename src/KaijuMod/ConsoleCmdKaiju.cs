@@ -35,6 +35,7 @@ namespace KaijuMod
                 + "  kaiju style <minusone|classic>  city attacks: one city-destroying blast (default), or six breaths along the streets\n"
                 + "  kaiju give <1-12|all|device|bike>  put weapon parts (see kaiju parts), the Oxygen Destroyer, or a bicycle in your backpack\n"
                 + "  kaiju gcell [Joe|FatCop|Arlene...]  spawn one of each G-cell stage (normal, feral, radiated, charged, infernal) in front of you\n"
+                + "  kaiju perf [reset|on <name|all>|off <name|all>]  the mod's cost per subsystem; switch one off to compare\n"
                 + "  kaiju gcell skins <on|off>  G-cell scales and darker skin on zombies spawned from now on\n"
                 + "  kaiju zbreath <on|off>  G-cell zombies' atomic breath\n"
                 + "  kaiju zblast <on|off>   G-cell zombies blowing up when they die\n"
@@ -173,6 +174,19 @@ namespace KaijuMod
                         GameApi.ConsoleOut(KaijuRun.Instance.GivePart(n - 1) ? "Gave part " + n + "." : "Could not give it (backpack full?).");
                     else
                         GameApi.ConsoleOut("Usage: kaiju give <1-" + KaijuRun.Parts + "|all|device|bike>");
+                    break;
+                }
+                case "perf":
+                {
+                    if (_params.Count > 2 && (_params[1] == "on" || _params[1] == "off"))
+                        GameApi.ConsoleOut(KaijuPerf.Switch(_params[2].ToLowerInvariant(), _params[1] == "on"));
+                    else if (_params.Count > 1 && _params[1] == "reset")
+                    {
+                        KaijuPerf.Reset();
+                        GameApi.ConsoleOut("Kaiju perf counters reset.");
+                    }
+                    else
+                        GameApi.ConsoleOut(KaijuPerf.Report());
                     break;
                 }
                 case "zbreath":
