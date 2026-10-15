@@ -66,8 +66,9 @@ namespace KaijuMod
         /// <summary>
         /// The trader in a port city he will attack (an end city before the last strip) always
         /// offers "Opening Trade Routes" to the next biome's nearest trader, at the top of the job
-        /// list, unless the player already has that tier's one (active or done): tier2_nexttrader
-        /// first, then tier3 and up. Added to the list the game builds (KaijuPartQuests' offer patch).
+        /// list once the player has finished that biome's trader tier (tier 1 in the pine forest,
+        /// tier 2 in the burnt forest...), unless they already have it (active or done). Added to the
+        /// list the game builds (KaijuPartQuests' offer patch).
         /// </summary>
         public static void OfferNextTrader(EntityTrader trader, EntityPlayer player, System.Collections.Generic.List<Quest> list)
         {
@@ -82,24 +83,30 @@ namespace KaijuMod
             var target = NextBiomeTrader(new Vector2(tp.x, tp.z));
             if (target == null)
                 return;
-            // VERIFIED (V3.3): QuestJournal.FindActiveOrCompleteQuest(name); tier2..tier5_nexttrader in quests.xml.
-            for (int tier = 2; tier <= 5; tier++)
-            {
-                string id = "tier" + tier + "_nexttrader";
-                if (player.QuestJournal.FindActiveOrCompleteQuest(id) != null)
-                    continue;
-                foreach (var q in list)
-                    if (q != null && q.QuestClass != null && q.QuestClass.ID == id)
-                        return; // already offered
-                var pos = new Vector3(target.boundingBoxPosition.x, target.boundingBoxPosition.y, target.boundingBoxPosition.z);
-                var size = new Vector3(target.boundingBoxSize.x, target.boundingBoxSize.y, target.boundingBoxSize.z);
-                Quest quest = KaijuPartQuests.Create(trader, id, pos, size);
-                if (quest == null)
-                    return;
-                list.Insert(0, quest);
-                Log.Out("[KaijuMod] " + trader.EntityName + " offers " + id + " to " + target.name);
+            // Once the biome's tier is done: Cedar Harbor (strip 0) after tier 1 offers tier2_nexttrader,
+            // Cinder Bay after tier 2 offers tier3_nexttrader, and so on.
+            // VERIFIED (V3.3): QuestJournal.GetCurrentFactionTier(faction) is the player's trader tier
+            // with that faction (tier 2 once tier 1's quests are done); FindActiveOrCompleteQuest(name);
+            // tier2..tier5_nexttrader in quests.xml.
+            int tier = strip + 2;
+            if (tier > 5)
                 return;
-            }
+            byte faction = trader.NPCInfo != null ? trader.NPCInfo.QuestFaction : (byte)0;
+            if (player.QuestJournal.GetCurrentFactionTier(faction) < tier)
+                return;
+            string id = "tier" + tier + "_nexttrader";
+            if (player.QuestJournal.FindActiveOrCompleteQuest(id) != null)
+                return;
+            foreach (var q in list)
+                if (q != null && q.QuestClass != null && q.QuestClass.ID == id)
+                    return; // already offered
+            var pos = new Vector3(target.boundingBoxPosition.x, target.boundingBoxPosition.y, target.boundingBoxPosition.z);
+            var size = new Vector3(target.boundingBoxSize.x, target.boundingBoxSize.y, target.boundingBoxSize.z);
+            Quest quest = KaijuPartQuests.Create(trader, id, pos, size);
+            if (quest == null)
+                return;
+            list.Insert(0, quest);
+            Log.Out("[KaijuMod] " + trader.EntityName + " offers " + id + " to " + target.name);
         }
 
         /// <summary>
