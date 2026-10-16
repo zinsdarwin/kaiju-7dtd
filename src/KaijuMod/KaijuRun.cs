@@ -867,7 +867,7 @@ namespace KaijuMod
                 if (st.PartTaken[i] || GameApi.ItemCount(player, PartItem(i)) > 0 || GameApi.ItemCount(player, WeaponItems[WeaponOf(i)]) > 0)
                     return -1;
                 // VERIFIED (V3.3): QuestJournal.FindActiveOrCompleteQuest(name, faction = -1).
-                if (player.QuestJournal != null && player.QuestJournal.FindActiveOrCompleteQuest(KaijuPartQuests.QuestId(i)) != null)
+                if (KaijuPartQuests.HasQuest(player, i))
                     return -1;
                 World world = GameApi.World;
                 if (st.CratePlaced[i] && world != null && GameApi.IsChunkLoaded(world, st.CratePos[i].x, st.CratePos[i].z)
