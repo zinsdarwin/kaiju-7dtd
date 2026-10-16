@@ -357,10 +357,14 @@ class SnakeMap:
                 self.settlements.append(dict(kind="city", role="start", strip=i, biome=key, x=start_x,
                                              name=CITY_NAMES[key][1], half=250, rows=2, block=BIOME_BLOCK.get(key, BLOCK_S)))
             names = list(TOWN_NAMES[key])
-            for n, t in enumerate((0.27, 0.5, 0.73)):
-                x0 = start_x + d * (310 if i == 0 else 120)
+            # After the first strip, the first town sits right where the pass comes down, just north
+            # of the last strip's port city, so moving your stuff over is a short trip; the other
+            # two spread out toward this strip's end city.
+            fractions = (0.27, 0.5, 0.73) if i == 0 else (0.0, 0.42, 0.78)
+            for n, t in enumerate(fractions):
+                x0 = start_x + d * (310 if i == 0 else 175)
                 x1 = d * PASS_X - d * 80
-                x = x0 + (x1 - x0) * t + self.rand.uniform(-60, 60)
+                x = x0 + (x1 - x0) * t + (self.rand.uniform(-60, 60) if t > 0 else 0)
                 self.settlements.append(dict(kind="town", role="town", strip=i, biome=key, x=x,
                                              name=names[n], half=150, rows=1, block=BIOME_BLOCK.get(key, BLOCK_S)))
             end = dict(kind="city", role="end", strip=i, biome=key, x=end_x, name=CITY_NAMES[key][0], half=250, rows=2,
