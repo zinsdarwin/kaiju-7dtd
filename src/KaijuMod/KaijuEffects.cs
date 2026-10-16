@@ -203,7 +203,13 @@ namespace KaijuMod
             f.ps = KaijuEffects.Particles(go.transform, "Bank", smoke, 1500, true);
             // Unity shrinks any particle bigger than half the screen (maxParticleSize 0.5): looking
             // straight at the bank from close by, its puffs shrank away and it seemed to vanish.
-            f.ps.GetComponent<ParticleSystemRenderer>().maxParticleSize = 50f;
+            var bankRenderer = f.ps.GetComponent<ParticleSystemRenderer>();
+            bankRenderer.maxParticleSize = 50f;
+            // Face the camera, not the screen plane: with puffs hundreds of metres across, view-aligned
+            // billboards swung with every turn of the head and opened gaps onto the bright sky.
+            bankRenderer.alignment = ParticleSystemRenderSpace.Facing;
+            // Far puffs first, so near and far don't swap as you turn.
+            bankRenderer.sortMode = ParticleSystemSortMode.Distance;
             var main = f.ps.main;
             main.startLifetime = new ParticleSystem.MinMaxCurve(90f, 150f);
             main.startSpeed = new ParticleSystem.MinMaxCurve(0.2f, 1.5f);
