@@ -14,7 +14,8 @@ using UnityEngine;
 /// layer on top), and an empty
 /// "Mouth" on the head bone (forward = where the breath goes). The dorsal plate material
 /// (name contains "Scales") has emission enabled at black so the mod can light it. Also bundles
-/// the atomic breath materials KaijuBeam, KaijuSpark and KaijuSmoke. Writes kaiju.unity3d,
+/// the atomic breath materials KaijuBeam, KaijuSpark and KaijuSmoke, and KaijuSmokeNoFog (the
+/// radiation cloud bank, Assets/Shaders/KaijuSmokeNoFog.shader). Writes kaiju.unity3d,
 /// preview.png and preview-glow.png (plates lit) to the output folder.
 /// </summary>
 public static class BuildKaiju
@@ -320,6 +321,8 @@ public static class BuildKaiju
             EffectMaterial("KaijuBeam", "Legacy Shaders/Particles/Additive", beamTex),
             EffectMaterial("KaijuSpark", "Legacy Shaders/Particles/Additive", dotTex),
             EffectMaterial("KaijuSmoke", "Legacy Shaders/Particles/Alpha Blended", dotTex),
+            // The radiation front's cloud bank: the same smoke, ignoring fog (Assets/Shaders).
+            EffectMaterial("KaijuSmokeNoFog", "Kaiju/SmokeNoFog", dotTex),
         };
     }
 

@@ -518,7 +518,9 @@ namespace KaijuMod
             if (on && frontCloud == null)
             {
                 float h = KaijuDirector.Instance.Footprint.Height * KaijuEffects.ExplosionScale;
-                frontCloud = FrontCloud.Create(KaijuDirector.Instance.EffectMaterial("KaijuSmoke"), h,
+                // Smoke that ignores fog, so it stays dark through storms (older bundles: the normal smoke).
+                var smoke = KaijuDirector.Instance.EffectMaterial("KaijuSmokeNoFog") ?? KaijuDirector.Instance.EffectMaterial("KaijuSmoke");
+                frontCloud = FrontCloud.Create(smoke, h,
                     FrontCloudWidth, FrontCloudDepth, prewarmFront);
             }
             prewarmFront = false;
