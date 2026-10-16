@@ -37,6 +37,7 @@ namespace KaijuMod
                 + "  kaiju gcell [Joe|FatCop|Arlene...]  spawn one of each G-cell stage (normal, feral, radiated, charged, infernal) in front of you\n"
                 + "  kaiju perf [reset|on <name|all>|off <name|all>]  the mod's cost per subsystem; switch one off to compare\n"
                 + "  kaiju gcell skins <on|off>  G-cell scales and darker skin on zombies spawned from now on\n"
+                + "  kaiju cloud          where the radiation cloud bank is and how it is drawn\n"
                 + "  kaiju zbreath <on|off>  G-cell zombies' atomic breath\n"
                 + "  kaiju zblast <on|off>   G-cell zombies blowing up when they die\n"
                 + "  kaiju radiation <on|off>  turn the radiation chase on or off\n"
@@ -189,6 +190,9 @@ namespace KaijuMod
                         GameApi.ConsoleOut(KaijuPerf.Report());
                     break;
                 }
+                case "cloud":
+                    GameApi.ConsoleOut(FrontCloud.Info);
+                    break;
                 case "zbreath":
                 case "zblast":
                 {

@@ -188,6 +188,26 @@ namespace KaijuMod
         private ParticleSystem ps;
         private bool placed;
         private Vector3 target;
+        // Furthest a puff reaches from the bank's centre (half its diagonal plus half the biggest puff).
+        private float reach;
+        /// <summary>
+        /// The game's camera draws nothing past 2000 m (GameOptionsManager sets farClipPlane), so a
+        /// bank further off lost its far puffs and the sky showed through. Past this distance the
+        /// whole bank is scaled toward the eye point instead: it looks exactly the same (same outline
+        /// and size on screen), just nearer.
+        /// </summary>
+        public static float MaxDrawDistance = 1850f;
+        // The last frame's numbers, for `kaiju cloud`.
+        private static float lastCentre = -1f, lastFar, lastClip, lastScale;
+
+        public static string Info
+        {
+            get
+            {
+                return lastCentre < 0f ? "No cloud bank yet." : "Cloud bank: centre " + Mathf.RoundToInt(lastCentre) + " m away, furthest puff "
+                    + Mathf.RoundToInt(lastFar) + " m, camera draws to " + Mathf.RoundToInt(lastClip) + " m, drawn at scale " + lastScale.ToString("0.00") + ".";
+            }
+        }
 
         /// <summary>
         /// h: blast scale height (his height times ExplosionScale). width (z) and depth (x) are the
@@ -205,6 +225,8 @@ namespace KaijuMod
             // straight at the bank from close by, its puffs shrank away and it seemed to vanish.
             f.ps.GetComponent<ParticleSystemRenderer>().maxParticleSize = 50f;
             var main = f.ps.main;
+            main.scalingMode = ParticleSystemScalingMode.Hierarchy; // the bank's scale shrinks it toward the eye
+            f.reach = 0.5f * Mathf.Sqrt(width * width + depth * depth + (h * 3.4f) * (h * 3.4f)) + h * 1.6f;
             main.startLifetime = new ParticleSystem.MinMaxCurve(90f, 150f);
             main.startSpeed = new ParticleSystem.MinMaxCurve(0.2f, 1.5f);
             main.startSize = new ParticleSystem.MinMaxCurve(h * 1.8f, h * 3.2f);
@@ -248,6 +270,30 @@ namespace KaijuMod
         private void Update()
         {
             worldPos = Vector3.MoveTowards(worldPos, target, MoveSpeed * Time.deltaTime);
+        }
+
+        protected override void LateUpdate()
+        {
+            Vector3 centre = GameApi.WorldToScene(worldPos);
+            var cam = Camera.main;
+            if (cam == null)
+            {
+                transform.position = centre;
+                transform.localScale = Vector3.one;
+                return;
+            }
+            // Scaling about the eye keeps every puff on the same line of sight at the same angular
+            // size, so only its distance changes.
+            Vector3 eye = cam.transform.position;
+            float far = Vector3.Distance(centre, eye) + reach;
+            float limit = Mathf.Min(MaxDrawDistance, cam.farClipPlane * 0.92f);
+            float s = Mathf.Min(1f, limit / Mathf.Max(1f, far));
+            transform.position = eye + (centre - eye) * s;
+            transform.localScale = Vector3.one * s;
+            lastCentre = Vector3.Distance(centre, eye);
+            lastFar = far;
+            lastClip = cam.farClipPlane;
+            lastScale = s;
         }
     }
 
