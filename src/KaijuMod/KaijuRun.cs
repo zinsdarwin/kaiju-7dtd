@@ -528,7 +528,8 @@ namespace KaijuMod
             if (!on)
                 return;
             float stripZ = -data.Size / 2f + (strip + 0.5f) * data.StripHeight;
-            float capY = data.SeaLevel + KaijuDirector.Instance.Footprint.Height * KaijuEffects.ExplosionScale * 3.6f;
+            // From the ground up to the old cap height: a wall of smoke, not just a cloud in the sky.
+            float capY = data.SeaLevel + KaijuDirector.Instance.Footprint.Height * KaijuEffects.ExplosionScale * 1.9f;
             frontCloud.MoveTo(new Vector3(fx - data.Direction(strip) * FrontCloudDepth * 0.5f, capY, stripZ));
         }
 
