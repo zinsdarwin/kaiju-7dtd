@@ -201,6 +201,9 @@ namespace KaijuMod
             Object.DontDestroyOnLoad(go);
             var f = go.AddComponent<FrontCloud>();
             f.ps = KaijuEffects.Particles(go.transform, "Bank", smoke, 1500, true);
+            // Unity shrinks any particle bigger than half the screen (maxParticleSize 0.5): looking
+            // straight at the bank from close by, its puffs shrank away and it seemed to vanish.
+            f.ps.GetComponent<ParticleSystemRenderer>().maxParticleSize = 50f;
             var main = f.ps.main;
             main.startLifetime = new ParticleSystem.MinMaxCurve(90f, 150f);
             main.startSpeed = new ParticleSystem.MinMaxCurve(0.2f, 1.5f);
