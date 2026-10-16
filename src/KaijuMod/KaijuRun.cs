@@ -669,11 +669,9 @@ namespace KaijuMod
                     Object.Destroy(crateLights[i].gameObject);
                     crateLights[i] = null;
                 }
-                // Compass marker: once in the town, until you carry the part.
-                bool inTown = InCity(town, p, 40f);
-                if (inTown && !hasPart && markers[i] == null)
-                    markers[i] = GameApi.AddMarker("kaiju_part", crate);
-                else if ((!inTown || hasPart) && markers[i] != null)
+                // No compass marker of its own any more: the quest's marker leads there (Darwin found
+                // the extra one noisy); one left from an older version is taken down.
+                if (markers[i] != null)
                 {
                     GameApi.RemoveMarker(markers[i]);
                     markers[i] = null;
