@@ -265,6 +265,7 @@ def pine():
     yard_sleepers(p, "GroupGenericZombie", 3, [(12, 8, "sleeperIdle", 0), (27, 10, "sleeperIdle", 2), (8, 12, "sleeperStomach", 1)])
     p.sleepers((x0 + 1, top + 1, z0 + 1), (7, 3, 7), "GroupZomSoldier", 1, True,
                [(x0 + 3, top + 1, z1 - 3, "sleeperSit", 2)])
+    theme_pine(p)
     return p
 
 
@@ -313,6 +314,7 @@ def burnt():
                                                (16, 13, "sleeperStomach", 2)])
     p.sleepers((bx0 + 1, 1, bz0 + 1), (11, 3, 7), "GroupZomSoldier", 2, True,
                [(bx0 + 4, 1, bz0 + 3, "sleeperSit", 2), (bx1 - 3, 1, bz0 + 4, "sleeperIdle", 0)])
+    theme_burnt(p)
     return p
 
 
@@ -363,6 +365,7 @@ def desert():
                [(tx0 + 2, 1, tz0 + 2, "sleeperSit", 2), (tx0 + 2, 6, tz0 + 2, "sleeperIdle", 0)])
     p.sleepers((tx0, top + 1, tz0), (7, 3, 7), "GroupZomSoldier", 1, True,
                [(CX, top + 1, tz0 + 1, "sleeperStomach", 0)])
+    theme_desert(p)
     return p
 
 
@@ -404,21 +407,20 @@ def snow():
                (cx - 4, top + 1, cz - 2, "cntGunSafeRandomLootHelperArmyGreen"),
                (cx + 4, top + 1, cz - 2, "cntMunitionsBoxArmy"),
                (cx + 4, top + 1, cz, "radioHam")])
-    # Yard: a corrugated hut (supply store) and fuel drums.
+    # Yard: a corrugated hut (supply store).
     hx0, hz0, hx1, hz1 = 4, 26, 12, 34
     p.walls(hx0, hz0, hx1, hz1, 1, 3, "corrugatedMetalShapes:cube")
     p.fill(hx0, 4, hz0, hx1, 4, hz1, "corrugatedMetalShapes:cube")
     p.clear(8, 1, hz0, 8, 2, hz0)
     crates(p, [(hx0 + 1, 1, hz1 - 1, "cntMilitaryMetalShelvesRandomLootHelper"),
                (hx1 - 1, 1, hz1 - 1, "cntFootlockerArmyGreenRandomLootHelper")])
-    for x, z in ((31, 33), (32, 33), (33, 33), (31, 34)):
-        p.set(x, 1, z, "cntBarrelGasSingle00")
     yard_sleepers(p, "GroupZomSoldier", 4, [(10, 9, "sleeperIdle", 0), (30, 9, "sleeperIdle", 0),
                                             (20, 12, "sleeperStomach", 2)])
     p.sleepers((hx0 + 1, 1, hz0 + 1), (7, 3, 7), "GroupZomSoldier", 2, True,
                [(hx0 + 3, 1, hz0 + 3, "sleeperSit", 2), (hx0 + 5, 1, hz0 + 4, "sleeperBack", 1)])
     p.sleepers((cx - 5, top + 1, cz - 5), (11, 3, 5), "GroupZomSoldier", 1, True,
                [(cx + 2, top + 1, cz - 3, "sleeperIdle", 0)])
+    theme_snow(p)
     return p
 
 
@@ -477,7 +479,7 @@ def wasteland():
     for x in range(4, 37, 2):
         if x not in GATE:
             p.set(x, 1, 13, "barbedWireSpindle")
-    for x, z in ((8, 17), (12, 19), (28, 17), (32, 19), (6, 31), (34, 31)):
+    for x, z in ((8, 17), (12, 19), (24, 30), (6, 31), (34, 33)):
         p.fill(x, 1, z, x, 2, z, "concreteShapes:cube")
     for x in list(range(10, 16)) + list(range(25, 31)):
         p.set(x, 1, 10, "ironSpikesTrapBloodPOI")
@@ -490,7 +492,109 @@ def wasteland():
                [(cx - 2, 6, cz, "sleeperIdle", 0), (cx + 2, 6, cz - 1, "sleeperStomach", 1)])
     p.sleepers((cx - 4, top + 1, cz - 4), (9, 3, 9), "GroupZomSoldier", 2, True,
                [(cx, top + 1, cz - 2, "sleeperIdle", 0), (cx + 2, top + 1, cz + 2, "sleeperSit", 2)])
+    theme_wasteland(p)
     return p
+
+
+# ---- set pieces from each strip's weapon quest
+
+def tent(p, x0, z0, x1, z1, wall, roof, open_side="-z"):
+    """A walled shelter two high with a roof, open on one long side."""
+    p.walls(x0, z0, x1, z1, 1, 2, wall)
+    p.fill(x0, 3, z0, x1, 3, z1, roof)
+    if open_side == "-z":
+        p.clear(x0 + 1, 1, z0, x1 - 1, 2, z0)
+    else:
+        p.clear(x0, 1, z0 + 1, x0, 2, z1 - 1)
+
+
+def pen(p, x0, z0, x1, z1, inside):
+    """A barbed wire pen with things inside it."""
+    p.ring(x0, z0, x1, z1, 1, "barbedWireSpindle1m")
+    for x, z, b in inside:
+        p.set(x, 1, z, b)
+
+
+def theme_pine(p):
+    """Disaster bureau field post: a triage tent, and a wired-off pen of irradiated drums (G-cell samples)."""
+    tent(p, 27, 17, 35, 22, "corrugatedMetalShapes:cube", "corrugatedMetalShapes:cube", "-x")
+    crates(p, [(34, 1, 18, "cntMedicLootPileA"), (34, 1, 21, "cntMedicLootPileB"),
+               (32, 1, 21, "cntPillCaseRandomLootHelper"), (30, 1, 21, "cntMedicineCabinetClosedRandomLootHelper")])
+    pen(p, 27, 26, 33, 31, [(29, 28, "cntBarrelRadiatedSingle00"), (31, 29, "cntBarrelRadiatedSingle00"),
+                            (30, 27, "cntBarrelRadiatedSingle45")])
+    p.set(13, 1, 18, "cntCollapsedCampfire")
+    # Searchlights on the south deck, watching the sea.
+    for x in (CX - 3, CX + 3):
+        p.set(x, 19, 20, "spotlightUpStraight_POI")
+
+
+def theme_burnt(p):
+    """Missile battery site: a launcher trailer aimed west at the sea, missile racks, munitions;
+    the bunker roof is a sandbagged pad for the launch control."""
+    # Trailer chassis and a launcher box stepped up toward the west.
+    p.fill(27, 1, 18, 35, 1, 20, "steelShapes:cube")
+    for i, x in enumerate(range(27, 35)):
+        y = 2 + (34 - x) // 3
+        p.fill(x, y, 18, x, y + 2, 20, "corrugatedMetalShapes:cube")
+        p.fill(x, 2, 19, x, y - 1, 19, "steelShapes:pillar50")
+    for x in range(28, 36, 2):
+        p.set(x, 1, 17, "barrierConcrete")
+    # Missile racks and munitions.
+    for z in (24, 26):
+        p.fill(29, 1, z, 34, 1, z, "metalPipeStackLoose")
+    crates(p, [(35, 1, 24, "cntMunitionsBoxArmy"), (35, 1, 26, "cntAmmoPileLarge"),
+               (28, 1, 28, "cntWeaponsBagLarge"), (30, 1, 28, "cntMunitionsBoxArmy")])
+    # Launch control pad on the bunker roof.
+    p.ring(CX - 6, 21, CX + 6, 29, 6, "sandbagStraight01", gaps={(CX - 1, 29), (CX, 29), (CX + 1, 29)})
+
+
+def theme_desert(p):
+    """Airstrike radio relay: an antenna farm, a big X signal panel on the sand for the jets,
+    a radio room in the tower, fuel drums."""
+    for x, z in ((4, 34), (10, 36), (35, 35)):
+        p.fill(x, 1, z, x, 12, z, "steelShapes:pole")
+        p.set(x, 13, z, "lightIndustrialRed")
+    for i in range(9):
+        for x, z in ((25 + i, 15 + i), (33 - i, 15 + i)):
+            p.set(x, 0, z, "terrConcrete")
+            p.set(x + 1, 0, z, "terrConcrete")
+    crates(p, [(CX + 2, 1, 26, "radioHam"), (CX + 1, 1, 26, "cntDeskMetalArmyGreenRandomLootHelper"),
+               (CX + 2, 21, 21, "radioHam")])
+    for x, z in ((14, 33), (16, 33), (14, 35)):
+        p.set(x, 1, z, "cntBarrelGasQuadA")
+
+
+def theme_snow(p):
+    """Maser test site: a gas depot behind sandbags, generators by the hut, and a scorched test target
+    out front; the deck's open south half is the cannon pad."""
+    p.ring(28, 29, 35, 35, 1, "sandbagStraight01", gaps={(31, 29)})
+    for x, z in ((29, 31), (31, 31), (33, 31), (29, 33), (31, 33), (33, 33)):
+        p.set(x, 1, z, "cntBarrelGasQuadA")
+    crates(p, [(13, 1, 27, "cntCollapsedGeneratorbank"), (13, 1, 30, "cntCollapsedGeneratorbank")])
+    # Test target: a scorched, broken concrete wall.
+    for x, h, b in ((30, 3, "concreteShapes:cubeTrimDestroyed03"), (31, 4, "concreteShapes:cubeTrimDestroyed01"),
+                    (32, 2, "concreteShapes:cubeTrimDestroyed04"), (33, 3, "concreteShapes:cubeTrimDestroyed02")):
+        p.fill(x, 1, 16, x, h - 1, 16, "concreteShapes:cube")
+        p.set(x, h, 16, b)
+
+
+def theme_wasteland(p):
+    """Oxygen Destroyer staging post: a gyrocopter helipad with an H and lights, fuel, a lab on the
+    blockhouse's upper floor and a pen of irradiated drums."""
+    x0, z0 = 26, 15
+    p.fill(x0, 0, z0, x0 + 10, 0, z0 + 10, "terrAsphalt")
+    for z in range(z0 + 2, z0 + 9):
+        p.set(x0 + 3, 0, z, "terrConcrete")
+        p.set(x0 + 7, 0, z, "terrConcrete")
+    for x in range(x0 + 3, x0 + 8):
+        p.set(x, 0, z0 + 5, "terrConcrete")
+    for x, z in ((x0, z0), (x0 + 10, z0), (x0, z0 + 10), (x0 + 10, z0 + 10)):
+        p.set(x, 1, z, "spotlightUpStraight_POI")
+    for x, z in ((35, 28), (35, 30), (33, 30)):
+        p.set(x, 1, z, "cntBarrelGasQuadA")
+    crates(p, [(CX - 4, 6, 22, "cntShippingCrateLabEquipment"), (CX - 4, 6, 24, "cntChemPileLarge"),
+               (CX + 4, 6, 22, "cntChemPileMedium"), (CX - 1, 6, 28, "lightDisplayXRayFull")])
+    pen(p, 4, 18, 9, 23, [(6, 20, "cntBarrelRadiatedSingle00"), (7, 21, "cntBarrelRadiatedSingle45")])
 
 
 POSTS = (pine, burnt, desert, snow, wasteland)
@@ -529,6 +633,7 @@ COLOURS = [
     ("barbed", (70, 70, 70)), ("ironSpikes", (120, 60, 50)), ("sandbag", (185, 165, 115)),
     ("barrier", (160, 160, 150)), ("brick", (190, 130, 90)), ("wood", (140, 100, 60)),
     ("steel", (95, 105, 115)), ("corrugated", (120, 130, 125)), ("concrete", (165, 165, 160)),
+    ("terrConcrete", (235, 235, 225)), ("terrAsphalt", (55, 55, 60)), ("metalPipe", (150, 60, 50)),
     ("terrSand", (220, 200, 150)), ("terrGravel", (130, 125, 115)), ("terr", (110, 95, 70)),
 ]
 THIN = ("ladder", "railing", "barbed", "pole", "pillar", "sleeper", "questRally", "flag", "light", "spotlight", "ironSpikes")
