@@ -97,10 +97,10 @@ namespace KaijuMod
         private Ashfall ash;
         private bool fogOn;
         private FrontCloud frontCloud;
-        private KaijuHorizonWall horizon;
+        private bool prewarmFront;   // the first cloud after a load starts fully formed
         private bool journalChecked; // trader quests in the journal pointed along the run, once per load
         /// <summary>Size of the dark cloud bank over the radiation front, metres.</summary>
-        public static float FrontCloudWidth = 900f, FrontCloudDepth = 700f;
+        public static float FrontCloudWidth = 2600f, FrontCloudDepth = 1800f;
         private float nextGeiger;
 
         // Not saved: markers and lights are rebuilt as the player moves.
@@ -202,6 +202,7 @@ namespace KaijuMod
             ClearMarkers();
             ClearFallout(world);
             boundWorld = world;
+            prewarmFront = true;
             journalChecked = false;
             startTimer = radTimer = partsTimer = 0f;
             st = new State();
@@ -508,34 +509,27 @@ namespace KaijuMod
 
         // ---- Fallout
 
-        /// <summary>
-        /// The wall of dark smoke on the horizon toward the radiation: on the side the front
-        /// actually is from you (so it is behind you as you flee and in front only if you turn back
-        /// toward it), at the front's distance (clamped), while you are ahead of it in its strip.
-        /// It replaces the old cloud bank over the front, a few far puffs that looked like a smudge.
-        /// </summary>
-        private void TickHorizon(EntityPlayer player, ulong now)
+        /// <summary>Keeps the dark cloud bank hanging over the irradiated side of the front.</summary>
+        private void TickFrontCloud(ulong now)
         {
             float fx;
             int strip;
-            bool front = CurrentFront(now, out fx, out strip);
-            bool on = false;
-            Vector3 p = player != null ? GameApi.Position(player) : Vector3.zero;
-            if (front && player != null && KaijuPerf.On("horizon") && data.StripOf(p.z) == strip)
+            bool on = CurrentFront(now, out fx, out strip);
+            if (on && frontCloud == null)
             {
-                // Ahead of the front: the radiation is the way the front is from you.
-                float side = Mathf.Sign(fx - p.x);
-                bool ahead = (p.x - fx) * data.Direction(strip) >= 0f;
-                on = ahead;
-                if (horizon == null && on)
-                    horizon = KaijuHorizonWall.Create(KaijuDirector.Instance.EffectMaterial("KaijuSmoke"));
-                if (horizon != null)
-                    horizon.Set(on, GameApi.WorldToScene(p), new Vector2(side, 0f), Mathf.Abs(p.x - fx),
-                        GameApi.WorldToScene(new Vector3(p.x, p.y - 40f, p.z)).y);
-                return;
+                float h = KaijuDirector.Instance.Footprint.Height * KaijuEffects.ExplosionScale;
+                frontCloud = FrontCloud.Create(KaijuDirector.Instance.EffectMaterial("KaijuSmoke"), h,
+                    FrontCloudWidth, FrontCloudDepth, prewarmFront);
             }
-            if (horizon != null)
-                horizon.Set(false, GameApi.WorldToScene(p), Vector2.zero, KaijuHorizonWall.MaxDistance, 0f);
+            prewarmFront = false;
+            if (frontCloud == null)
+                return;
+            frontCloud.SetEmitting(on);
+            if (!on)
+                return;
+            float stripZ = -data.Size / 2f + (strip + 0.5f) * data.StripHeight;
+            float capY = data.SeaLevel + KaijuDirector.Instance.Footprint.Height * KaijuEffects.ExplosionScale * 3.6f;
+            frontCloud.MoveTo(new Vector3(fx - data.Direction(strip) * FrontCloudDepth * 0.5f, capY, stripZ));
         }
 
         /// <summary>Shows or hides the smoke: fallout over ruined cities, the cloud bank over the front, ash (`kaiju perf off clouds`).</summary>
@@ -572,9 +566,6 @@ namespace KaijuMod
             if (frontCloud != null)
                 Object.Destroy(frontCloud.gameObject);
             frontCloud = null;
-            if (horizon != null)
-                Object.Destroy(horizon.gameObject);
-            horizon = null;
             if (fogOn)
                 GameApi.ClearFog(world);
             fogOn = false;
@@ -586,9 +577,7 @@ namespace KaijuMod
         /// </summary>
         private void TickFallout(World world, EntityPlayer player, ulong now)
         {
-            long th = KaijuPerf.Begin();
-            TickHorizon(player, now);
-            KaijuPerf.End("horizon", th);
+            TickFrontCloud(now);
             if (player == null)
                 return;
             Vector3 p = GameApi.Position(player);

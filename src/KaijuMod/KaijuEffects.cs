@@ -200,16 +200,16 @@ namespace KaijuMod
             var go = new GameObject("KaijuFrontCloud");
             Object.DontDestroyOnLoad(go);
             var f = go.AddComponent<FrontCloud>();
-            f.ps = KaijuEffects.Particles(go.transform, "Bank", smoke, 320, true);
+            f.ps = KaijuEffects.Particles(go.transform, "Bank", smoke, 1000, true);
             var main = f.ps.main;
             main.startLifetime = new ParticleSystem.MinMaxCurve(90f, 150f);
             main.startSpeed = new ParticleSystem.MinMaxCurve(0.2f, 1.5f);
-            main.startSize = new ParticleSystem.MinMaxCurve(h * 1.1f, h * 2.0f);
-            main.startColor = new ParticleSystem.MinMaxGradient(new Color(0.13f, 0.12f, 0.12f, 0.8f), new Color(0.22f, 0.2f, 0.19f, 0.7f));
+            main.startSize = new ParticleSystem.MinMaxCurve(h * 1.8f, h * 3.2f);
+            main.startColor = new ParticleSystem.MinMaxGradient(new Color(0.1f, 0.09f, 0.09f, 0.85f), new Color(0.18f, 0.16f, 0.15f, 0.75f));
             var shape = f.ps.shape;
             shape.enabled = true;
             shape.shapeType = ParticleSystemShapeType.Box;
-            shape.scale = new Vector3(depth, h * 0.5f, width);
+            shape.scale = new Vector3(depth, h * 1.2f, width);
             var col = f.ps.colorOverLifetime;
             col.enabled = true;
             col.color = KaijuEffects.Fade(Color.white, Color.white, 0.15f, 0.8f);
@@ -217,7 +217,7 @@ namespace KaijuMod
             size.enabled = true;
             size.size = new ParticleSystem.MinMaxCurve(1f, AnimationCurve.Linear(0f, 0.8f, 1f, 1.3f));
             var emission = f.ps.emission;
-            emission.rateOverTime = 2.6f;
+            emission.rateOverTime = 7.5f;
             f.ps.Play();
             if (prewarm)
                 f.ps.Simulate(150f, true, false);
