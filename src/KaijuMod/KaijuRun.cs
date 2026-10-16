@@ -622,183 +622,70 @@ namespace KaijuMod
         }
 
         /// <summary>
-        /// Places each part crate once its town's ground is loaded (in the POI nearest the town
-        /// centre, on a free ground-floor cell), then keeps its light and compass marker up to date.
+        /// The parts come from the trader's special job, a fetch quest at a building in the same town
+        /// (the part is in the fetch satchel). Once a part has been held it stays taken: its job is
+        /// not offered again. (Older versions put the part in a glowing crate; those stay where they are.)
         /// </summary>
         private void TickParts(World world, EntityPlayer player)
         {
-            Vector3 p = player != null ? GameApi.Position(player) : Vector3.zero;
+            if (player == null)
+                return;
             for (int i = 0; i < Parts; i++)
             {
-                Settlement town = TownFor(i);
-                if (town == null)
-                    continue;
-                if (!st.CratePlaced[i])
-                {
-                    Vector3i spot;
-                    byte rot;
-                    if (FindQuestChest(world, town, out spot, out rot) && GameApi.PlaceBlock(world, spot, CrateBlock(i), rot))
-                    {
-                        st.CratePlaced[i] = true;
-                        st.CratePos[i] = spot;
-                        Save();
-                        Log.Out("[KaijuMod] " + PartItem(i) + " crate placed in " + town.Name + " at " + spot);
-                    }
-                    continue;
-                }
-                if (player == null)
-                    continue;
-                Vector3 crate = new Vector3(st.CratePos[i].x + 0.5f, st.CratePos[i].y + 0.5f, st.CratePos[i].z + 0.5f);
-                bool near = (crate - p).sqrMagnitude < 350f * 350f;
-                bool hasPart = GameApi.ItemCount(player, PartItem(i)) > 0;
-                bool loaded = GameApi.IsChunkLoaded(world, st.CratePos[i].x, st.CratePos[i].z);
-                bool crateThere = !loaded || GameApi.BlockName(world, st.CratePos[i]) == CrateBlock(i);
-                if (!st.PartTaken[i] && (hasPart || !crateThere || (loaded && GameApi.LootTakenFrom(world, st.CratePos[i], PartItem(i)))))
+                if (!st.PartTaken[i] && GameApi.ItemCount(player, PartItem(i)) > 0)
                 {
                     st.PartTaken[i] = true;
                     Save();
-                    Log.Out("[KaijuMod] " + PartItem(i) + " taken from its crate");
+                    Log.Out("[KaijuMod] " + PartItem(i) + " taken");
                 }
-                // Once taken it stays taken: stashing or crafting the part must not bring the marker back.
-                hasPart = hasPart || st.PartTaken[i];
-                // Light: while nearby and the part is still out there.
-                if (near && !hasPart && crateThere && crateLights[i] == null)
-                    crateLights[i] = Beacon.Create(crate + Vector3.up, new Color(0.5f, 0.85f, 1f), 14f, 4f);
-                else if ((!near || hasPart || !crateThere) && crateLights[i] != null)
-                {
-                    Object.Destroy(crateLights[i].gameObject);
-                    crateLights[i] = null;
-                }
-                // No compass marker of its own any more: the quest's marker leads there (Darwin found
-                // the extra one noisy); one left from an older version is taken down.
                 if (markers[i] != null)
                 {
                     GameApi.RemoveMarker(markers[i]);
                     markers[i] = null;
                 }
+                if (crateLights[i] != null)
+                {
+                    Object.Destroy(crateLights[i].gameObject);
+                    crateLights[i] = null;
+                }
             }
         }
 
-        // POIs already scanned and found to have no main chest (scanning one is costly).
-        private readonly HashSet<PrefabInstance> noChest = new HashSet<PrefabInstance>();
-        // A POI's main loot chest: the reinforced (hero) chest or hardened chest at the end of it.
-        private static readonly string[] MainChests = { "cntLootChestHero", "cntHardenedChest" };
+        // The building each part's job sends you to, once chosen.
+        private readonly Dictionary<int, PrefabInstance> fetchPois = new Dictionary<int, PrefabInstance>();
 
         /// <summary>
-        /// Where a town's part goes: the main loot chest of its best quest POI (highest tier, then
-        /// nearest the centre; with a Rally block so its quests work), which the part crate (a hero
-        /// chest with the part on top of that chest's usual loot) replaces. Else a free floor cell
-        /// in the POI nearest the centre. False until that ground is loaded.
+        /// The building in a part's town for its fetch job: a POI with a Rally block and the fetch
+        /// quest tag (so the game can activate it and place the satchel), the highest tier, then
+        /// nearest the town's middle; never the trader. Null if the town has none.
         /// </summary>
-        private bool FindQuestChest(World world, Settlement town, out Vector3i spot, out byte rotation)
+        private PrefabInstance FetchPoi(int part, Settlement town)
         {
-            spot = default(Vector3i);
-            rotation = 0;
-            // Nothing to do until you are there: the town's middle must be loaded.
-            if (!GameApi.IsChunkLoaded(world, Mathf.RoundToInt(town.X), Mathf.RoundToInt(town.Z)))
-                return false;
-            var pois = new List<PrefabInstance>();
+            PrefabInstance best;
+            if (fetchPois.TryGetValue(part, out best))
+                return best;
+            float bestKey = float.MaxValue;
             foreach (var poi in GameApi.Pois())
             {
                 if (poi == null || poi.name == null || poi.name.StartsWith("trader_") || poi.name.StartsWith("sign_"))
                     continue;
                 float cx = poi.boundingBoxPosition.x + poi.boundingBoxSize.x * 0.5f;
                 float cz = poi.boundingBoxPosition.z + poi.boundingBoxSize.z * 0.5f;
-                if (Mathf.Abs(cx - town.X) <= town.HalfWidth && Mathf.Abs(cz - town.Z) <= town.HalfDepth && GameApi.HasRallyBlock(poi))
-                    pois.Add(poi);
-            }
-            pois.Sort((a, b) =>
-            {
-                int t = GameApi.PoiTier(b).CompareTo(GameApi.PoiTier(a));
-                if (t != 0)
-                    return t;
-                Vector2 ca = new Vector2(a.boundingBoxPosition.x + a.boundingBoxSize.x * 0.5f - town.X, a.boundingBoxPosition.z + a.boundingBoxSize.z * 0.5f - town.Z);
-                Vector2 cb = new Vector2(b.boundingBoxPosition.x + b.boundingBoxSize.x * 0.5f - town.X, b.boundingBoxPosition.z + b.boundingBoxSize.z * 0.5f - town.Z);
-                return ca.sqrMagnitude.CompareTo(cb.sqrMagnitude);
-            });
-            foreach (var poi in pois)
-            {
-                if (noChest.Contains(poi))
-                    continue;
-                bool ready;
-                if (GameApi.FindPoiBlock(world, poi, MainChests, out spot, out rotation, out ready))
-                {
-                    Log.Out("[KaijuMod] " + town.Name + ": the part goes in the main loot chest of " + poi.name + " (tier " + GameApi.PoiTier(poi) + ")");
-                    return true;
-                }
-                if (!ready)
-                    return false; // that POI is not all loaded yet: try again later
-                noChest.Add(poi); // scanned all of it: never again
-            }
-            rotation = 0;
-            return FindCrateSpot(world, town, out spot);
-        }
-
-        /// <summary>A free ground-floor cell in the POI nearest a town's centre (not its trader).</summary>
-        private bool FindCrateSpot(World world, Settlement town, out Vector3i spot)
-        {
-            spot = default(Vector3i);
-            if (!GameApi.IsChunkLoaded(world, Mathf.RoundToInt(town.X), Mathf.RoundToInt(town.Z)))
-                return false;
-            PrefabInstance best = null;
-            float bestD = float.MaxValue;
-            foreach (var poi in GameApi.Pois())
-            {
-                if (poi == null || poi.name == null || poi.name.StartsWith("trader_"))
-                    continue;
-                float cx = poi.boundingBoxPosition.x + poi.boundingBoxSize.x * 0.5f;
-                float cz = poi.boundingBoxPosition.z + poi.boundingBoxSize.z * 0.5f;
                 if (Mathf.Abs(cx - town.X) > town.HalfWidth || Mathf.Abs(cz - town.Z) > town.HalfDepth)
                     continue;
-                float d = (cx - town.X) * (cx - town.X) + (cz - town.Z) * (cz - town.Z);
-                if (d < bestD)
+                if (!GameApi.HasRallyBlock(poi) || !GameApi.PoiHasQuestTag(poi, "fetch"))
+                    continue;
+                float key = -GameApi.PoiTier(poi) * 100000f + (cx - town.X) * (cx - town.X) + (cz - town.Z) * (cz - town.Z);
+                if (key < bestKey)
                 {
-                    bestD = d;
+                    bestKey = key;
                     best = poi;
                 }
             }
-            int x0, z0, rx, rz;
-            if (best != null)
-            {
-                x0 = best.boundingBoxPosition.x + best.boundingBoxSize.x / 2;
-                z0 = best.boundingBoxPosition.z + best.boundingBoxSize.z / 2;
-                rx = Mathf.Max(1, best.boundingBoxSize.x / 2 - 2);
-                rz = Mathf.Max(1, best.boundingBoxSize.z / 2 - 2);
-            }
-            else
-            {
-                x0 = Mathf.RoundToInt(town.X);
-                z0 = Mathf.RoundToInt(town.Z);
-                rx = rz = 10;
-            }
-            if (!GameApi.IsChunkLoaded(world, x0, z0))
-                return false;
-            int ground = Mathf.RoundToInt(town.Y);
-            // Spiral out from the POI centre; first free ground-floor cell with a floor under it.
-            for (int r = 0; r <= Mathf.Max(rx, rz); r++)
-            {
-                for (int dx = -r; dx <= r; dx++)
-                {
-                    for (int dz = -r; dz <= r; dz++)
-                    {
-                        if (Mathf.Max(Mathf.Abs(dx), Mathf.Abs(dz)) != r || Mathf.Abs(dx) > rx || Mathf.Abs(dz) > rz)
-                            continue;
-                        int x = x0 + dx, z = z0 + dz;
-                        if (!GameApi.IsChunkLoaded(world, x, z))
-                            continue;
-                        for (int y = ground - 1; y <= ground + 6; y++)
-                        {
-                            var c = new Vector3i(x, y, z);
-                            if (GameApi.IsAir(world, c) && GameApi.IsAir(world, new Vector3i(x, y + 1, z)) && !GameApi.IsAir(world, new Vector3i(x, y - 1, z)))
-                            {
-                                spot = c;
-                                return true;
-                            }
-                        }
-                    }
-                }
-            }
-            return false;
+            fetchPois[part] = best;
+            if (best == null)
+                Log.Warning("[KaijuMod] No building in " + town.Name + " can hold a fetch job for " + PartItem(part));
+            return best;
         }
 
         private static bool InCity(Settlement city, Vector3 p, float margin)
@@ -817,6 +704,7 @@ namespace KaijuMod
                     Object.Destroy(crateLights[i].gameObject);
                 crateLights[i] = null;
             }
+            fetchPois.Clear();
         }
 
         /// <summary>Gives the local player a part (0-based) for testing.</summary>
@@ -831,13 +719,14 @@ namespace KaijuMod
             if (data == null)
                 return "No weapon parts: this world has no " + KaijuWorldData.FileName + ".";
             var player = GameApi.LocalPlayer(boundWorld);
-            var s = "Weapon parts (one in each town, from its trader):";
+            var s = "Weapon parts (one in each town, the trader's special job):";
             for (int i = 0; i < Parts; i++)
             {
                 Settlement town = TownFor(i);
                 bool has = player != null && GameApi.ItemCount(player, PartItem(i)) > 0;
+                var poi = town != null ? FetchPoi(i, town) : null;
                 s += "\n  " + (i + 1) + ". " + PartItem(i) + " in " + (town != null ? town.Name : "?") + ": "
-                    + (st.PartTaken[i] ? "taken" : st.CratePlaced[i] ? "crate at " + st.CratePos[i] : "crate not placed yet (placed when you get near)")
+                    + (st.PartTaken[i] ? "taken" : poi != null ? "job at " + poi.name : "no building for the job")
                     + (has ? ", YOU HAVE IT" : "");
             }
             s += "\nMaser: " + (st.MaserUsed ? "used" : "charge " + (st.MaserCharge * 100 / 3) + "%")
@@ -847,9 +736,9 @@ namespace KaijuMod
         }
 
         /// <summary>
-        /// The part (0-based) whose quest this trader should offer, or -1: the trader must be in a
-        /// part's town, and the player must not have the part, its weapon, the quest (active or
-        /// done), and the part must still be in its crate. sitePos/siteSize: where the quest leads.
+        /// The part (0-based) whose job this trader should offer, or -1: the trader must be in a
+        /// part's town, and the player must not have had the part, have its weapon or have the job
+        /// (active or done). sitePos/siteSize: the building the job sends you to.
         /// </summary>
         public int PartQuestFor(EntityTrader trader, EntityPlayer player, out Vector3 sitePos, out Vector3 siteSize)
         {
@@ -864,23 +753,13 @@ namespace KaijuMod
                     continue;
                 if (st.PartTaken[i] || GameApi.ItemCount(player, PartItem(i)) > 0 || GameApi.ItemCount(player, WeaponItems[WeaponOf(i)]) > 0)
                     return -1;
-                // VERIFIED (V3.3): QuestJournal.FindActiveOrCompleteQuest(name, faction = -1).
                 if (KaijuPartQuests.HasQuest(player, i))
                     return -1;
-                World world = GameApi.World;
-                if (st.CratePlaced[i] && world != null && GameApi.IsChunkLoaded(world, st.CratePos[i].x, st.CratePos[i].z)
-                    && GameApi.BlockName(world, st.CratePos[i]) != CrateBlock(i))
-                    return -1; // crate already emptied and gone
-                if (st.CratePlaced[i])
-                {
-                    sitePos = new Vector3(st.CratePos[i].x - 15, st.CratePos[i].y, st.CratePos[i].z - 15);
-                    siteSize = new Vector3(30f, 20f, 30f);
-                }
-                else
-                {
-                    sitePos = new Vector3(town.X - 50f, town.Y, town.Z - 50f);
-                    siteSize = new Vector3(100f, 20f, 100f);
-                }
+                var poi = FetchPoi(i, town);
+                if (poi == null)
+                    return -1;
+                sitePos = new Vector3(poi.boundingBoxPosition.x, poi.boundingBoxPosition.y, poi.boundingBoxPosition.z);
+                siteSize = new Vector3(poi.boundingBoxSize.x, poi.boundingBoxSize.y, poi.boundingBoxSize.z);
                 return i;
             }
             return -1;

@@ -187,6 +187,42 @@ namespace KaijuMod
             return e.entityId;
         }
 
+        private static readonly Dictionary<string, string> questTags = new Dictionary<string, string>();
+
+        /// <summary>True if the POI's prefab lists a quest tag (e.g. "fetch", "clear"); read from its xml once per prefab.</summary>
+        public static bool PoiHasQuestTag(PrefabInstance poi, string tag)
+        {
+            // VERIFIED (V3.3): prefab xmls list QuestTags (e.g. "clear, fetch"); quests filter POIs by them.
+            if (poi == null)
+                return false;
+            string tags;
+            string key = poi.name ?? "";
+            if (!questTags.TryGetValue(key, out tags))
+            {
+                tags = "";
+                try
+                {
+                    string path = poi.location.FullPathNoExtension;
+                    if (string.IsNullOrEmpty(path) && poi.prefab != null)
+                        path = poi.prefab.location.FullPathNoExtension;
+                    if (!string.IsNullOrEmpty(path) && System.IO.File.Exists(path + ".xml"))
+                    {
+                        var m = System.Text.RegularExpressions.Regex.Match(System.IO.File.ReadAllText(path + ".xml"), "name=\"QuestTags\" value=\"([^\"]*)\"");
+                        if (m.Success)
+                            tags = m.Groups[1].Value.ToLowerInvariant();
+                    }
+                }
+                catch (System.Exception)
+                {
+                }
+                questTags[key] = tags;
+            }
+            foreach (string t in tags.Split(','))
+                if (t.Trim() == tag)
+                    return true;
+            return false;
+        }
+
         /// <summary>The POI's difficulty tier (0-5).</summary>
         public static int PoiTier(PrefabInstance poi)
         {
