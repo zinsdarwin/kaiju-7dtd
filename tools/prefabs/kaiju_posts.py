@@ -192,6 +192,11 @@ def net_len(n):
 W = D = 40                 # footprint, metres
 CX = 20                    # tower centre x
 GATE = range(18, 22)       # gate cells along the south fence
+WIRE_X = (5, 8, 11, 14, 25, 28, 31, 34)   # centres of 3 m wire spindles either side of the approach
+
+# Multiblocks (MultiBlockDim in blocks.xml) need room: barrierConcrete and barbedWireSpindle are
+# 3 x 1, cntAmmoPileLarge and cntDeskMetal* 2 x 1, cntMilitaryGoodsC 2 x 2, cntMilitaryMetalShelves*
+# 1 x 2 x 2, gun safes 1 x 2 high. Placed side by side they overlap and the game drops them.
 
 
 def base(p, ground, fence, fence2=None, wire=True):
@@ -203,9 +208,8 @@ def base(p, ground, fence, fence2=None, wire=True):
         p.ring(1, 1, W - 2, D - 2, 2, fence2, gaps=gaps)
     if wire:
         # Wire belts either side of the approach, leaving the road in the open.
-        for x in list(range(4, 15)) + list(range(25, 36)):
-            if x % 2 == 0:
-                p.set(x, 1, 5, "barbedWireSpindle")
+        for x in WIRE_X:                              # 3-wide spindles, centred
+            p.set(x, 1, 5, "barbedWireSpindle")
         for x in list(range(6, 15, 3)) + list(range(26, 36, 3)):
             p.set(x, 1, 9, "barbedWireSpindle1m")
     p.set(CX, 1, 4, "questRallyMarker")
@@ -273,7 +277,7 @@ def pine():
 
 def burnt():
     p = Prefab("kaiju_post_burnt", W, 33, D, 2, "Cinder Relay")
-    base(p, "terrGravel", "barrierConcrete")
+    base(p, "terrGravel", "barrierMilitary")
     bx0, bz0, bx1, bz1 = CX - 6, 21, CX + 6, 29        # bunker 13x9, 4 high
     p.fill(bx0, 1, bz0, bx1, 5, bz1, "concreteShapes:cube")
     p.clear(bx0 + 1, 1, bz0 + 1, bx1 - 1, 4, bz1 - 1)
@@ -322,7 +326,7 @@ def burnt():
 
 def desert():
     p = Prefab("kaiju_post_desert", W, 28, D, 3, "Sandstone Watch")
-    base(p, "terrSand", "sandbagStraight01", "sandbagStraight01")
+    base(p, "terrGravel", "sandbagStraight01", "sandbagStraight01")
     tx0, tz0, tx1, tz1 = CX - 3, 21, CX + 3, 27        # 7x7 tower
     top = 20
     p.walls(tx0, tz0, tx1, tz1, 1, top - 1, "brickShapes:cube")
@@ -358,7 +362,7 @@ def desert():
     p.ring(5, 28, 11, 34, 1, "sandbagStraight01", gaps={(8, 28)})
     for x, z in ((30, 31), (31, 31), (30, 32)):
         p.set(x, 1, z, "cntBarrelPlasticSingle00")
-    crates(p, [(6, 1, 33, "cntFootlockerArmyGreenRandomLootHelper"), (10, 1, 33, "cntMilitaryGoodsC")])
+    crates(p, [(6, 1, 33, "cntFootlockerArmyGreenRandomLootHelper"), (8, 1, 32, "cntMilitaryGoodsC")])
     yard_sleepers(p, "GroupGenericZombie", 4, [(11, 10, "sleeperIdle", 0), (29, 8, "sleeperIdle", 3),
                                                (24, 13, "sleeperSideLeft", 1)])
     p.sleepers((tx0 + 1, 1, tz0 + 1), (5, 3, 5), "GroupZomSoldier", 2, True,
@@ -373,7 +377,7 @@ def desert():
 
 def snow():
     p = Prefab("kaiju_post_snow", W, 32, D, 4, "Frost Array")
-    base(p, "terrGravel", "barrierMilitary", wire=True)
+    base(p, "terrGravel", "corrugatedMetalShapes:cube", "corrugatedMetalShapes:cube")
     cx, cz = CX, 25
     top = 20
     # 5x5 concrete core, ladder inside on its north wall; steel outrigger legs.
@@ -412,7 +416,7 @@ def snow():
     p.walls(hx0, hz0, hx1, hz1, 1, 3, "corrugatedMetalShapes:cube")
     p.fill(hx0, 4, hz0, hx1, 4, hz1, "corrugatedMetalShapes:cube")
     p.clear(8, 1, hz0, 8, 2, hz0)
-    crates(p, [(hx0 + 1, 1, hz1 - 1, "cntMilitaryMetalShelvesRandomLootHelper"),
+    crates(p, [(hx0 + 1, 1, hz1 - 2, "cntMilitaryMetalShelvesRandomLootHelper"),
                (hx1 - 1, 1, hz1 - 1, "cntFootlockerArmyGreenRandomLootHelper")])
     yard_sleepers(p, "GroupZomSoldier", 4, [(10, 9, "sleeperIdle", 0), (30, 9, "sleeperIdle", 0),
                                             (20, 12, "sleeperStomach", 2)])
@@ -428,7 +432,7 @@ def snow():
 
 def wasteland():
     p = Prefab("kaiju_post_wasteland", W, 30, D, 5, "Last Word Command")
-    base(p, "terrGravel", "barrierConcrete", "barbedWireSpindle1m")
+    base(p, "terrGravel", "concreteShapes:cube", "barbedWireSpindle1m")
     cx, cz = CX, 25
     top = 22
     # Two-storey blockhouse 11x9, steel-faced.
@@ -471,14 +475,13 @@ def wasteland():
                (bx1 - 1, 1, bz1 - 1, "cntWoodenChestMilitaryRandomLootHelper"),
                (bx1 - 1, 1, bz0 + 1, "cntQuestRandomLootHelper"),
                (bx0 + 3, 1, bz1 - 1, "cntAmmoPileLarge"),
-               (bx1 - 1, 6, bz1 - 1, "cntMilitaryMetalShelvesRandomLootHelper"),
+               (bx1 - 1, 6, bz1 - 2, "cntMilitaryMetalShelvesRandomLootHelper"),
                (bx0 + 3, 6, bz1 - 1, "radioHam"),
                (cx + 3, top + 1, cz + 3, "cntHardenedChestSecure"),
                (cx - 3, top + 1, cz + 3, "cntMunitionsBoxArmy")])
     # Yard: inner wire belt, tank traps of concrete, a spike field each side of the road.
-    for x in range(4, 37, 2):
-        if x not in GATE:
-            p.set(x, 1, 13, "barbedWireSpindle")
+    for x in WIRE_X:
+        p.set(x, 1, 13, "barbedWireSpindle")
     for x, z in ((8, 17), (12, 19), (24, 30), (6, 31), (34, 33)):
         p.fill(x, 1, z, x, 2, z, "concreteShapes:cube")
     for x in list(range(10, 16)) + list(range(25, 31)):
@@ -538,11 +541,13 @@ def theme_burnt(p):
         p.fill(x, y, 18, x, y + 2, 20, "corrugatedMetalShapes:cube")
         p.fill(x, 2, 19, x, y - 1, 19, "steelShapes:pillar50")
     for x in range(28, 36, 2):
-        p.set(x, 1, 17, "barrierConcrete")
-    # Missile racks and munitions.
+        p.set(x, 1, 17, "barrierMilitary")
+    # Missile racks (steel rails with munitions on them) and more munitions.
     for z in (24, 26):
-        p.fill(29, 1, z, 34, 1, z, "metalPipeStackLoose")
-    crates(p, [(35, 1, 24, "cntMunitionsBoxArmy"), (35, 1, 26, "cntAmmoPileLarge"),
+        p.fill(29, 1, z, 34, 1, z, "steelShapes:cube")
+        for x in range(29, 35, 2):
+            p.set(x, 2, z, "cntMunitionsBoxArmy")
+    crates(p, [(35, 1, 24, "cntMunitionsBoxArmy"), (35, 1, 22, "cntAmmoPileLarge"),
                (28, 1, 28, "cntWeaponsBagLarge"), (30, 1, 28, "cntMunitionsBoxArmy")])
     # Launch control pad on the bunker roof.
     p.ring(CX - 6, 21, CX + 6, 29, 6, "sandbagStraight01", gaps={(CX - 1, 29), (CX, 29), (CX + 1, 29)})
@@ -558,7 +563,7 @@ def theme_desert(p):
         for x, z in ((25 + i, 15 + i), (33 - i, 15 + i)):
             p.set(x, 0, z, "terrConcrete")
             p.set(x + 1, 0, z, "terrConcrete")
-    crates(p, [(CX + 2, 1, 26, "radioHam"), (CX + 1, 1, 26, "cntDeskMetalArmyGreenRandomLootHelper"),
+    crates(p, [(CX + 2, 1, 26, "radioHam"), (CX - 1, 1, 22, "cntDeskMetalArmyGreenRandomLootHelper"),
                (CX + 2, 21, 21, "radioHam")])
     for x, z in ((14, 33), (16, 33), (14, 35)):
         p.set(x, 1, z, "cntBarrelGasQuadA")

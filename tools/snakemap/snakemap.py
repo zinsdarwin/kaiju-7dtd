@@ -248,6 +248,26 @@ def load_display_names(game):
     return names
 
 
+POSTS_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "KaijuMod", "Prefabs")
+
+
+def load_post(key):
+    """The mod's own army post for a biome (KaijuMod/Prefabs/kaiju_post_<key>, written by
+    tools/prefabs/kaiju_posts.py), or None. The game finds prefabs in a mod's Prefabs folder."""
+    f = os.path.join(POSTS_DIR, "kaiju_post_%s.xml" % key)
+    if not os.path.exists(f):
+        return None
+    t = open(f, encoding="utf-8-sig").read()
+
+    def prop(n, default=None):
+        m = re.search(r'name="%s" value="([^"]*)"' % n, t)
+        return m.group(1) if m else default
+
+    sx, _, sz = [int(v) for v in prop("PrefabSize").split(",")]
+    return Poi("kaiju_post_%s" % key, sx, sz, int(prop("YOffset", "0")), int(prop("RotationToFaceNorth", "0")),
+               set(), set(), set(), int(prop("DifficultyTier", "0")))
+
+
 def load_part(game, name):
     """A prefab from Data/Prefabs/Parts (the game finds prefabs in any folder under Prefabs)."""
     t = open(os.path.join(game, "Data", "Prefabs", "Parts", name + ".xml"), encoding="utf-8-sig", errors="ignore").read()
@@ -702,8 +722,10 @@ class SnakeMap:
         self.part_sites = []
         for i, tier in enumerate(self.PART_TIERS):
             city = next(s for s in self.settlements if s["role"] == "end" and s["strip"] == i)
-            pool = [p for p in mil if p.tier == tier] or [p for p in mil if abs(p.tier - tier) <= 1]
-            p = self.rand.choice(pool)
+            p = load_post(BIOMES[i][0])
+            if p is None:   # no custom post: one of the game's military POIs
+                pool = [p for p in mil if p.tier == tier] or [p for p in mil if abs(p.tier - tier) <= 1]
+                p = self.rand.choice(pool)
             x0, x1, z0, z1, zc = self.settlement_rect(city)
             b = (p.rot_north + 2) & 3                 # entrance to the south, toward the city
             w, dpt = p.footprint(b)

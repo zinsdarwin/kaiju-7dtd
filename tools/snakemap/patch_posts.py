@@ -38,7 +38,10 @@ GAME = r"C:\Program Files (x86)\Steam\steamapps\common\7 Days To Die"
 
 
 def prefab_info(name):
-    t = open(os.path.join(GAME, "Data", "Prefabs", "POIs", name + ".xml"), encoding="utf-8-sig", errors="ignore").read()
+    f = os.path.join(sm.POSTS_DIR, name + ".xml")
+    if not os.path.exists(f):
+        f = os.path.join(GAME, "Data", "Prefabs", "POIs", name + ".xml")
+    t = open(f, encoding="utf-8-sig", errors="ignore").read()
 
     def prop(n, d=None):
         m = re.search(r'name="%s" value="([^"]*)"' % n, t)
@@ -53,6 +56,8 @@ def main():
     ap.add_argument("--world", required=True)
     ap.add_argument("--save", required=True)
     ap.add_argument("--parts", default="2,3,4,5")
+    ap.add_argument("--swap", action="store_true",
+                    help="replace each listed part's post with the mod's own post for its biome (kaiju_post_<biome>)")
     ap.add_argument("--out", default=None, help="write the edited files here instead of in place")
     a = ap.parse_args()
     parts = [int(p) for p in a.parts.split(",")]
@@ -77,6 +82,10 @@ def main():
         m = re.search(r'<site part="%d" strip="(\d)" city="([^"]+)" name="([^"]+)" tier="(\d)" x="(-?\d+)" y="(-?\d+)" '
                       r'z="(-?\d+)" w="(\d+)" d="(\d+)" />' % part, kx)
         strip, cname, poi, tier, ox, oy, oz = int(m.group(1)), m.group(2), m.group(3), m.group(4), *map(int, m.group(5, 6, 7))
+        old_poi = poi
+        if a.swap:
+            poi = "kaiju_post_" + sm.BIOMES[strip][0]
+            tier = str(sm.load_post(sm.BIOMES[strip][0]).tier)
         city = cities[str(strip)]
         sx, sz, yoff, rotn = prefab_info(poi)
         b = (rotn + 2) & 3
@@ -86,7 +95,8 @@ def main():
         pad = float(h[zc + H, city["x"] + H])
         moved = oz >= zc + MIN_DZ
         if moved:
-            xmin, zmin = ox, oz
+            # Same shelf; a swapped-in post of another size is centred on the city again.
+            xmin, zmin = (int(round(city["x"] - w / 2)) if a.swap else ox), oz
         else:
             xmin = int(round(city["x"] - w / 2))
             zmax = int(min(sm.strip_center(strip) + sm.STRIP_H / 2 - 20, H - 120) - d)
@@ -120,7 +130,7 @@ def main():
         trails.append(((cx, z1), (cx, zmin)))
         # prefabs.xml: same line, new place.
         y = sm.prefab_y(gh) + yoff
-        old = re.search(r'  <decoration type="model" name="%s" position="%d,-?\d+,%d" rotation="\d" />' % (re.escape(poi), ox, oz), px)
+        old = re.search(r'  <decoration type="model" name="%s" position="%d,-?\d+,%d" rotation="\d" />' % (re.escape(old_poi), ox, oz), px)
         px = px.replace(old.group(0), '  <decoration type="model" name="%s" position="%d,%d,%d" rotation="%d" />' % (poi, xmin, y, zmin, b))
         kx = kx.replace(m.group(0), '<site part="%d" strip="%d" city="%s" name="%s" tier="%s" x="%d" y="%d" z="%d" w="%d" d="%d" />'
                         % (part, strip, cname, poi, tier, xmin, sm.prefab_y(gh), zmin, w, d))
