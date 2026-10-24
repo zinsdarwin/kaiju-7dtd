@@ -82,16 +82,18 @@ class Prefab:
                 self.set(x0, y, z, block)
                 self.set(x1, y, z, block)
 
-    def ring(self, x0, z0, x1, z1, y, block, rot_x=ALONG_X, rot_z=ALONG_Z, gaps=()):
-        """A one-block-high line round a rectangle (sandbags, railings, fences); gaps: (x, z) cells left open."""
+    def ring(self, x0, z0, x1, z1, y, block, rot_x=ALONG_X, rot_z=ALONG_Z, gaps=(), outside=False):
+        """A one-block-high line round a rectangle (sandbags, railings, fences); gaps: (x, z) cells left open.
+        outside: for blocks that sit on one edge of their cell (railings; rotation 0 puts them on the
+        -z edge, 1 on -x, 2 on +z, 3 on +x), turn each side so they sit on the rectangle's outer edge."""
         for x in range(x0, x1 + 1):
-            for z in (z0, z1):
+            for z, r in ((z0, 0), (z1, 2)):
                 if (x, z) not in gaps:
-                    self.set(x, y, z, block, rot_x)
+                    self.set(x, y, z, block, r if outside else rot_x)
         for z in range(z0 + 1, z1):
-            for x in (x0, x1):
+            for x, r in ((x0, 1), (x1, 3)):
                 if (x, z) not in gaps:
-                    self.set(x, y, z, block, rot_z)
+                    self.set(x, y, z, block, r if outside else rot_z)
 
     def ladder(self, x, z, y0, y1, wall):
         for y in range(y0, y1 + 1):
@@ -248,7 +250,7 @@ def pine():
     # Deck, cabin with a window band, stepped roof, flag.
     p.fill(x0, top, z0, x1, top, z1, "woodShapes:cube")
     p.set(sx, top, sz, LADDER_BLOCK, LADDER["+z"])
-    p.ring(x0, z0, x1, z1, top + 1, "woodShapes:railing")
+    p.ring(x0, z0, x1, z1, top + 1, "woodShapes:railing", outside=True)
     p.walls(x0 + 1, z0 + 1, x1 - 1, z1 - 1, top + 1, top + 3, "woodShapes:cube")
     for x in range(x0 + 2, x1 - 1):
         p.clear(x, top + 2, z0 + 1, x, top + 2, z0 + 1)
@@ -396,7 +398,7 @@ def snow():
     # Deck 11x11 with railings; radar dome on the north half, open view south.
     p.fill(cx - 5, top, cz - 5, cx + 5, top, cz + 5, "steelShapes:cube")
     p.set(cx, top, cz + 1, LADDER_BLOCK, LADDER["+z"])
-    p.ring(cx - 5, cz - 5, cx + 5, cz + 5, top + 1, "corrugatedMetalShapes:railing")
+    p.ring(cx - 5, cz - 5, cx + 5, cz + 5, top + 1, "corrugatedMetalShapes:railing", outside=True)
     dc, r = (cx, top + 1, cz + 3), 3.6
     for x in range(cx - 4, cx + 5):
         for y in range(top + 1, top + 6):
