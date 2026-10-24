@@ -34,6 +34,8 @@ GAME = r"C:\Program Files (x86)\Steam\steamapps\common\7 Days To Die"
 VERSION = 19
 DENSITY_AIR, DENSITY_TERRAIN = 127, 128   # sbyte 127 and -128
 
+# Wooden ladders (a frame shape), never iron: wood upgrades to cobblestone and up (Darwin, 2026-10-24).
+LADDER_BLOCK = "woodShapes:ladderSquare"
 # Ladder rotation by the side its wall is on (measured on the game's prefabs).
 LADDER = {"-z": 0, "-x": 1, "+z": 2, "+x": 3}
 ALONG_X, ALONG_Z = 0, 1                     # sandbags, railings, barriers
@@ -93,7 +95,7 @@ class Prefab:
 
     def ladder(self, x, z, y0, y1, wall):
         for y in range(y0, y1 + 1):
-            self.set(x, y, z, "ladderMetal", LADDER[wall])
+            self.set(x, y, z, LADDER_BLOCK, LADDER[wall])
 
     def sleepers(self, start, size, group, count, loot=True, spots=()):
         """A sleeper volume (prefab coordinates, inclusive start, size) and the sleeper blocks in it."""
@@ -245,7 +247,7 @@ def pine():
     p.ladder(sx, sz, 1, top, "+z")
     # Deck, cabin with a window band, stepped roof, flag.
     p.fill(x0, top, z0, x1, top, z1, "woodShapes:cube")
-    p.set(sx, top, sz, "ladderMetal", LADDER["+z"])
+    p.set(sx, top, sz, LADDER_BLOCK, LADDER["+z"])
     p.ring(x0, z0, x1, z1, top + 1, "woodShapes:railing")
     p.walls(x0 + 1, z0 + 1, x1 - 1, z1 - 1, top + 1, top + 3, "woodShapes:cube")
     for x in range(x0 + 2, x1 - 1):
@@ -291,7 +293,7 @@ def burnt():
     p.fill(mx, 1, mz, mx, 30, mz, "steelShapes:cube")
     p.ladder(mx, mz - 1, 1, nest, "+z")
     p.clear(mx, 5, mz - 1, mx, 5, mz - 1)
-    p.set(mx, 5, mz - 1, "ladderMetal", LADDER["+z"])
+    p.set(mx, 5, mz - 1, LADDER_BLOCK, LADDER["+z"])
     for dx, dz in ((-2, -2), (2, -2), (-2, 2), (2, 2)):
         p.fill(mx + dx, 6, mz + dz, mx + dx, nest - 1, mz + dz, "steelShapes:pillar50")
     for y in range(9, nest, 4):
@@ -299,7 +301,7 @@ def burnt():
                gaps={(mx, mz - 2)})
     # Crow's nest facing south, sandbag parapet.
     p.fill(mx - 3, nest, mz - 4, mx + 3, nest, mz + 2, "steelShapes:cube")
-    p.set(mx, nest, mz - 1, "ladderMetal", LADDER["+z"])
+    p.set(mx, nest, mz - 1, LADDER_BLOCK, LADDER["+z"])
     p.ring(mx - 3, mz - 4, mx + 3, mz + 2, nest + 1, "sandbagStraight01")
     p.fill(mx, 31, mz, mx, 32, mz, "steelShapes:pole")
     p.set(mx, 30, mz - 1, "lightIndustrialRed")
@@ -343,7 +345,7 @@ def desert():
         p.clear(tx1, y, (tz0 + tz1) // 2, tx1, y, (tz0 + tz1) // 2)
     # Top: overhanging platform, crenellated parapet, sun roof on poles.
     p.fill(tx0 - 1, top, tz0 - 1, tx1 + 1, top, tz1 + 1, "brickShapes:cube")
-    p.set(lx, top, lz, "ladderMetal", LADDER["+z"])
+    p.set(lx, top, lz, LADDER_BLOCK, LADDER["+z"])
     for x in range(tx0 - 1, tx1 + 2):
         for z in (tz0 - 1, tz1 + 1):
             p.set(x, top + 1, z, "brickShapes:cube" if x % 2 else "sandbagStraight01", ALONG_X)
@@ -393,7 +395,7 @@ def snow():
         p.ring(cx - 5, cz - 5, cx + 5, cz + 5, y, "steelShapes:cube")
     # Deck 11x11 with railings; radar dome on the north half, open view south.
     p.fill(cx - 5, top, cz - 5, cx + 5, top, cz + 5, "steelShapes:cube")
-    p.set(cx, top, cz + 1, "ladderMetal", LADDER["+z"])
+    p.set(cx, top, cz + 1, LADDER_BLOCK, LADDER["+z"])
     p.ring(cx - 5, cz - 5, cx + 5, cz + 5, top + 1, "corrugatedMetalShapes:railing")
     dc, r = (cx, top + 1, cz + 3), 3.6
     for x in range(cx - 4, cx + 5):
@@ -459,7 +461,7 @@ def wasteland():
         p.clear(tx1, y, cz, tx1, y, cz)
     # Command deck 11x11 with a 2-high steel parapet and slits, roofed at the back.
     p.fill(cx - 5, top, cz - 5, cx + 5, top, cz + 5, "steelShapes:cube")
-    p.set(lx, top, lz, "ladderMetal", LADDER["+z"])
+    p.set(lx, top, lz, LADDER_BLOCK, LADDER["+z"])
     p.walls(cx - 5, cz - 5, cx + 5, cz + 5, top + 1, top + 2, "steelShapes:cube")
     for x in range(cx - 4, cx + 5, 2):
         p.clear(x, top + 2, cz - 5, x, top + 2, cz - 5)
