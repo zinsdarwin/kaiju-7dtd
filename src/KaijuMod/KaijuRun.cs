@@ -99,8 +99,23 @@ namespace KaijuMod
         private FrontCloud frontCloud;
         private bool prewarmFront;   // the first cloud after a load starts fully formed
         private bool journalChecked; // trader quests in the journal pointed along the run, once per load
-        /// <summary>Size of the dark cloud bank over the radiation front, metres.</summary>
+        /// <summary>
+        /// Size of the dark cloud bank over the radiation front, metres: depth along the strip, width
+        /// across it at most (it is cut down to fit the strip, see FrontCloudWidthFor).
+        /// </summary>
         public static float FrontCloudWidth = 2600f, FrontCloudDepth = 1800f;
+
+        /// <summary>
+        /// The bank's emitter width across the strip (z) so its puffs stay inside the strip's own
+        /// biome: the strip height less, on each side, the biggest puff's radius, how far a puff
+        /// drifts in its life, and a little margin. (At 2600 m it spilled over the ridge into the
+        /// next strip, which then looked irradiated.)
+        /// </summary>
+        private float FrontCloudWidthFor(float h)
+        {
+            float edge = FrontCloud.MaxPuffRadius(h) + FrontCloud.MaxDrift + 20f;
+            return Mathf.Clamp(data.StripHeight - 2f * edge, 150f, FrontCloudWidth);
+        }
         private float nextGeiger;
 
         // Not saved: markers and lights are rebuilt as the player moves.
@@ -521,7 +536,7 @@ namespace KaijuMod
                 // Smoke that ignores fog, so it stays dark through storms (older bundles: the normal smoke).
                 var smoke = KaijuDirector.Instance.EffectMaterial("KaijuSmokeNoFog") ?? KaijuDirector.Instance.EffectMaterial("KaijuSmoke");
                 frontCloud = FrontCloud.Create(smoke, h,
-                    FrontCloudWidth, FrontCloudDepth, prewarmFront);
+                    FrontCloudWidthFor(h), FrontCloudDepth, prewarmFront);
             }
             prewarmFront = false;
             if (frontCloud == null)

@@ -200,6 +200,16 @@ namespace KaijuMod
         // The last frame's numbers, for `kaiju cloud`.
         private static float lastCentre = -1f, lastFar, lastClip, lastScale;
 
+        // Puff sizes (times h) and drift: Create uses these, and KaijuRun sizes the bank so that a
+        // puff at the emitter's edge, full grown and drifted, still ends inside the strip.
+        private const float PuffMin = 1.8f, PuffMax = 3.2f, PuffGrowth = 1.3f, SpeedMax = 0.4f, LifeMax = 150f;
+
+        /// <summary>Radius of the biggest puff at the end of its life, metres.</summary>
+        public static float MaxPuffRadius(float h) { return 0.5f * h * PuffMax * PuffGrowth; }
+
+        /// <summary>Furthest a puff drifts from where it was born, metres.</summary>
+        public static float MaxDrift { get { return SpeedMax * LifeMax; } }
+
         public static string Info
         {
             get
@@ -227,20 +237,22 @@ namespace KaijuMod
             var main = f.ps.main;
             main.scalingMode = ParticleSystemScalingMode.Hierarchy; // the bank's scale shrinks it toward the eye
             f.reach = 0.5f * Mathf.Sqrt(width * width + depth * depth + (h * 3.4f) * (h * 3.4f)) + h * 1.6f;
-            main.startLifetime = new ParticleSystem.MinMaxCurve(90f, 150f);
-            main.startSpeed = new ParticleSystem.MinMaxCurve(0.2f, 1.5f);
-            main.startSize = new ParticleSystem.MinMaxCurve(h * 1.8f, h * 3.2f);
+            main.startLifetime = new ParticleSystem.MinMaxCurve(90f, LifeMax);
+            // Slow drift in any direction (a box emitter alone sends every puff north, up to 225 m).
+            main.startSpeed = new ParticleSystem.MinMaxCurve(0.05f, SpeedMax);
+            main.startSize = new ParticleSystem.MinMaxCurve(h * PuffMin, h * PuffMax);
             main.startColor = new ParticleSystem.MinMaxGradient(new Color(0.1f, 0.09f, 0.09f, 0.85f), new Color(0.18f, 0.16f, 0.15f, 0.75f));
             var shape = f.ps.shape;
             shape.enabled = true;
             shape.shapeType = ParticleSystemShapeType.Box;
             shape.scale = new Vector3(depth, h * 3.4f, width);
+            shape.randomDirectionAmount = 1f;
             var col = f.ps.colorOverLifetime;
             col.enabled = true;
             col.color = KaijuEffects.Fade(Color.white, Color.white, 0.15f, 0.8f);
             var size = f.ps.sizeOverLifetime;
             size.enabled = true;
-            size.size = new ParticleSystem.MinMaxCurve(1f, AnimationCurve.Linear(0f, 0.8f, 1f, 1.3f));
+            size.size = new ParticleSystem.MinMaxCurve(1f, AnimationCurve.Linear(0f, 0.8f, 1f, PuffGrowth));
             var emission = f.ps.emission;
             emission.rateOverTime = 11f;
             f.ps.Play();
